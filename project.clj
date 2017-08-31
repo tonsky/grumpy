@@ -1,4 +1,4 @@
-(defproject whining "0.1.0-SNAPSHOT"
+(defproject grumpy "0.1.0-SNAPSHOT"
   :dependencies [
     [org.clojure/clojure       "1.9.0-alpha19"]
     [ring/ring-core            "1.6.2"]
@@ -8,4 +8,10 @@
     [rum                       "0.10.8"]
     [org.clojure/clojurescript "1.9.562" :scope "provided"]
   ]
-  :main "whining.server")
+  :main grumpy.server
+  :profiles {
+    :uberjar {
+      :aot [grumpy.server]
+      :uberjar-name "grumpy.jar"
+    }
+  })

@@ -1,4 +1,4 @@
-(ns whining.server
+(ns grumpy.server
   (:require
     [compojure.route]
     [rum.core :as rum]
@@ -9,7 +9,8 @@
     [clojure.java.io :as io])
   (:import
     [org.joda.time DateTime]
-    [org.joda.time.format DateTimeFormat]))
+    [org.joda.time.format DateTimeFormat])
+  (:gen-class))
 
 
 (def styles (slurp (io/resource "style.css")))

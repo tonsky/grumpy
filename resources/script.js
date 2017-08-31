@@ -10,7 +10,8 @@ function reloadSubtitle() {
   'Это не текст, это ссылка. Не нажимайте на ссылку.',
   'Не обновляйте эту страницу! Не нажимайте НАЗАД',
   'Произошла ошибка OK',
-  'Пароль должен содержать заглавную букву и специальный символ'
+  'Пароль должен содержать заглавную букву и специальный символ',
+  'Are you sure you want to exist? — YES / NO'
   ];
   var subtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
   var div = document.getElementById('site_subtitle');

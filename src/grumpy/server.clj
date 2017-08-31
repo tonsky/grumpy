@@ -5,9 +5,12 @@
     [ring.util.response]
     [clojure.edn :as edn]
     [immutant.web :as web]
+    [clojure.java.io :as io]
+    [ring.middleware.params]
     [compojure.core :as compojure]
-    [clojure.java.io :as io])
+    [ring.middleware.multipart-params])
   (:import
+    [java.util UUID]
     [org.joda.time DateTime]
     [org.joda.time.format DateTimeFormat])
   (:gen-class))
@@ -61,11 +64,41 @@
       [:script {:dangerouslySetInnerHTML { :__html script}}]]]))
 
 
+(defn safe-slurp [source]
+  (try
+    (slurp source)
+    (catch Exception e
+      nil)))
+      
+
 (defn get-post [post-id]
   (let [path (str "posts/" post-id "/post.edn")]
-    (-> (io/file path)
-         (slurp)
-         (edn/read-string))))
+    (some-> (io/file path)
+            (safe-slurp)
+            (edn/read-string))))
+
+
+(defn next-post-id []
+  (let [uuid     (UUID/randomUUID)
+        time     (int (/ (System/currentTimeMillis) 1000))
+        high     (.getMostSignificantBits uuid)
+        low      (.getLeastSignificantBits uuid)
+        new-high (bit-or (bit-and high 0x00000000FFFFFFFF)
+                         (bit-shift-left time 32))]
+    (str (UUID. new-high low))))
+
+
+(defn save-post! [post pictures]
+  (let [dir           (io/file (str "posts/" (:id post)))
+        picture-names (for [[picture idx] (map vector pictures (range))
+                            :let [in-name  (:filename picture)
+                                  [_ ext]  (re-matches #".*(\.[^\.]+)" in-name)]]
+                        (str (:id post) "_" (inc idx) ext))]
+    (.mkdir dir)
+    (doseq [[picture name] (map vector pictures picture-names)]
+      (io/copy (:tempfile picture) (io/file dir name))
+      (.delete (:tempfile picture)))
+    (spit (io/file dir "post.edn") (pr-str (assoc post :pictures (vec picture-names))))))
 
 
 (rum/defc index-page [post-ids]
@@ -79,6 +112,24 @@
     (post (get-post post-id))))
 
 
+(rum/defc edit-post-page [post-id]
+  (let [post    (get-post post-id)
+        create? (nil? post)]
+    (page {:title (if create? "Создание" "Редактирование")}
+      [:form { :action (str "/post/" post-id "/edit")
+               :enctype "multipart/form-data"
+               :method "post" }
+        [:.edit_post_picture
+          [:input { :type "file" :name "picture"}]]
+        [:.edit_post_body
+          [:textarea
+            { :value (:body post "")
+              :name "body"
+              :placeholder "Пиши сюда..." }]]
+        [:.edit_post_submit
+          [:button (if create? "Создать" "Сохранить")]]])))
+
+
 (defn render-html [component]
   (str "<!DOCTYPE html>\n" (rum/render-static-markup component)))
 
@@ -89,14 +140,6 @@
         :when (.isDirectory child)]
     name))
 
-; "/"
-; "/feed"
-; "/post/:id"
-; /post/:id/pict.jpg
-; "/login"
-; GET "/write"
-; POST "/write"
-
 
 (compojure/defroutes routes
   (compojure.route/resources "/i" {:root "public/i"})
@@ -104,17 +147,31 @@
   (compojure/GET "/" []
     { :body (render-html (index-page (post-ids))) })
 
+  (compojure/GET "/post/new" []
+    { :status 303
+      :headers { "Location" (str "/post/" (next-post-id) "/edit") }})
+
   (compojure/GET "/post/:id/:img" [id img]
     (ring.util.response/file-response (str "posts/" id "/" img)))    
 
   (compojure/GET "/post/:post-id" [post-id]
     { :body (render-html (post-page post-id)) })
 
-  ; (compojure/GET "/write" []
-  ;   { :body "WRITE" })
+  (compojure/GET "/post/:post-id/edit" [post-id]
+    { :body (render-html (edit-post-page post-id)) })
 
-  ; (compojure/POST "/write" [:as req]
-  ;   { :body "POST" })
+  (ring.middleware.multipart-params/wrap-multipart-params
+    (compojure/POST "/post/:post-id/edit" [post-id :as req]
+      (let [params  (:multipart-params req)
+            body    (get params "body")
+            picture (get params "picture")]
+        (save-post! { :id     post-id
+                      :body   body
+                      :author "nikitonsky" }  ;; FIXME author
+                    [picture])
+        { :status 302
+          :headers { "Location" (str "/post/" post-id) }})))
+
   (fn [req]
     { :status 404
       :body "404 Not found" }))
@@ -124,13 +181,27 @@
   (fn [request]
     (some-> (handler request)
       (update :headers merge headers))))
-    
+
+
+(defn print-errors [handler]
+  (fn [req]
+    (try
+      (handler req)
+      (catch Exception e
+        (.printStackTrace e)
+        { :status 500
+          :headers { "Content-type" "text/plain; charset=utf-8" }
+          :body (with-out-str
+                  (clojure.stacktrace/print-stack-trace (clojure.stacktrace/root-cause e))) }))))
+
 
 (def app
   (-> routes
+    (ring.middleware.params/wrap-params)
     (with-headers { "Content-Type"  "text/html; charset=utf-8"
                     "Cache-Control" "no-cache"
-                    "Expires"       "-1" })))
+                    "Expires"       "-1" })
+    (print-errors)))
 
 
 (defn -main [& args]

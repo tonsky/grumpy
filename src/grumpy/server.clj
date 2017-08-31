@@ -135,10 +135,13 @@
 
 
 (defn post-ids []
-  (for [name (seq (.list (io/file "posts")))
-        :let [child (io/file "posts" name)]
-        :when (.isDirectory child)]
-    name))
+  (->>
+    (for [name (seq (.list (io/file "posts")))
+          :let [child (io/file "posts" name)]
+          :when (.isDirectory child)]
+      name)
+    (sort)
+    (reverse)))
 
 
 (compojure/defroutes routes

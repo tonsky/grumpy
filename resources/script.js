@@ -11,7 +11,8 @@ function reloadSubtitle() {
   'Не обновляйте эту страницу! Не нажимайте НАЗАД',
   'Произошла ошибка OK',
   'Пароль должен содержать заглавную букву и специальный символ',
-  'Are you sure you want to exist? — YES / NO'
+  'Are you sure you want to exist? — YES / NO',
+  'Открыть в приложении'
   ];
   var subtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
   var div = document.getElementById('site_subtitle');

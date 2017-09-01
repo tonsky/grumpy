@@ -99,14 +99,22 @@
             (edn/read-string))))
 
 
+(def ^:const encode-table "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")
+
+
+(defn encode [num len]
+  (loop [num num
+         res ()
+         len len]
+    (if (== 0 len)
+      (str/join res)
+      (recur (quot num 64) (conj res (nth encode-table (rem num 64))) (dec len)))))
+
+
 (defn next-post-id []
-  (let [uuid     (UUID/randomUUID)
-        time     (int (/ (System/currentTimeMillis) 1000))
-        high     (.getMostSignificantBits uuid)
-        low      (.getLeastSignificantBits uuid)
-        new-high (bit-or (bit-and high 0x00000000FFFFFFFF)
-                         (bit-shift-left time 32))]
-    (str (UUID. new-high low))))
+  (str
+    (encode (/ (System/currentTimeMillis) 1000) 6)
+    (encode (rand-int (* 64 64 64)) 3)))
 
 
 (defn save-post! [post pictures]
@@ -240,4 +248,3 @@
 (comment
   (def server (-main "--port" "8080"))
   (web/stop server))
-

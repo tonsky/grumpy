@@ -2,6 +2,7 @@
   (:require
     [compojure.route]
     [rum.core :as rum]
+    [clojure.stacktrace]
     [ring.util.response]
     [clojure.edn :as edn]
     [immutant.web :as web]

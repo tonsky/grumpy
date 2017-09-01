@@ -104,7 +104,7 @@
                             :let [in-name  (:filename picture)
                                   [_ ext]  (re-matches #".*(\.[^\.]+)" in-name)]]
                         (str (:id post) "_" (inc idx) ext))]
-    (.mkdir dir)
+    (.mkdirs dir)
     (doseq [[picture name] (zip pictures picture-names)]
       (io/copy (:tempfile picture) (io/file dir name))
       (.delete (:tempfile picture)))

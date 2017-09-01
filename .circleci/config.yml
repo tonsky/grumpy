@@ -36,7 +36,8 @@ jobs:
       - deploy:
           name: deploy to hosting
           command: |
-            ssh-keyscan -H grumpy.website >> ~/.ssh/known_hosts
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              ssh-keyscan -H grumpy.website >> ~/.ssh/known_hosts
               scp target/grumpy.jar grumpy@grumpy.website:
+              ssh grumpy@grumpy.website /home/grumpy/restart.sh
             fi

@@ -9,6 +9,7 @@ jobs:
     environment:
       LEIN_ROOT: "true"
       JVM_OPTS: -Xmx3200m
+
     
     steps:
       - checkout
@@ -27,3 +28,15 @@ jobs:
           key: v1-dependencies-{{ checksum "project.clj" }}
         
       - run: lein uberjar
+
+      - add_ssh_keys:
+          fingerprints:
+            - "f5:56:00:dd:2e:a6:6d:14:d8:8a:89:83:9f:c0:49:6a"
+
+      - deploy:
+          name: deploy to hosting
+          command: |
+            ssh-keyscan -H grumpy.website >> ~/.ssh/known_hosts
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              scp target/grumpy.jar grumpy@grumpy.website:
+            fi

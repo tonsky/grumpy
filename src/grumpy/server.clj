@@ -10,6 +10,7 @@
     [clojure.java.io :as io]
     [ring.middleware.params]
     [compojure.core :as compojure]
+    [clojure.java.shell :as shell]    
     [ring.middleware.multipart-params])
   (:import
     [java.util UUID]
@@ -29,6 +30,16 @@
 
 (defn render-date [inst]
   (.print date-formatter (DateTime. inst)))
+
+
+(defn send-mail! [{:keys [to subject body]}]
+  (shell/sh
+    "mail"
+    "-s"
+    subject
+    to
+    "-aFrom:Grumpy Admin <admin@grumpy.website>"
+    :in body))
 
 
 (rum/defc post [post]

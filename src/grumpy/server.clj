@@ -5,6 +5,7 @@
     [clojure.stacktrace]
     [ring.util.response]
     [clojure.edn :as edn]
+    [clojure.set :as set]
     [immutant.web :as web]
     [clojure.string :as str]
     [clojure.java.io :as io]
@@ -135,7 +136,10 @@
           (when (== 0 idx)
             [:span.author (:author post) ": "])
           p])
-      [:p.meta (render-date (:created post)) " // " [:a {:href (str "/post/" (:id post))} "Ссылка"]]]])
+      [:p.meta
+        (render-date (:created post))
+        " // " [:a {:href (str "/post/" (:id post))} "Ссылка"]
+        [:span.logged_in " × " [:a.edit_post {:href (str "/post/" (:id post) "/edit")} "Править"]]]]])
 
 
 (rum/defc page [opts & children]
@@ -148,20 +152,18 @@
         [:title title]
         [:meta { :name "viewport" :content "width=device-width, initial-scale=1.0"}]
         [:style {:dangerouslySetInnerHTML { :__html styles}}]]
-      [:body
+      [:body.logged_out
         [:header
           (if index?
-            [:h1 title]
-            [:h1 [:a {:href "/"} title]])
-          [:p#site_subtitle "Это не текст, это ссылка. Не нажимайте на ссылку."]]
+            [:h1 title [:a.new_post.logged_in { :href "/new" } "+"]]
+            [:h1 [:a.title_back {:href "/"} "◄"] title])
+          [:p#site_subtitle [:span "&nbps;"]]]
         children
       [:footer
         [:a { :href "https://twitter.com/nikitonsky" } "Никита Прокопов"]
         ", "
         [:a { :href "https://twitter.com/freetonik" } "Рахим Давлеткалиев"]
-        ". 2017. All fights retarded."
-        [:br]
-        [:a { :href "/feed" :rel "alternate" :type "application/rss+xml" } "RSS"]]    
+        ". 2017. All fights retarded."]    
       
       [:script {:dangerouslySetInnerHTML { :__html script}}]]]))
 
@@ -245,7 +247,7 @@
 (rum/defc edit-post-page [post-id]
   (let [post    (get-post post-id)
         create? (nil? post)]
-    (page {:title (if create? "Создание" "Редактирование")}
+    (page {:title (if create? "Новый пост" "Правка поста")}
       [:form { :action (str "/post/" post-id "/edit")
                :enctype "multipart/form-data"
                :method "post" }
@@ -258,20 +260,24 @@
               :placeholder "Пиши сюда..."
               :autofocus true }]]
         [:.edit_post_submit
-          [:button.btn (if create? "Создать" "Сохранить")]]])))
+          [:button.btn (if create? "В печать!" "Поправить")]]])))
 
 
 (rum/defc email-sent-page [message]
-  (page {}
+  (page { :title "Как-то так..." }
     [:div.email_sent_message message]))
 
 
-(rum/defc forbidden-page [redirect-url]
+(rum/defc forbidden-page [redirect-url email]
   (page { :title "Вход" }
     [:form { :action "/send-email"
              :method "post" }
       [:div.forbidden_email
-        [:input { :type "text" :name "email" :placeholder "E-mail" :autofocus true }]]
+        [:input { :type "text"
+                  :name "email"
+                  :placeholder "E-mail"
+                  :autofocus true
+                  :value email }]]
       [:div
         [:input { :type "hidden" :name "redirect-url" :value redirect-url }]]
       [:div
@@ -310,7 +316,10 @@
     { :body (render-html (post-page post-id)) })
 
   (compojure/GET "/forbidden" [:as req]
-    { :body (render-html (forbidden-page (get (:params req) "redirect-url"))) })
+    (let [redirect-url (get (:params req) "redirect-url")
+          user         (get-in (:cookies req) ["grumpy_user" :value])
+          email        (get (set/map-invert authors) user)]
+      { :body (render-html (forbidden-page redirect-url email)) }))
 
   (compojure/GET "/authenticate" [:as req] ;; ?email=...&token=...&redirect-url=...
     (let [email        (get (:params req) "email")
@@ -322,8 +331,9 @@
           (swap! *tokens dissoc email)
           (assoc
             (redirect redirect-url)
+            :cookies { "grumpy_user" { :value user }}
             :session { :user    user
-                      :created (now) }))
+                       :created (now) }))
         { :status 403
           :body   "403 Bad token" })))
 

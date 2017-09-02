@@ -20,22 +20,34 @@
     [org.joda.time.format DateTimeFormat DateTimeFormatter])
   (:gen-class))
 
+
 (.mkdirs (io/file "grumpy_data"))
+
+
+(defmacro from-config [name default-value]
+ `(let [file# (io/file "grumpy_data" ~name)]
+    (when-not (.exists file#)
+      (spit file# ~default-value))
+    (slurp file#)))
+
 
 (def styles (slurp (io/resource "style.css")))
 (def script (slurp (io/resource "script.js")))
 (def date-formatter (DateTimeFormat/forPattern "dd.MM.YYYY"))
 
-(when-not (.exists (io/file "grumpy_data/AUTHORS"))
-  (spit "grumpy_data/AUTHORS" (pr-str { "prokopov@gmail.com" "nikitonsky"
-                                        "freetonik@gmail.com" "freetonik" })))
 
-(def authors (edn/read-string (slurp "grumpy_data/AUTHORS")))
+(def authors (edn/read-string
+               (from-config "AUTHORS" 
+                 (pr-str { "prokopov@gmail.com" "nikitonsky"
+                           "freetonik@gmail.com" "freetonik" }))))
+
+
+(def hostname (from-config "HOSTNAME" "http://grumpy.website"))
+
 
 (defonce *tokens (atom {}))
 (def session-ttl (* 1000 86400 14)) ;; 14 days
 (def token-ttl-ms (* 1000 60 15)) ;; 15 min
-
 
 
 (defn zip [coll1 coll2]
@@ -331,11 +343,7 @@
         :else
           (let [token        (gen-token)
                 redirect-url (get params "redirect-url")
-                link         (str (name (:scheme req))
-                                  "://"
-                                  (:server-name req)
-                                  (when (not= (:server-port req) 80)
-                                    (str ":" (:server-port req)))
+                link         (str hostname
                                   "/authenticate"
                                   "?email=" (encode-uri-component email)
                                   "&token=" (encode-uri-component token)

@@ -1,8 +1,8 @@
 window.onload = function() {
   reloadSubtitle();
-  document.querySelector('#site_subtitle > span').onclick = reloadSubtitle;
+  document.querySelector('.subtitle > span').onclick = reloadSubtitle;
   if (document.cookie.indexOf("grumpy_user=") >= 0) {
-    document.body.classList.remove("logged_out");
+    document.body.classList.remove("anonymous");
   }
 }
 
@@ -19,6 +19,6 @@ function reloadSubtitle() {
   'Warning: No pixels were selected'
   ];
   var subtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
-  var div = document.querySelector('#site_subtitle > span');
+  var div = document.querySelector('.subtitle > span');
   div.innerHTML = subtitle;
 }

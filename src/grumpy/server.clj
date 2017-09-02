@@ -32,7 +32,6 @@
     (slurp file#)))
 
 
-(def styles (slurp (io/resource "style.css")))
 (def script (slurp (io/resource "script.js")))
 (def date-formatter (DateTimeFormat/forPattern "dd.MM.YYYY"))
 
@@ -126,20 +125,20 @@
 
 (rum/defc post [post]
   [:.post
-    [:.post_sidebar
-      [:img.avatar {:src (str "/i/" (:author post) ".jpg")}]]
-    [:div
+    [:.post_side
+      [:img.post_avatar {:src (str "/static/" (:author post) ".jpg")}]]
+    [:.post_body
       (for [name (:pictures post)]
-        [:img { :src (str "/post/" (:id post) "/" name) }])
+        [:img.post_img { :src (str "/post/" (:id post) "/" name) }])
       (for [[p idx] (zip (str/split (:body post) #"\n+") (range))]
-        [:p
+        [:p.post_p
           (when (== 0 idx)
-            [:span.author (:author post) ": "])
+            [:span.post_author (:author post) ": "])
           p])
-      [:p.meta
+      [:p.post_meta
         (render-date (:created post))
         " // " [:a {:href (str "/post/" (:id post))} "Ссылка"]
-        [:span.logged_in " × " [:a.edit_post {:href (str "/post/" (:id post) "/edit")} "Править"]]]]])
+        [:span.post_meta_edit " × " [:a {:href (str "/post/" (:id post) "/edit")} "Править"]]]]])
 
 
 (rum/defc page [opts & children]
@@ -149,15 +148,15 @@
     [:html
       [:head
         [:meta { :http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
-        [:title title]
         [:meta { :name "viewport" :content "width=device-width, initial-scale=1.0"}]
-        [:style {:dangerouslySetInnerHTML { :__html styles}}]]
-      [:body.logged_out
+        [:title title]
+        [:link { :rel "stylesheet" :type "text/css" :href "/static/styles.css" }]]
+      [:body.anonymous
         [:header
           (if index?
-            [:h1 title [:a.new_post.logged_in { :href "/new" } "+"]]
-            [:h1 [:a.title_back {:href "/"} "◄"] title])
-          [:p#site_subtitle [:span "&nbps;"]]]
+            [:h1.title title [:a.title_new { :href "/new" } "+"]]
+            [:h1.title [:a.title_back {:href "/"} "◄"] title])
+          [:p.subtitle [:span "&nbps;"]]]
         children
       [:footer
         [:a { :href "https://twitter.com/nikitonsky" } "Никита Прокопов"]
@@ -248,40 +247,42 @@
   (let [post    (get-post post-id)
         create? (nil? post)]
     (page {:title (if create? "Новый пост" "Правка поста")}
-      [:form { :action (str "/post/" post-id "/edit")
-               :enctype "multipart/form-data"
-               :method "post" }
-        [:.edit_post_picture
+      [:form.edit-post
+        { :action (str "/post/" post-id "/edit")
+          :enctype "multipart/form-data"
+          :method "post" }
+        [:.form_row.edit-post_picture
           [:input { :type "file" :name "picture"}]]
-        [:.edit_post_body
+        [:.form_row
           [:textarea
             { :value (:body post "")
               :name "body"
               :placeholder "Пиши сюда..."
               :autofocus true }]]
-        [:.edit_post_submit
-          [:button.btn (if create? "В печать!" "Поправить")]]])))
+        [:.form_row
+          [:button (if create? "В печать!" "Поправить")]]])))
 
 
 (rum/defc email-sent-page [message]
   (page { :title "Как-то так..." }
-    [:div.email_sent_message message]))
+    [:.email-sent
+      [:.email-sent_message message]]))
 
 
 (rum/defc forbidden-page [redirect-url email]
   (page { :title "Вход" }
-    [:form { :action "/send-email"
+    [:form.forbidden
+      { :action "/send-email"
              :method "post" }
-      [:div.forbidden_email
+      [:.form_row
         [:input { :type "text"
                   :name "email"
                   :placeholder "E-mail"
                   :autofocus true
-                  :value email }]]
-      [:div
+                  :value email }]
         [:input { :type "hidden" :name "redirect-url" :value redirect-url }]]
-      [:div
-        [:button.btn "Отправить письмецо"]]]))
+      [:.form_row
+        [:button "Отправить письмецо"]]]))
 
 
 (defn render-html [component]
@@ -304,8 +305,6 @@
 
 
 (compojure/defroutes routes
-  (compojure.route/resources "/i" {:root "public/i"})
-
   (compojure/GET "/" []
     { :body (render-html (index-page (post-ids))) })
 
@@ -344,12 +343,13 @@
 
   (compojure/POST "/send-email" [:as req]
     (let [params (:params req)
-          email  (get params "email")]
+          email  (get params "email")
+          user   (get authors email)]
       (cond
         (not (contains? authors email))
           (redirect "/email-sent" { :message (str "Ты не автор, " email) })
         (some? (get-token email))
-          (redirect "/email-sent" { :message (str "Token still alive, check your email, " email) })
+          (redirect "/email-sent" { :message (str "Ссылка в почте еще жива, " user) })
         :else
           (let [token        (gen-token)
                 redirect-url (get params "redirect-url")
@@ -363,7 +363,7 @@
               { :to      email
                 :subject (str "Вход в Grumpy " (render-date (now)))
                 :body    (str "<html><div style='text-align: center;'><a href='" link "' style='display: inline-block; font-size: 16px; padding: 0.5em 1.75em; background: #c3c; color: white; text-decoration: none; border-radius: 4px;'>Войти в сайтик!</a></div></html>") })
-            (redirect "/email-sent" { :message (str "Check your mail, " email) })))))
+            (redirect "/email-sent" { :message (str "Смотри почту, " user) })))))
 
   (compojure/GET "/email-sent" [:as req]
     { :body (render-html (email-sent-page (get-in req [:params "message"]))) })
@@ -390,11 +390,7 @@
                         :author  (get-in req [:session :user])
                         :created (now) }
                       [picture])
-          (redirect "/")))))
-
-  (fn [req]
-    { :status 404
-      :body "404 Not found" }))
+          (redirect "/"))))))
 
 
 (defn with-headers [handler headers]
@@ -425,20 +421,28 @@
 
 
 (def app
-  (-> 
-    routes
-    (expire-session)
-    (session/wrap-session
-      { :store        (session.cookie/cookie-store { :key cookie-secret })
-        :cookie-name  "grumpy"
-        :cookie-attrs { :http-only true
-                        :secure    false ;; FIXME
-                      } })
-    (ring.middleware.params/wrap-params)
-    (with-headers { "Content-Type"  "text/html; charset=utf-8"
-                    "Cache-Control" "no-cache"
-                    "Expires"       "-1" })
-    (print-errors)))
+  (compojure/routes
+    (-> 
+      routes
+      (expire-session)
+      (session/wrap-session
+        { :store        (session.cookie/cookie-store { :key cookie-secret })
+          :cookie-name  "grumpy"
+          :cookie-attrs { :http-only true
+                          :secure    false ;; FIXME
+                        } })
+      (ring.middleware.params/wrap-params)
+      (with-headers { "Content-Type"  "text/html; charset=utf-8"
+                      "Cache-Control" "no-cache"
+                      "Expires"       "-1" })
+      (print-errors))
+    (->
+      (compojure.route/resources "/static" {:root "static"})
+      (with-headers { "Cache-Control" "no-cache"
+                      "Expires"       "-1" }))
+    (fn [req]
+      { :status 404
+        :body "404 Not found" })))
 
 
 (defn -main [& args]

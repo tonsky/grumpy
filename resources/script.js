@@ -12,7 +12,8 @@ function reloadSubtitle() {
   'Произошла ошибка OK',
   'Пароль должен содержать заглавную букву и специальный символ',
   'Are you sure you want to exist? — YES / NO',
-  'Открыть в приложении'
+  'Открыть в приложении',
+  'Warning: No pixel were selected'
   ];
   var subtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
   var div = document.getElementById('site_subtitle');

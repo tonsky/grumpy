@@ -8,6 +8,7 @@
     [rum                       "0.10.8"]
     [org.clojure/clojurescript "1.9.562" :scope "provided"]
   ]
+  :global-vars {*warn-on-reflection* true}
   :main grumpy.server
   :profiles {
     :uberjar {

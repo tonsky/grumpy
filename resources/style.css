@@ -86,23 +86,26 @@ footer {
   border-top: 1px dotted black;
 }
 
-.edit_post_body > textarea {
+.edit_post_body > textarea,
+.forbidden_email > input {
   font: inherit;
   width: 100%;
-  height: 450px;
   outline: none;
   padding: 1em 1.75em;
   margin: 0 -1.75em 0;
   border: 1px solid #EEE;
 }
 
-.edit_post_body, .edit_post_submit, .edit_post_picture { 
+.edit_post_body > textarea { height: 450px; }
+
+form > div { 
   margin: 1em 0;
 }
 
 .edit_post_submit { padding-bottom: 2em; }
+.email_sent_message { font-size: 200%; line-height: 1.4em; }
 
-.edit_post_submit > button {
+.btn {
   padding: 0.5em 1.75em;
   font: inherit;
   background: #c3c;

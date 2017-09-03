@@ -17,16 +17,23 @@
 
 
 (defn save-post! [post pictures]
-  (let [dir           (io/file (str "grumpy_data/posts/" (:id post)))
+  (let [id            (:id post)
+        dir           (io/file (str "grumpy_data/posts/" id))
         picture-names (for [[picture idx] (grumpy/zip pictures (range))
                             :let [in-name  (:filename picture)
                                   [_ ext]  (re-matches #".*(\.[^\.]+)" in-name)]]
-                        (str (:id post) "_" (inc idx) ext))]
+                        (str id "_" (inc idx) ext))]
     (.mkdirs dir)
     (doseq [[picture name] (grumpy/zip pictures picture-names)]
       (io/copy (:tempfile picture) (io/file dir name))
       (.delete (:tempfile picture)))
-    (spit (io/file dir "post.edn") (pr-str (assoc post :pictures (vec picture-names))))))
+    (let [old-post (grumpy/get-post id)
+          post'    (merge post
+                     { :pictures (vec picture-names)
+                       :created  (grumpy/now)
+                       :updated  (grumpy/now) }
+                     (select-keys old-post [:created]))]
+      (spit (io/file dir "post.edn") (pr-str post')))))
 
 
 (rum/defc edit-post-page [post-id]
@@ -70,7 +77,6 @@
               picture (get params "picture")]
           (save-post! { :id      post-id
                         :body    body
-                        :author  (get-in req [:session :user])
-                        :created (grumpy/now) }
+                        :author  (get-in req [:session :user]) }
                       [picture])
           (grumpy/redirect "/"))))))

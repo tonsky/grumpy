@@ -8,8 +8,8 @@
   (:import
     [java.util Date]
     [java.net URLEncoder]
-    [org.joda.time DateTime]
-    [org.joda.time.format DateTimeFormat DateTimeFormatter]))
+    [org.joda.time DateTime DateTimeZone]
+    [org.joda.time.format DateTimeFormat DateTimeFormatter ISODateTimeFormat]))
 
 
 (.mkdirs (io/file "grumpy_data"))
@@ -24,8 +24,12 @@
 
 (def authors (edn/read-string
                (from-config "AUTHORS" 
-                 (pr-str { "prokopov@gmail.com" "nikitonsky"
-                           "freetonik@gmail.com" "freetonik" }))))
+                 (pr-str #{ { :email "prokopov@gmail.com" :user "nikitonsky" :name "Никита Прокопов" }
+                            { :email "freetonik@gmail.com" :user "freetonik" :name "Рахим Давлеткалиев" } }))))
+
+
+(defn author-by [attr value]
+  (first (filter #(= (get % attr) value) authors)))
 
 
 (def hostname (from-config "HOSTNAME" "http://grumpy.website"))
@@ -43,11 +47,15 @@
   (- (.getTime (now)) (.getTime inst)))
 
 
-(def date-formatter (DateTimeFormat/forPattern "dd.MM.YYYY"))
+(def ^:private date-formatter (DateTimeFormat/forPattern "dd.MM.YYYY"))
+(def ^:private iso-formatter (DateTimeFormat/forPattern "yyyy-MM-dd'T'HH:mm:ss'Z'"))
 
-
-(defn render-date [^Date inst]
+(defn format-date [^Date inst]
   (.print ^DateTimeFormatter date-formatter (DateTime. inst)))
+
+
+(defn format-iso-inst [^Date inst]
+  (.print iso-formatter (DateTime. inst DateTimeZone/UTC)))
 
 
 (defn encode-uri-component [s]
@@ -120,7 +128,7 @@
     (reverse)))
 
 
-(def ^:private script (slurp (io/resource "script.js")))
+(def ^:private script (clojure.core/slurp (io/resource "script.js")))
 
 
 (rum/defc page [opts & children]
@@ -131,6 +139,8 @@
       [:head
         [:meta { :http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
         [:meta { :name "viewport" :content "width=device-width, initial-scale=1.0"}]
+        [:link { :href "/feed.xml" :rel "alternate" :title "Ворчание ягнят" :type "application/atom+xml" }]
+
         [:title title]
         [:link { :rel "stylesheet" :type "text/css" :href "/static/styles.css" }]
         (for [css styles]

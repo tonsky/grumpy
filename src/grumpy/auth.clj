@@ -119,12 +119,12 @@
   (compojure/GET "/forbidden" [:as req]
     (let [redirect-url (get (:params req) "redirect-url")
           user         (get-in (:cookies req) ["grumpy_user" :value])
-          email        (get (set/map-invert grumpy/authors) user)]
+          email        (:email (grumpy/author-by :user user))]
       (grumpy/html-response (forbidden-page redirect-url email))))
 
   (compojure/GET "/authenticate" [:as req] ;; ?email=...&token=...&redirect-url=...
     (let [email        (get (:params req) "email")
-          user         (get grumpy/authors email)
+          user         (:user (grumpy/author-by :email email))
           token        (get (:params req) "token")
           redirect-url (get (:params req) "redirect-url")]
       (if (= token (get-token email))
@@ -146,9 +146,9 @@
   (compojure/POST "/send-email" [:as req]
     (let [params (:params req)
           email  (get params "email")
-          user   (get grumpy/authors email)]
+          user   (:user (grumpy/author-by :email email))]
       (cond
-        (not (contains? grumpy/authors email))
+        (nil? (grumpy/author-by :email email))
           (grumpy/redirect "/email-sent" { :message (str "Ты не автор, " email) })
         (some? (get-token email))
           (grumpy/redirect "/email-sent" { :message (str "Ссылка в почте еще жива, " user) })
@@ -162,7 +162,7 @@
             (swap! *tokens assoc email { :value token :created (grumpy/now) })
             (send-email!
               { :to      email
-                :subject (str "Вход в Grumpy " (grumpy/render-date (grumpy/now)))
+                :subject (str "Вход в Grumpy " (grumpy/format-date (grumpy/now)))
                 :body    (str "<html><div style='text-align: center;'><a href=\"" link "\" style='display: inline-block; font-size: 16px; padding: 0.5em 1.75em; background: #c3c; color: white; text-decoration: none; border-radius: 4px;'>Войти в сайтик!</a></div></html>") })
             (grumpy/redirect "/email-sent" { :message (str "Смотри почту, " user) })))))
 

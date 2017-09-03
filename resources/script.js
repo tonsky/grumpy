@@ -16,7 +16,8 @@ function reloadSubtitle() {
   'Пароль должен содержать заглавную букву и специальный символ',
   'Are you sure you want to exist? — YES / NO',
   'Открыть в приложении',
-  'Warning: No pixels were selected'
+  'Warning: No pixels were selected',
+  'You need to be logged in to log out. Please log in to log out.'
   ];
   var subtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
   var div = document.querySelector('.subtitle > span');

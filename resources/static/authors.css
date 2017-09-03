@@ -1,0 +1,36 @@
+/* FORMS */
+
+textarea, input[type=text], button { font: inherit; outline: none; }
+
+textarea, input[type=text] {
+  width: calc(100% + 3.5em);
+  margin: 0 -1.75em;
+  padding: 1em 1.75em;
+  border: 1px solid #DDD;
+}
+
+button {
+  padding: 0.5em 1.75em;
+  background: #c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+button:hover { background: #d4d; }
+button:active { background: #c3c; }
+
+.form_row { margin: 1em 0; }
+
+
+/* EDIT POST */
+
+.edit-post textarea { height: 450px; }
+
+.edit-post_picture { background: #EEE; margin: 0 -1.75em;  }
+.edit-post_picture > input { width: 100%; padding: 2em 1.75em; }
+
+
+/* EMAIL SENT */
+
+.email-sent { padding: 1em 3em; margin: 0 -3em; background: #EEE; }
+.email-sent_message { font-size: 200%; line-height: 1.4em; }

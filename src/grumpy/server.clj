@@ -70,8 +70,8 @@
           (str 
             "\n  <entry>\n"
             "    <title>Ворчание ягнят</title>\n"
-            "    <link rel=\"alternate\" type=\"text/html\" href=\"" grumpy/hostname "/posts/" (:id post) "\" />\n"
-            "    <id>" grumpy/hostname "/posts/" (:id post) "</id>\n"
+            "    <link rel=\"alternate\" type=\"text/html\" href=\"" grumpy/hostname "/post/" (:id post) "\" />\n"
+            "    <id>" grumpy/hostname "/post/" (:id post) "</id>\n"
             "    <published>" (grumpy/format-iso-inst (:created post)) "</published>\n"
             "    <updated>" (grumpy/format-iso-inst (:updated post)) "</updated>\n"
             "    <content type=\"html\"><![CDATA[\n"

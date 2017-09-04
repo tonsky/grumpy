@@ -10,13 +10,13 @@
     [grumpy.auth :as auth]))
 
 
-(defn next-post-id []
+(defn next-post-id [^java.util.Date inst]
   (str
-    (grumpy/encode (quot (System/currentTimeMillis) 1000) 6)
+    (grumpy/encode (quot (.getTime inst) 1000) 6)
     (grumpy/encode (rand-int (* 64 64 64)) 3)))
 
 
-(defn save-post! [post pictures]
+(defn save-post! [post pictures {:keys [delete?]}]
   (let [id            (:id post)
         dir           (io/file (str "grumpy_data/posts/" id))
         picture-names (for [[picture idx] (grumpy/zip pictures (range))
@@ -26,12 +26,14 @@
     (.mkdirs dir)
     (doseq [[picture name] (grumpy/zip pictures picture-names)]
       (io/copy (:tempfile picture) (io/file dir name))
-      (.delete (:tempfile picture)))
+      (when delete?
+        (.delete (:tempfile picture))))
     (let [old-post (grumpy/get-post id)
-          post'    (merge post
+          post'    (merge
                      { :pictures (vec picture-names)
                        :created  (grumpy/now)
                        :updated  (grumpy/now) }
+                     post
                      (select-keys old-post [:created]))]
       (spit (io/file dir "post.edn") (pr-str post')))))
 
@@ -61,7 +63,7 @@
   (compojure/GET "/new" [:as req]
     (or
       (auth/check-session req)
-      (grumpy/redirect (str "/post/" (next-post-id) "/edit"))))
+      (grumpy/redirect (str "/post/" (next-post-id (grumpy/now)) "/edit"))))
 
   (compojure/GET "/post/:post-id/edit" [post-id :as req]
     (or
@@ -78,5 +80,6 @@
           (save-post! { :id      post-id
                         :body    body
                         :author  (get-in req [:session :user]) }
-                      [picture])
+                      [picture]
+                      { :delete? true })
           (grumpy/redirect "/"))))))

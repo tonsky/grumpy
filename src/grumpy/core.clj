@@ -118,9 +118,19 @@
             (edn/read-string))))
 
 
+(defn list-files
+  ([dir] (seq (.list (io/file dir))))
+  ([dir re]
+    (seq
+      (.list (io/file dir)
+        (proxy [java.io.FilenameFilter] []
+          (accept ^boolean [^java.io.File file ^String name]
+            (boolean (re-matches re name))))))))
+  
+
 (defn post-ids []
   (->>
-    (for [name (seq (.list (io/file "grumpy_data/posts")))
+    (for [name (list-files "grumpy_data/posts")
           :let [child (io/file "grumpy_data/posts" name)]
           :when (.isDirectory child)]
       name)

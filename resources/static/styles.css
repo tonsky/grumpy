@@ -4,7 +4,7 @@ body {
   font-family: sans-serif;
   line-height: 140%;
   padding: 0.25em 1em;
-  max-width: 640px;
+  max-width: 652px; /* .post_img =>> 550px */
   margin: 0 auto;
 }
 
@@ -37,8 +37,9 @@ body.anonymous .title_new { display: none; }
 .post_side { margin-right: 20px; min-width: 50px; }
 .post_avatar { border-radius: 100%; width: 50px; height: 50px; }
 
-.post_img { max-width: 100%; height: auto; }
+.post_img { max-width: 100%; height: auto; max-height: 500px; margin-bottom: 1em; }
 .post_author { font-weight: bold; }
+.post_p { margin: 0 0 1em 0; }
 
 .post_meta_edit > a { color: #c3c; }
 .post_meta_edit > a:hover { color: #d4d; }

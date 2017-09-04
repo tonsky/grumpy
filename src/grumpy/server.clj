@@ -22,8 +22,12 @@
     [:.post_side
       [:img.post_avatar {:src (str "/static/" (:author post) ".jpg")}]]
     [:.post_body
-      (for [name (:pictures post)]
-        [:img.post_img { :src (str "/post/" (:id post) "/" name) }])
+      (for [name (:pictures post)
+            :let [src (str "/post/" (:id post) "/" name)]]
+        (if (str/ends-with? name ".mp4")
+          [:video.post_img { :autoplay true :loop true }
+            [:source { :type "video/mp4" :src src }]]
+          [:img.post_img { :src src }]))
       (for [[p idx] (grumpy/zip (str/split (:body post) #"(\r?\n)+") (range))]
         [:p.post_p
           (when (== 0 idx)
@@ -76,8 +80,11 @@
             "    <updated>" (grumpy/format-iso-inst (:updated post)) "</updated>\n"
             "    <content type=\"html\"><![CDATA[\n"
             (str/join ""
-              (for [name (:pictures post)]
-                (str "      <p><img src=\"" grumpy/hostname "/post/" (:id post) "/" name "\"></p>\n")))
+              (for [name (:pictures post)
+                    :let [src (str grumpy/hostname "/post/" (:id post) "/" name)]]
+                (if (str/ends-with? name ".mp4")
+                  (str "      <p><video autoplay loop><source type=\"video/mp4\" src=\"" src "\"></video></p>\n")
+                  (str "      <p><img src=\"" src "\"></p>\n"))))
             (str/join ""
               (for [[paragraph idx] (grumpy/zip (str/split (:body post) #"(\r?\n)+") (range))]
                 (str

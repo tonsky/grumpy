@@ -150,7 +150,7 @@
           (if index?
             [:h1.title title [:a.title_new { :href "/new" } "+"]]
             [:h1.title [:a.title_back {:href "/"} "◄"] title])
-          [:p.subtitle [:span "&nbps;"]]]
+          [:p.subtitle [:span " "]]]
         children
       [:footer
         [:a { :href "https://twitter.com/nikitonsky" } "Никита Прокопов"]

@@ -9,7 +9,14 @@ function reload_subtitle() {
     'Are you sure you want to exist? — YES / NO',
     'Открыть в приложении',
     'Warning: No pixels were selected',
-    'You need to be logged in to log out. Please log in to log out.'
+    'You need to be logged in to log out. Please log in to log out.',
+    'Отменить изменения? – Отмена / Изменить', 
+    'Отменить подписку? – Отменить / Да',
+    'Please, try again later',
+    'You need to login to unsubscribe from spam',
+    'Update Java Runtime?',
+    'Компьютер будет перезагружен через 15 минут',
+    'grumpy.website запрашивает разрешение на: Показывать оповещения'
   ];
   var subtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
   var div = document.querySelector('.subtitle > span');

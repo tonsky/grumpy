@@ -158,6 +158,10 @@
         [:meta { :name "viewport" :content "width=device-width, initial-scale=1.0"}]
         [:link { :href "/feed.xml" :rel "alternate" :title "Ворчание ягнят" :type "application/atom+xml" }]
 
+        [:link { :href "/static/favicons/apple-touch-icon-152x152.png" :rel "apple-touch-icon-precomposed" :sizes "152x152" }]
+        [:link { :href "/static/favicons/favicon-196x196.png" :rel "icon" :sizes "196x196" }]
+        [:link { :href "/static/favicons/favicon-32x32.png"  :rel "icon" :sizes "32x32" }]
+
         [:title title]
         [:style { :type "text/css" :dangerouslySetInnerHTML { :__html (resource "styles.css") }}]
         (for [css styles]

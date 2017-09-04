@@ -17,8 +17,12 @@
   (:gen-class))
 
 
+(def page-size 5)
+
+
 (rum/defc post [post]
   [:.post
+    { :data-id (:id post) }
     [:.post_side
       [:img.post_avatar {:src (str "/static/" (:author post) ".jpg")}]]
     [:.post_body
@@ -40,9 +44,14 @@
 
 
 (rum/defc index-page [post-ids]
-  (grumpy/page {:index? true}
+  (grumpy/page {:index? true :scripts ["loader.js"]}
     (for [post-id post-ids]
       (post (grumpy/get-post post-id)))))
+
+
+(rum/defc posts-fragment [post-ids]
+  (for [post-id post-ids]
+    (post (grumpy/get-post post-id))))
 
 
 (rum/defc post-page [post-id]
@@ -103,13 +112,24 @@
 
 (compojure/defroutes routes
   (compojure/GET "/" []
-    (grumpy/html-response (index-page (grumpy/post-ids))))
+    (let [post-ids  (grumpy/post-ids)
+          first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)]
+      (grumpy/html-response (index-page first-ids))))
 
   (compojure/GET "/post/:id/:img" [id img]
     (ring.util.response/file-response (str "grumpy_data/posts/" id "/" img)))    
 
   (compojure/GET "/post/:post-id" [post-id]
     (grumpy/html-response (post-page post-id)))
+
+  (compojure/GET "/after/:post-id" [post-id]
+    (let [post-ids (->> (grumpy/post-ids)
+                        (drop-while #(not= % post-id))
+                        (drop 1)
+                        (take page-size))]
+      { :status  200
+        :headers { "Content-Type" "text/html; charset=utf-8" }
+        :body    (rum/render-static-markup (posts-fragment post-ids)) }))
 
   (compojure/GET "/feed.xml" []
     { :status 200

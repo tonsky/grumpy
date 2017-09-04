@@ -93,14 +93,14 @@
 
 (rum/defc email-sent-page [message]
   (grumpy/page { :title "Как-то так..."
-                 :styles "authors.css" }
+                 :styles ["authors.css"] }
     [:.email-sent
       [:.email-sent_message message]]))
 
 
 (rum/defc forbidden-page [redirect-url email]
   (grumpy/page { :title "Вход"
-                 :styles "authors.css" }
+                 :styles ["authors.css"] }
     [:form.forbidden
       { :action "/send-email"
              :method "post" }

@@ -35,6 +35,9 @@
 (def hostname (from-config "HOSTNAME" "http://grumpy.website"))
 
 
+(def dev? (= "http://localhost:8080" hostname))
+
+
 (defn zip [coll1 coll2]
   (map vector coll1 coll2))
 
@@ -138,11 +141,16 @@
     (reverse)))
 
 
-(def ^:private script (clojure.core/slurp (io/resource "script.js")))
+(def ^:private resource
+  (cond-> (fn [name]
+            (println "SLURPING" name)
+            (clojure.core/slurp (io/resource (str "static/" name))))
+    (not dev?)
+      (memoize)))
 
 
 (rum/defc page [opts & children]
-  (let [{:keys [title index? styles]
+  (let [{:keys [title index? styles scripts]
          :or {title  "Ворчание ягнят"
               index? false}} opts]
     [:html
@@ -152,9 +160,9 @@
         [:link { :href "/feed.xml" :rel "alternate" :title "Ворчание ягнят" :type "application/atom+xml" }]
 
         [:title title]
-        [:link { :rel "stylesheet" :type "text/css" :href "/static/styles.css" }]
+        [:style { :type "text/css" :dangerouslySetInnerHTML { :__html (resource "styles.css") }}]
         (for [css styles]
-          [:link { :rel "stylesheet" :type "text/css" :href (str "/static/" styles) }])]
+          [:style { :type "text/css" :dangerouslySetInnerHTML { :__html (resource css) }}])]
       [:body.anonymous
         [:header
           (if index?
@@ -162,13 +170,17 @@
             [:h1.title [:a.title_back {:href "/"} "◄"] title])
           [:p.subtitle [:span " "]]]
         children
-      [:footer
-        [:a { :href "https://twitter.com/nikitonsky" } "Никита Прокопов"]
-        ", "
-        [:a { :href "https://twitter.com/freetonik" } "Рахим Давлеткалиев"]
-        ". 2017. All fights retarded."]    
-      
-      [:script {:dangerouslySetInnerHTML { :__html script}}]]]))
+        (when index?
+          [:.loader "..."])
+        [:footer
+          [:a { :href "https://twitter.com/nikitonsky" } "Никита Прокопов"]
+          ", "
+          [:a { :href "https://twitter.com/freetonik" } "Рахим Давлеткалиев"]
+          ". 2017. All fights retarded."]    
+        
+        [:script {:dangerouslySetInnerHTML { :__html (resource "scripts.js") }}]
+        (for [script scripts]
+          [:script {:dangerouslySetInnerHTML { :__html (resource script) }}])]]))
 
 
 (defn html-response [component]

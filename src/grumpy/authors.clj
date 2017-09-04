@@ -42,7 +42,7 @@
   (let [post    (grumpy/get-post post-id)
         create? (nil? post)]
     (grumpy/page { :title (if create? "Новый пост" "Правка поста")
-                   :styles "authors.css" }
+                   :styles ["authors.css"] }
       [:form.edit-post
         { :action (str "/post/" post-id "/edit")
           :enctype "multipart/form-data"

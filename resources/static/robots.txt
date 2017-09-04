@@ -1,0 +1,12 @@
+User-agent: *
+
+Disallow: /new
+Disallow: /post/*/edit
+Disallow: /after/*
+Disallow: /send-email
+Disallow: /logout
+Disallow: /authenticate
+Disallow: /forbidden
+
+Sitemap: http://grumpy.website/sitemap.xml
+Host: http://grumpy.website

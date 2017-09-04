@@ -141,9 +141,8 @@
     (reverse)))
 
 
-(def ^:private resource
+(def resource
   (cond-> (fn [name]
-            (println "SLURPING" name)
             (clojure.core/slurp (io/resource (str "static/" name))))
     (not dev?)
       (memoize)))

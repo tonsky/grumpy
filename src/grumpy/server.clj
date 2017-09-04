@@ -110,6 +110,17 @@
       )))
 
 
+(defn sitemap [post-ids]
+  (str
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+    "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
+    "<url><loc>" grumpy/hostname "/</loc></url>\n"
+    (str/join "\n"
+      (for [id post-ids]
+        (str "<url><loc>" grumpy/hostname "/post/" id "</loc></url>")))
+    "\n</urlset>"))
+
+
 (compojure/defroutes routes
   (compojure/GET "/" []
     (let [post-ids  (grumpy/post-ids)
@@ -135,6 +146,16 @@
     { :status 200
       :headers { "Content-type" "application/atom+xml; charset=utf-8" }
       :body (feed (take 10 (grumpy/post-ids))) })
+
+  (compojure/GET "/sitemap.xml" []
+    { :status 200
+      :headers { "Content-type" "text/xml; charset=utf-8" }
+      :body (sitemap (grumpy/post-ids)) })
+
+  (compojure/GET "/robots.txt" []
+    { :status 200
+      :headers { "Content-type" "text/plain" }
+      :body (grumpy/resource "robots.txt") })
 
   (auth/wrap-session
     (compojure/routes

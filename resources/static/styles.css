@@ -47,8 +47,16 @@ body.anonymous .post_meta_edit { display: none; }
 
 
 /* FOOTER */
-.loader { height: 60px; padding: 20px 0; margin: 0 0 3em 0; text-align: center; background: #EEE; }
-.loader-error { cursor: pointer; text-decoration: underline; }
+@keyframes rotating {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.loader { margin: 0 0 3em 0; text-align: center; }
+.loader > img { width: 76px; height: 76px; border: 2px solid #000; border-radius: 50%; }
+.loader-loading > img { animation: rotating 1s ease-in-out infinite; }
+.loader-error > img { cursor: pointer; border-color: red; }
+.loader-error > img:hover { position: relative; top: -1px; }
 
 footer {
   padding: 1em 0 1em;

@@ -187,7 +187,7 @@
           [:p.subtitle [:span " "]]]
         children
         (when index?
-          [:.loader "..."])
+          [:.loader [:img { :src "/static/favicons/apple-touch-icon-152x152.png" }]])
         [:footer
           [:a { :href "https://twitter.com/nikitonsky" } "Никита Прокопов"]
           ", "

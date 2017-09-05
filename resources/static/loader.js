@@ -4,14 +4,15 @@ var loader_status = "IDLE",
 
 function load_posts() {
   loader_status = "LOADING";
-  loader.innerHTML = "Загружаю еще контента...";
+  loader.classList.add("loader-loading");
   loader.classList.remove("loader-error");
-  loader.removeEventListener("click", load_posts);
+  loader.querySelector("img").removeEventListener("click", load_posts);
   var posts = document.querySelectorAll(".post"),
       last_post = posts[posts.length - 1],
       last_post_id = last_post.getAttribute("data-id");
 
   fetch('/after/' + last_post_id).then(function(resp) {
+    loader.classList.remove("loader-loading");
     if(resp.ok) {
       resp.text().then(function (fragment) {
         if (fragment.length === 0) {
@@ -22,14 +23,12 @@ function load_posts() {
           div.innerHTML = fragment;
           loader.parentNode.insertBefore(div, loader);
           loader_status = "IDLE";
-          loader.innerHTML = "...";
         }
       });
     } else {
       loader_status = "ERROR";
-      loader.innerHTML = "Ошибка. Нажмите, чтобы повторить";
       loader.classList.add("loader-error");
-      loader.addEventListener("click", load_posts);
+      loader.querySelector("img").addEventListener("click", load_posts);
     }
   });
 }

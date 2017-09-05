@@ -38,7 +38,7 @@
       (spit (io/file dir "post.edn") (pr-str post')))))
 
 
-(rum/defc edit-post-page [post-id]
+(rum/defc edit-post-page [post-id user]
   (let [post    (grumpy/get-post post-id)
         create? (nil? post)]
     (grumpy/page { :title (if create? "Новый пост" "Правка поста")
@@ -56,6 +56,8 @@
               :placeholder "Пиши сюда..."
               :autofocus true }]]
         [:.form_row
+          "Автор: " [:input.edit-post_author { :type "text" :name "author" :value (or (:author post) user) }]]
+        [:.form_row
           [:button (if create? "В печать!" "Поправить")]]])))
 
 
@@ -68,7 +70,7 @@
   (compojure/GET "/post/:post-id/edit" [post-id :as req]
     (or
       (auth/check-session req)
-      (grumpy/html-response (edit-post-page post-id))))
+      (grumpy/html-response (edit-post-page post-id (get-in req [:session :user])))))
 
   (ring.middleware.multipart-params/wrap-multipart-params
     (compojure/POST "/post/:post-id/edit" [post-id :as req]
@@ -77,9 +79,9 @@
         (let [params  (:multipart-params req)
               body    (get params "body")
               picture (get params "picture")]
-          (save-post! { :id      post-id
-                        :body    body
-                        :author  (get-in req [:session :user]) }
+          (save-post! { :id     post-id
+                        :body   body
+                        :author (get params "author") }
                       [picture]
                       { :delete? true })
           (grumpy/redirect "/"))))))

@@ -24,7 +24,10 @@
   [:.post
     { :data-id (:id post) }
     [:.post_side
-      [:img.post_avatar {:src (str "/static/" (:author post) ".jpg")}]]
+      [:img.post_avatar 
+        { :src (if (some? (grumpy/author-by :user (:author post)))
+                 (str "/static/" (:author post) ".jpg")
+                 "/static/guest.jpg")}]]
     [:.post_content
       (for [name (:pictures post)
             :let [src (str "/post/" (:id post) "/" name)]]
@@ -96,7 +99,9 @@
             (grumpy/format-text
               (str "<strong>" (:author post) ": </strong>" (:body post)))
             "    ]]></content>\n"
-            "    <author><name>" (:name author) "</name><email>" (:email author) "</email></author>\n"
+            (if (some? author)
+              (str "    <author><name>" (:name author) "</name><email>" (:email author) "</email></author>\n")
+              (str "    <author><name>" (:author post) "</name></author>\n"))
             "  </entry>\n"
           )))
         "\n</feed>"
@@ -152,8 +157,8 @@
 
   (auth/wrap-session
     (compojure/routes
-      auth/routes
-      authors/routes)))
+      #'auth/routes
+      #'authors/routes)))
 
 
 (defn with-headers [handler headers]

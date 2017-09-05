@@ -16,7 +16,8 @@ function reload_subtitle() {
     'You need to login to unsubscribe from spam',
     'Update Java Runtime?',
     'Компьютер будет перезагружен через 15 минут',
-    'grumpy.website запрашивает разрешение на: Показывать оповещения'
+    'grumpy.website запрашивает разрешение на: Показывать оповещения',
+    'Ваш браузер устарел'
   ];
   var subtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
   var div = document.querySelector('.subtitle > span');

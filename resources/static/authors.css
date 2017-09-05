@@ -29,6 +29,7 @@ button:active { background: #c3c; }
 .edit-post_picture { background: #EEE; margin: 0 -1.75em;  }
 .edit-post_picture > input { width: 100%; padding: 2em 1.75em; }
 
+input[type=text].edit-post_author { display: inline-block; width: calc(100% - 100px); margin: 0; padding: 0; border: none; }
 
 /* EMAIL SENT */
 

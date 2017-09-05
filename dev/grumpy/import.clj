@@ -25,17 +25,16 @@
                       (let [id (authors/next-post-id inst)]
                         (spit (io/file dir "id") id)
                         id))]
-    (when (nil? author)                        
-      (authors/save-post!
-        { :id id
-          :body body
-          :author "nikitonsky"
-          :created inst
-          :updated inst }
-        (if picture
-          [{ :filename picture :tempfile (io/file dir picture) }]
-          [])
-        { :delete? false }))))
+    (authors/save-post!
+      { :id id
+        :body body
+        :author (or author "nikitonsky")
+        :created inst
+        :updated inst }
+      (if picture
+        [{ :filename picture :tempfile (io/file dir picture) }]
+        [])
+      { :delete? false })))
 
 
 (comment

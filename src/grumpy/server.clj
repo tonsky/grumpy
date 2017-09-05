@@ -132,13 +132,16 @@
     (grumpy/html-response (post-page post-id)))
 
   (compojure/GET "/after/:post-id" [post-id]
-    (let [post-ids (->> (grumpy/post-ids)
-                        (drop-while #(not= % post-id))
-                        (drop 1)
-                        (take page-size))]
-      { :status  200
-        :headers { "Content-Type" "text/html; charset=utf-8" }
-        :body    (rum/render-static-markup (posts-fragment post-ids)) }))
+    (when grumpy/dev? (Thread/sleep 2000))
+    (if (and grumpy/dev? (< (rand) 0.5))
+      { :status 500 }
+      (let [post-ids (->> (grumpy/post-ids)
+                          (drop-while #(not= % post-id))
+                          (drop 1)
+                          (take page-size))]
+        { :status  200
+          :headers { "Content-Type" "text/html; charset=utf-8" }
+          :body    (rum/render-static-markup (posts-fragment post-ids)) })))
 
   (compojure/GET "/feed.xml" []
     { :status 200

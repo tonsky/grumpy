@@ -78,13 +78,13 @@
       "  <updated>" (grumpy/format-iso-inst updated) "</updated>\n"
       (str/join ""
         (for [author grumpy/authors]
-          (str "  <author><name>" (:name author) "</name><email>" (:email author) "</email></author>\n")))
+          (str "  <author><name>" (:user author) "</name></author>\n")))
       (str/join ""
         (for [post posts
               :let [author (grumpy/author-by :user (:author post))]]
           (str 
             "\n  <entry>\n"
-            "    <title>Ворчание ягнят</title>\n"
+            "    <title>" (:author post) " ворчит</title>\n"
             "    <link rel=\"alternate\" type=\"text/html\" href=\"" grumpy/hostname "/post/" (:id post) "\" />\n"
             "    <id>" grumpy/hostname "/post/" (:id post) "</id>\n"
             "    <published>" (grumpy/format-iso-inst (:created post)) "</published>\n"
@@ -99,9 +99,7 @@
             (grumpy/format-text
               (str "<strong>" (:author post) ": </strong>" (:body post)))
             "    ]]></content>\n"
-            (if (some? author)
-              (str "    <author><name>" (:name author) "</name><email>" (:email author) "</email></author>\n")
-              (str "    <author><name>" (:author post) "</name></author>\n"))
+            (str "    <author><name>" (:author post) "</name></author>\n")
             "  </entry>\n"
           )))
         "\n</feed>"

@@ -35,6 +35,9 @@ body.anonymous .title_new { display: none; }
 
 .post { display: flex; justify-content: flex-start; margin-bottom: 2em; }
 .post_side { margin-right: 20px; min-width: 50px; }
+@media (max-width: 399px) {
+  .post_side { display: none; }
+}
 .post_avatar { border-radius: 100%; width: 50px; height: 50px; }
 
 .post_img { max-width: 100%; height: auto; max-height: 500px; margin-bottom: 1em; }

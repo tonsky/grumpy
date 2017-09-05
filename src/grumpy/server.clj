@@ -25,18 +25,17 @@
     { :data-id (:id post) }
     [:.post_side
       [:img.post_avatar {:src (str "/static/" (:author post) ".jpg")}]]
-    [:.post_body
+    [:.post_content
       (for [name (:pictures post)
             :let [src (str "/post/" (:id post) "/" name)]]
         (if (str/ends-with? name ".mp4")
           [:video.post_img { :autoplay true :loop true }
             [:source { :type "video/mp4" :src src }]]
           [:img.post_img { :src src }]))
-      (for [[p idx] (grumpy/zip (str/split (:body post) #"(\r?\n)+") (range))]
-        [:p.post_p
-          (when (== 0 idx)
-            [:span.post_author (:author post) ": "])
-          p])
+      [:.post_body 
+        { :dangerouslySetInnerHTML 
+          { :__html (grumpy/format-text
+                      (str "<span class=\"post_author\">" (:author post) ": </span>" (:body post))) }}]
       [:p.post_meta
         (grumpy/format-date (:created post))
         " // " [:a {:href (str "/post/" (:id post))} "Ссылка"]
@@ -94,14 +93,8 @@
                 (if (str/ends-with? name ".mp4")
                   (str "      <p><video autoplay loop><source type=\"video/mp4\" src=\"" src "\"></video></p>\n")
                   (str "      <p><img src=\"" src "\"></p>\n"))))
-            (str/join ""
-              (for [[paragraph idx] (grumpy/zip (str/split (:body post) #"(\r?\n)+") (range))]
-                (str
-                  "      <p>"
-                  (when (== 0 idx)
-                    (str "<strong>" (:author post) ": </strong>"))
-                  paragraph
-                  "</p>\n")))
+            (grumpy/format-text
+              (str "<strong>" (:author post) ": </strong>" (:body post)))
             "    ]]></content>\n"
             "    <author><name>" (:name author) "</name><email>" (:email author) "</email></author>\n"
             "  </entry>\n"

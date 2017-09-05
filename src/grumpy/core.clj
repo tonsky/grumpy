@@ -141,6 +141,19 @@
     (reverse)))
 
 
+(defn format-text [text]
+  (->> (str/split text #"[\r\n]+")
+    (map
+      (fn [paragraph]
+        (as-> paragraph paragraph
+          ;; highlight links
+          (str/replace paragraph #"https?://([^\s<>]+[^\s.,!?:;'\"\-<>()\[\]{}*_])"
+            (fn [[href path]]
+              (str "<a href=\"" href "\" target=\"_blank\">" (re-find #"[^?#]+" path) "</a>")))
+          (str "<p>" paragraph "</p>\n"))))
+    (str/join)))
+
+
 (def resource
   (cond-> (fn [name]
             (clojure.core/slurp (io/resource (str "static/" name))))

@@ -19,7 +19,7 @@
 (defn import-telegram-post [dir]
   (let [body      (slurp (io/file dir "text.txt"))
         author    (grumpy/slurp (io/file dir "author"))
-        inst      (parse-inst (.getName (io/file dir)))
+        inst      (parse-inst formatter (.getName (io/file dir)))
         picture   (first (grumpy/list-files dir #".*\.(jpg|jpeg|png|gif|mp4)"))
         id        (or (grumpy/slurp (io/file dir "id"))
                       (let [id (authors/next-post-id inst)]

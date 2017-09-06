@@ -87,6 +87,7 @@
             "    <title>" (:author post) " ворчит</title>\n"
             "    <link rel=\"alternate\" type=\"text/html\" href=\"" grumpy/hostname "/post/" (:id post) "\" />\n"
             "    <id>" grumpy/hostname "/post/" (:id post) "</id>\n"
+            "    <icon>" grumpy/hostname "/static/favicons/favicon-32x32.png</icon>"
             "    <published>" (grumpy/format-iso-inst (:created post)) "</published>\n"
             "    <updated>" (grumpy/format-iso-inst (:updated post)) "</updated>\n"
             "    <content type=\"html\"><![CDATA[\n"

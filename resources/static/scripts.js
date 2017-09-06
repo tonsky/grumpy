@@ -16,7 +16,8 @@ var subtitles =
     'Update Java Runtime?',
     'Компьютер будет перезагружен через 15 минут',
     'grumpy.website запрашивает разрешение на: Показывать оповещения',
-    'Ваш браузер устарел' ],
+    'Ваш браузер устарел',
+    'How likely are you to recommend grumpy.website to your friends?' ],
   subtitle_el = document.querySelector('.subtitle > span');
 
 

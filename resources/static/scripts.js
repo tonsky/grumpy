@@ -17,7 +17,8 @@ var subtitles =
     'Компьютер будет перезагружен через 15 минут',
     'grumpy.website запрашивает разрешение на: Показывать оповещения',
     'Ваш браузер устарел',
-    'How likely are you to recommend grumpy.website to your friends?' ],
+    'How likely are you to recommend grumpy.website to your friends?',
+    'System has recovered from a serious error' ],
   subtitle_el = document.querySelector('.subtitle > span');
 
 

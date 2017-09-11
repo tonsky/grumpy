@@ -18,23 +18,28 @@
 
 (defn save-post! [post pictures {:keys [delete?]}]
   (let [id            (:id post)
+        old-post      (grumpy/get-post id)
         dir           (io/file (str "grumpy_data/posts/" id))
         picture-names (for [[picture idx] (grumpy/zip pictures (range))
                             :let [in-name  (:filename picture)
                                   [_ ext]  (re-matches #".*(\.[^\.]+)" in-name)]]
                         (str id "_" (inc idx) ext))]
-    (.mkdirs dir)
+    (if (nil? old-post)
+      (.mkdirs dir)
+      (when (not-empty picture-names)
+       (doseq [name (:pictures old-post)]
+         (io/delete-file (io/file dir name)))))
     (doseq [[picture name] (grumpy/zip pictures picture-names)]
       (io/copy (:tempfile picture) (io/file dir name))
       (when delete?
         (.delete (:tempfile picture))))
-    (let [old-post (grumpy/get-post id)
-          post'    (merge
-                     { :pictures (vec picture-names)
-                       :created  (grumpy/now)
-                       :updated  (grumpy/now) }
-                     post
-                     (select-keys old-post [:created]))]
+    (let [post' (merge
+                  { :pictures (or (not-empty (vec picture-names))
+                                  (:pictures old-post))
+                    :created  (grumpy/now)
+                    :updated  (grumpy/now) }
+                  post
+                  (select-keys old-post [:created]))]
       (spit (io/file dir "post.edn") (pr-str post')))))
 
 
@@ -82,6 +87,7 @@
           (save-post! { :id     post-id
                         :body   body
                         :author (get params "author") }
-                      [picture]
+                      (when (some-> picture :size pos?)
+                        [picture])
                       { :delete? true })
           (grumpy/redirect "/"))))))

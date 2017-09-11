@@ -46,7 +46,7 @@
 
 
 (rum/defc index-page [post-ids]
-  (grumpy/page {:index? true :scripts ["loader.js"]}
+  (grumpy/page {:page :index :scripts ["loader.js"]}
     (for [post-id post-ids]
       (post (grumpy/get-post post-id)))))
 
@@ -57,7 +57,7 @@
 
 
 (rum/defc post-page [post-id]
-  (grumpy/page {}
+  (grumpy/page {:page :post}
     (post (grumpy/get-post post-id))))
 
 

@@ -149,7 +149,8 @@
           ;; highlight links
           (str/replace paragraph #"https?://([^\s<>]+[^\s.,!?:;'\"\-<>()\[\]{}*_])"
             (fn [[href path]]
-              (str "<a href=\"" href "\" target=\"_blank\">" (re-find #"[^?#]+" path) "</a>")))
+              (let [normalized-path (str/replace path #"/$" "")]
+                (str "<a href=\"" href "\" target=\"_blank\">" (re-find #"[^?#]+" normalized-path) "</a>"))))
           (str "<p>" paragraph "</p>\n"))))
     (str/join)))
 

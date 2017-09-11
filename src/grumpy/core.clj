@@ -162,9 +162,9 @@
 
 
 (rum/defc page [opts & children]
-  (let [{:keys [title index? styles scripts]
-         :or {title  "Ворчание ягнят"
-              index? false}} opts]
+  (let [{:keys [title page styles scripts]
+         :or {title "Ворчание ягнят"
+              page  :other}} opts]
     [:html
       [:head
         [:meta { :http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
@@ -181,12 +181,13 @@
           [:style { :type "text/css" :dangerouslySetInnerHTML { :__html (resource css) }}])]
       [:body.anonymous
         [:header
-          (if index?
-            [:h1.title title [:a.title_new { :href "/new" } "+"]]
-            [:h1.title [:a.title_back {:href "/"} "◄"] title])
+          (case page
+            :index [:h1.title title [:a.title_new { :href "/new" } "+"]]
+            :post  [:h1.title [:a {:href "/"} title ]]
+                   [:h1.title [:a.title_back {:href "/"} "◄"] title])
           [:p.subtitle [:span " "]]]
         children
-        (when index?
+        (when (= page :index)
           [:.loader [:img { :src "/static/favicons/apple-touch-icon-152x152.png" }]])
         [:footer
           [:a { :href "https://twitter.com/nikitonsky" } "Никита Прокопов"]

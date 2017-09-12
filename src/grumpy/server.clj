@@ -34,7 +34,8 @@
         (if (str/ends-with? name ".mp4")
           [:video.post_img { :autoplay true :loop true }
             [:source { :type "video/mp4" :src src }]]
-          [:img.post_img { :src src }]))
+          [:a { :href src :target :_blank }
+            [:img.post_img { :src src }]]))
       [:.post_body 
         { :dangerouslySetInnerHTML 
           { :__html (grumpy/format-text

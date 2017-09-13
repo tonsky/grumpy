@@ -22,10 +22,10 @@
     (clojure.core/slurp file#)))
 
 
-(def authors (edn/read-string
-               (from-config "AUTHORS" 
-                 (pr-str #{ { :email "prokopov@gmail.com" :user "nikitonsky" :name "Никита Прокопов" }
-                            { :email "freetonik@gmail.com" :user "freetonik" :name "Рахим Давлеткалиев" } }))))
+(def authors 
+  [ { :email "prokopov@gmail.com"  :user "nikitonsky" :name "Никита Прокопов"    :url "https://twitter.com/nikitonsky" }
+    { :email "freetonik@gmail.com" :user "freetonik"  :name "Рахим Давлеткалиев" :url "https://twitter.com/freetonik" }
+    { :email "ivan@grishaev.me"    :user "igrishaev"  :name "Иван Гришаев"       :url "http://grishaev.me/"} ])
 
 
 (defn author-by [attr value]
@@ -192,10 +192,10 @@
         (when (= page :index)
           [:.loader [:img { :src "/static/favicons/apple-touch-icon-152x152.png" }]])
         [:footer
-          [:a { :href "https://twitter.com/nikitonsky" } "Никита Прокопов"]
-          ", "
-          [:a { :href "https://twitter.com/freetonik" } "Рахим Давлеткалиев"]
-          ". 2017. All fights retarded."]    
+          (interpose ", "
+            (for [author authors]
+              [:a { :href (:url author) } (:name author)]))
+          ". 2017. All fights retarded."]
         
         [:script {:dangerouslySetInnerHTML { :__html (resource "scripts.js") }}]
         (for [script scripts]

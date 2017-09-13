@@ -63,7 +63,8 @@
         [:.form_row
           "Автор: " [:input.edit-post_author { :type "text" :name "author" :value (or (:author post) user) }]]
         [:.form_row
-          [:button (if create? "В печать!" "Поправить")]]])))
+          [:button (if create? "В печать!" "Поправить")]]]
+      [:script { :src "/static/editor.js" }])))
 
 
 (compojure/defroutes routes

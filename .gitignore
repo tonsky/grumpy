@@ -10,3 +10,5 @@ pom.xml.asc
 .hgignore
 .hg/
 grumpy_data
+resources/static/editor*
+figwheel_server.log

@@ -163,6 +163,15 @@
       (memoize)))
 
 
+(def style
+  (memoize
+    (fn [name]
+      (if dev?
+        [:link { :rel "stylesheet" :type "text/css" :href (str "/static/" name) }]
+        (let [content (clojure.core/slurp (io/resource (str "static/" name)))]
+          [:style { :type "text/css" :dangerouslySetInnerHTML { :__html content }}])))))
+
+
 (rum/defc page [opts & children]
   (let [{:keys [title page styles scripts]
          :or {title "Ворчание ягнят"
@@ -178,9 +187,9 @@
         [:link { :href "/static/favicons/favicon-32x32.png"  :rel "icon" :sizes "32x32" }]
 
         [:title title]
-        [:style { :type "text/css" :dangerouslySetInnerHTML { :__html (resource "styles.css") }}]
+        (style "styles.css")
         (for [css styles]
-          [:style { :type "text/css" :dangerouslySetInnerHTML { :__html (resource css) }}])]
+          (style css))]
       [:body.anonymous
         [:header
           (case page

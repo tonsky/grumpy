@@ -27,7 +27,7 @@ jobs:
             - ~/.m2
           key: v1-dependencies-{{ checksum "project.clj" }}
         
-      - run: lein uberjar
+      - run: lein package
 
       - add_ssh_keys:
           fingerprints:

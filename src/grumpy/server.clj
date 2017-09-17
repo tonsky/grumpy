@@ -43,7 +43,7 @@
       [:p.post_meta
         (grumpy/format-date (:created post))
         " // " [:a {:href (str "/post/" (:id post))} "Ссылка"]
-        [:span.post_meta_edit " × " [:a {:href (str "/post/" (:id post) "/edit")} "Править"]]]]])
+        [:a.post_meta_edit {:href (str "/post/" (:id post) "/edit")} "Править"]]]])
 
 
 (rum/defc index-page [post-ids]

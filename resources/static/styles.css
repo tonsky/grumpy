@@ -42,10 +42,11 @@ body.anonymous .title_new { display: none; }
 
 .post_img { max-width: 100%; height: auto; max-height: 500px; margin-bottom: 1em; }
 .post_author { font-weight: bold; }
+.post_content { width: 100%; }
 .post_body > p { margin: 0 0 1em 0; }
 
-.post_meta_edit > a { color: #c3c; }
-.post_meta_edit > a:hover { color: #d4d; }
+.post_meta_edit { float: right; color: #c3c; }
+.post_meta_edit:hover { color: #d4d; }
 body.anonymous .post_meta_edit { display: none; }
 
 

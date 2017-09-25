@@ -18,7 +18,8 @@ var subtitles =
     'grumpy.website запрашивает разрешение на: Показывать оповещения',
     'Ваш браузер устарел',
     'How likely are you to recommend grumpy.website to your friends?',
-    'System has recovered from a serious error' ],
+    'System has recovered from a serious error',
+    'Ваш город Новосибирск? — Да / Выбрать другой' ],
   subtitle_el = document.querySelector('.subtitle > span');
 
 

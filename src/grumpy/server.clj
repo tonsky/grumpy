@@ -71,8 +71,10 @@
                      (Date.))]
     (str
       "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-      "<feed xmlns=\"http://www.w3.org/2005/Atom\" xml:lang=\"en-US\">\n"
+      "<feed xmlns=\"http://www.w3.org/2005/Atom\" xml:lang=\"ru\">\n"
       "  <title>Ворчание ягнят</title>\n"
+      "  <subtitle>Are you sure you want to exist? — YES / NO</subtitle>\n"
+      "  <icon>" grumpy/hostname "/static/favicons/favicon-32x32.png</icon>\n"
       "  <link type=\"application/atom+xml\" href=\"" grumpy/hostname "/feed.xml\" rel=\"self\" />\n"
       "  <link rel=\"alternate\" type=\"text/html\" href=\"" grumpy/hostname "/\" />\n"
       "  <id>" grumpy/hostname "/</id>\n"
@@ -88,7 +90,6 @@
             "    <title>" (:author post) " ворчит</title>\n"
             "    <link rel=\"alternate\" type=\"text/html\" href=\"" grumpy/hostname "/post/" (:id post) "\" />\n"
             "    <id>" grumpy/hostname "/post/" (:id post) "</id>\n"
-            "    <icon>" grumpy/hostname "/static/favicons/favicon-32x32.png</icon>"
             "    <published>" (grumpy/format-iso-inst (:created post)) "</published>\n"
             "    <updated>" (grumpy/format-iso-inst (:updated post)) "</updated>\n"
             "    <content type=\"html\"><![CDATA[\n"

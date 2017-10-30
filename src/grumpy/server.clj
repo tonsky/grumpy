@@ -63,53 +63,6 @@
     (post (grumpy/get-post post-id))))
 
 
-(defn feed [post-ids]
-  (let [posts   (map grumpy/get-post post-ids)
-        updated (->> posts
-                     (map :updated)
-                     (map #(.getTime ^Date %))
-                     (reduce max)
-                     (Date.))]
-    (str
-      "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-      "<feed xmlns=\"http://www.w3.org/2005/Atom\" xml:lang=\"ru\">\n"
-      "  <title>Ворчание ягнят</title>\n"
-      "  <subtitle>Are you sure you want to exist? — YES / NO</subtitle>\n"
-      "  <icon>" grumpy/hostname "/static/favicons/favicon-32x32.png</icon>\n"
-      "  <link type=\"application/atom+xml\" href=\"" grumpy/hostname "/feed.xml\" rel=\"self\" />\n"
-      "  <link rel=\"alternate\" type=\"text/html\" href=\"" grumpy/hostname "/\" />\n"
-      "  <id>" grumpy/hostname "/</id>\n"
-      "  <updated>" (grumpy/format-iso-inst updated) "</updated>\n"
-      (str/join ""
-        (for [author grumpy/authors]
-          (str "  <author><name>" (:user author) "</name></author>\n")))
-      (str/join ""
-        (for [post posts
-              :let [author (grumpy/author-by :user (:author post))]]
-          (str
-            "\n  <entry>\n"
-            "    <title>" (:author post) " ворчит</title>\n"
-            "    <link rel=\"alternate\" type=\"text/html\" href=\"" grumpy/hostname "/post/" (:id post) "\" />\n"
-            "    <id>" grumpy/hostname "/post/" (:id post) "</id>\n"
-            "    <published>" (grumpy/format-iso-inst (:created post)) "</published>\n"
-            "    <updated>" (grumpy/format-iso-inst (:updated post)) "</updated>\n"
-            "    <content type=\"html\"><![CDATA[\n"
-            (str/join ""
-              (for [name (:pictures post)
-                    :let [src (str grumpy/hostname "/post/" (:id post) "/" name)]]
-                (if (str/ends-with? name ".mp4")
-                  (str "      <p><video autoplay loop><source type=\"video/mp4\" src=\"" src "\"></video></p>\n")
-                  (str "      <p><img src=\"" src "\"></p>\n"))))
-            (grumpy/format-text
-              (str "<strong>" (:author post) ": </strong>" (:body post)))
-            "    ]]></content>\n"
-            (str "    <author><name>" (:author post) "</name></author>\n")
-            "  </entry>\n"
-          )))
-        "\n</feed>"
-      )))
-
-
 (defn sitemap [post-ids]
   (feed/sitemap post-ids))
 
@@ -141,7 +94,7 @@
   (compojure/GET "/feed.xml" []
     { :status 200
       :headers { "Content-type" "application/atom+xml; charset=utf-8" }
-      :body (feed (take 10 (grumpy/post-ids))) })
+      :body (feed/feed (take 10 (grumpy/post-ids))) })
 
   (compojure/GET "/sitemap.xml" []
     { :status 200

@@ -2,6 +2,7 @@
   :dependencies [
     [org.clojure/clojure       "1.9.0-alpha19"]
     [org.clojure/data.xml      "0.0.8"]
+    [hiccup                    "1.0.5"]
     [ring/ring-core            "1.6.2"]
     [org.immutant/web          "2.1.9"]
     [compojure                 "1.6.0"]

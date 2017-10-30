@@ -1,12 +1,15 @@
 (ns grumpy.feed
   (:require
    [clojure.string :as str]
-   [clojure.data.xml :refer [indent-str sexp-as-element]]
+   [clojure.xml :refer [emit-element]]
+   [clojure.data.xml :refer [indent-str emit-str sexp-as-element]]
 
    [grumpy.core :as grumpy]
    [grumpy.authors :as authors]))
 
-(def emit (comp indent-str sexp-as-element))
+;; swap emit-str to indent-str for debug
+(def emit (comp emit-str sexp-as-element))
+(def emit-el (comp emit-element sexp-as-element))
 
 (defn get-ext [filename]
   (keyword (str/lower-case (last (str/split filename #"\.")))))
@@ -66,7 +69,7 @@
           [:-cdata
            (str
             (when-let [pictures (-> post :pictures not-empty)]
-              (emit
+              (emit-el
                (for [name pictures
                      :let [src (str url "/" name)]]
                  (if (str/ends-with? name ".mp4")
@@ -74,7 +77,7 @@
                     [:video {:autoplay "autoplay" :loop "loop"}
                      [:source {:type "video/mp4" :src src}]]]
                    [:p nil [:img {:src src}]]))))
-            (emit [:strong nil (format "%s: " (:author post))])
+            (emit-el [:strong nil (format "%s: " (:author post))])
             (grumpy/format-text (:body post)))]]])])))
 
 (defn sitemap [post-ids]

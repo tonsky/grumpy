@@ -22,6 +22,9 @@
     :png "image/png"
     "application/octet-stream"))
 
+(defn video? [filename]
+  (= (get-ext filename) :mp4))
+
 (defn get-max-date [posts]
   (->> posts
        (map :updated)
@@ -72,7 +75,7 @@
               (emit-el
                (for [name pictures
                      :let [src (str url "/" name)]]
-                 (if (str/ends-with? name ".mp4")
+                 (if (video? name)
                    [:p nil
                     [:video {:autoplay "autoplay" :loop "loop"}
                      [:source {:type "video/mp4" :src src}]]]

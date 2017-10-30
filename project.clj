@@ -1,16 +1,17 @@
 (defproject grumpy "0.1.0-SNAPSHOT"
   :dependencies [
     [org.clojure/clojure       "1.9.0-alpha19"]
+    [org.clojure/data.xml      "0.0.8"]
     [ring/ring-core            "1.6.2"]
     [org.immutant/web          "2.1.9"]
     [compojure                 "1.6.0"]
     [rum                       "0.10.8"]
     [org.clojure/clojurescript "1.9.908" :scope "provided"]
   ]
-  
+
   :global-vars {*warn-on-reflection* true}
   :jvm-opts ["-Xmx3500m"]
-  
+
   :main grumpy.server
 
   :profiles {
@@ -25,7 +26,7 @@
         [cider/cider-nrepl "0.15.1"]
     ]}
   }
-  
+
   :aliases { "package" ["do" ["clean"] ["cljsbuild" "once" "advanced"] ["uberjar"]] }
 
   :plugins [

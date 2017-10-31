@@ -2,12 +2,14 @@
   (:require
    [clojure.string :as str]
    [clojure.data.xml :refer [indent-str emit-str sexp-as-element]]
-   [hiccup.core :refer [html]]
+   [rum.server-render]
    [grumpy.core :as grumpy]
    [grumpy.authors :as authors]))
 
 ;; swap emit-str to indent-str for debug
 (def emit (comp emit-str sexp-as-element))
+
+(def html rum.server-render/render-static-markup)
 
 (defn get-ext [filename]
   (keyword (str/lower-case (last (str/split filename #"\.")))))

@@ -32,9 +32,9 @@
     [:.post_content
       (for [name (:pictures post)
             :let [src (str "/post/" (:id post) "/" name)]]
-        (if (str/ends-with? name ".mp4")
+        (if (grumpy/video? name)
           [:video.post_img { :autoplay true :loop true }
-            [:source { :type "video/mp4" :src src }]]
+            [:source { :type (grumpy/mime-type name) :src src }]]
           [:a { :href src :target :_blank }
             [:img.post_img { :src src }]]))
       [:.post_body
@@ -61,10 +61,6 @@
 (rum/defc post-page [post-id]
   (grumpy/page {:page :post}
     (post (grumpy/get-post post-id))))
-
-
-(defn sitemap [post-ids]
-  (feed/sitemap post-ids))
 
 
 (compojure/defroutes routes
@@ -99,7 +95,7 @@
   (compojure/GET "/sitemap.xml" []
     { :status 200
       :headers { "Content-type" "text/xml; charset=utf-8" }
-      :body (sitemap (grumpy/post-ids)) })
+      :body (feed/sitemap (grumpy/post-ids)) })
 
   (compojure/GET "/robots.txt" []
     { :status 200

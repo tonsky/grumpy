@@ -4,7 +4,8 @@
     [rum.core :as rum]
     [clojure.edn :as edn]
     [clojure.string :as str]
-    [clojure.java.io :as io])
+    [clojure.java.io :as io]
+    [ring.util.mime-type :as mime-type])
   (:import
     [java.util Date]
     [java.net URLEncoder]
@@ -83,6 +84,14 @@
         query))))
 
 
+(defn mime-type [filename]
+  (mime-type/ext-mime-type filename { nil "application/octet-stream" }))
+
+
+(defn video? [filename]
+  (str/starts-with? (mime-type filename) "video/"))
+
+
 (def ^:const encode-table "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")
 
 
@@ -152,7 +161,7 @@
               (let [norm-path     (re-find #"[^?#]+" path)
                     without-slash (str/replace norm-path #"/$" "")]
                 (str "<a href=\"" href "\" target=\"_blank\">" without-slash "</a>"))))
-          (str "<p>" paragraph "</p>\n"))))
+          (str "<p>" paragraph "</p>"))))
     (str/join)))
 
 

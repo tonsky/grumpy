@@ -43,8 +43,8 @@
                       (str "<span class=\"post_author\">" (:author post) ": </span>" (:body post))) }}]
       [:p.post_meta
         (grumpy/format-date (:created post))
-        " // " [:a {:href (str "/post/" (:id post))} "Ссылка"]
-        [:a.post_meta_edit {:href (str "/post/" (:id post) "/edit")} "Править"]]]])
+        " // " [:a {:href (str "/post/" (:id post))} "Hyperlink"]
+        [:a.post_meta_edit {:href (str "/post/" (:id post) "/edit")} "Edit"]]]])
 
 
 (rum/defc index-page [post-ids]

@@ -24,7 +24,7 @@
                     (java.util.Date.))]
     (emit
      [:feed {:xmlns "http://www.w3.org/2005/Atom" :xml:lang "ru"}
-      [:title {} "Ворчание ягнят"]
+      [:title {} "Grumpy Website"]
       [:subtitle {} "Are you sure you want to exist? — YES / NO"]
       [:icon {} (str grumpy/hostname "/static/favicons/favicon-32x32.png")]
       [:link {:type "application/atom+xml"
@@ -41,7 +41,7 @@
             :let [author (grumpy/author-by :user (:author post))
                   url    (str grumpy/hostname "/post/" (:id post))]]
         [:entry {}
-         [:title {} (format "%s ворчит" (:author post))]
+         [:title {} (format "%s is being grumpy" (:author post))]
          [:link {:rel  "alternate"
                  :type "text/html"
                  :href url}]

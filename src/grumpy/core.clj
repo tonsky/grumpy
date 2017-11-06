@@ -24,9 +24,9 @@
 
 
 (def authors 
-  [ { :email "prokopov@gmail.com"  :user "nikitonsky" :name "Никита Прокопов"    :url "https://twitter.com/nikitonsky" }
-    { :email "freetonik@gmail.com" :user "freetonik"  :name "Рахим Давлеткалиев" :url "https://twitter.com/freetonik" }
-    { :email "ivan@grishaev.me"    :user "igrishaev"  :name "Иван Гришаев"       :url "http://grishaev.me/"} ])
+  [ { :email "prokopov@gmail.com"  :user "nikitonsky" :name "Nikita Prokopov"    :url "https://twitter.com/nikitonsky" }
+    { :email "freetonik@gmail.com" :user "freetonik"  :name "Rakhim Davletkaliyev" :url "https://twitter.com/freetonik" }
+    { :email "ivan@grishaev.me"    :user "igrishaev"  :name "Ivan Grishaev"       :url "http://grishaev.me/"} ])
 
 
 (defn author-by [attr value]
@@ -183,13 +183,13 @@
 
 (rum/defc page [opts & children]
   (let [{:keys [title page styles scripts]
-         :or {title "Ворчание ягнят"
+         :or {title "Grumpy Website"
               page  :other}} opts]
     [:html
       [:head
         [:meta { :http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
         [:meta { :name "viewport" :content "width=device-width, initial-scale=1.0"}]
-        [:link { :href "/feed.xml" :rel "alternate" :title "Ворчание ягнят" :type "application/atom+xml" }]
+        [:link { :href "/feed.xml" :rel "alternate" :title "Grumpy Website" :type "application/atom+xml" }]
 
         [:link { :href "/static/favicons/apple-touch-icon-152x152.png" :rel "apple-touch-icon-precomposed" :sizes "152x152" }]
         [:link { :href "/static/favicons/favicon-196x196.png" :rel "icon" :sizes "196x196" }]

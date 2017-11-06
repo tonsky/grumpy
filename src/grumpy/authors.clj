@@ -46,7 +46,7 @@
 (rum/defc edit-post-page [post-id user]
   (let [post    (grumpy/get-post post-id)
         create? (nil? post)]
-    (grumpy/page { :title (if create? "Новый пост" "Правка поста")
+    (grumpy/page { :title (if create? "New post" "Edit post")
                    :styles ["authors.css"] }
       [:form.edit-post
         { :action (str "/post/" post-id "/edit")
@@ -58,12 +58,12 @@
           [:textarea
             { :value (:body post "")
               :name "body"
-              :placeholder "Пиши сюда..."
+              :placeholder "Be grumpy here..."
               :autofocus true }]]
         [:.form_row
-          "Автор: " [:input.edit-post_author { :type "text" :name "author" :value (or (:author post) user) }]]
+          "Author: " [:input.edit-post_author { :type "text" :name "author" :value (or (:author post) user) }]]
         [:.form_row
-          [:button (if create? "В печать!" "Поправить")]]]
+          [:button (if create? "Grumpost now!" "Edit")]]]
       [:script { :src "/static/editor.js" }])))
 
 

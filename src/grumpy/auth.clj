@@ -92,14 +92,14 @@
 
 
 (rum/defc email-sent-page [message]
-  (grumpy/page { :title "Как-то так..."
+  (grumpy/page { :title "Something like that..."
                  :styles ["authors.css"] }
     [:.email-sent
       [:.email-sent_message message]]))
 
 
 (rum/defc forbidden-page [redirect-url email]
-  (grumpy/page { :title "Вход"
+  (grumpy/page { :title "Log in"
                  :styles ["authors.css"] }
     [:form.forbidden
       { :action "/send-email"
@@ -112,7 +112,7 @@
                   :value email }]
         [:input { :type "hidden" :name "redirect-url" :value redirect-url }]]
       [:.form_row
-        [:button "Отправить письмецо"]]]))
+        [:button "Send email"]]]))
 
 
 (compojure/defroutes routes
@@ -149,9 +149,9 @@
           user   (:user (grumpy/author-by :email email))]
       (cond
         (nil? (grumpy/author-by :email email))
-          (grumpy/redirect "/email-sent" { :message (str "Ты не автор, " email) })
+          (grumpy/redirect "/email-sent" { :message (str "You aren't the author, " email) })
         (some? (get-token email))
-          (grumpy/redirect "/email-sent" { :message (str "Ссылка в почте еще жива, " user) })
+          (grumpy/redirect "/email-sent" { :message (str "Emailed link is still valid, " user) })
         :else
           (let [token        (gen-token)
                 redirect-url (get params "redirect-url")
@@ -162,9 +162,9 @@
             (swap! *tokens assoc email { :value token :created (grumpy/now) })
             (send-email!
               { :to      email
-                :subject (str "Вход в Grumpy " (grumpy/format-date (grumpy/now)))
-                :body    (str "<html><div style='text-align: center;'><a href=\"" link "\" style='display: inline-block; font-size: 16px; padding: 0.5em 1.75em; background: #c3c; color: white; text-decoration: none; border-radius: 4px;'>Войти в сайтик!</a></div></html>") })
-            (grumpy/redirect "/email-sent" { :message (str "Смотри почту, " user) })))))
+                :subject (str "Log into Grumpy " (grumpy/format-date (grumpy/now)))
+                :body    (str "<html><div style='text-align: center;'><a href=\"" link "\" style='display: inline-block; font-size: 16px; padding: 0.5em 1.75em; background: #c3c; color: white; text-decoration: none; border-radius: 4px;'>Login now!</a></div></html>") })
+            (grumpy/redirect "/email-sent" { :message (str "Check your email, " user) })))))
 
   (compojure/GET "/email-sent" [:as req]
     (grumpy/html-response (email-sent-page (get-in req [:params "message"])))))

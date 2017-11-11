@@ -51,7 +51,7 @@
   (- (.getTime (now)) (.getTime inst)))
 
 
-(def ^:private date-formatter (DateTimeFormat/forPattern "dd.MM.YYYY"))
+(def ^:private date-formatter (DateTimeFormat/forPattern "MMMMM d, YYYY"))
 (def ^:private iso-formatter (DateTimeFormat/forPattern "yyyy-MM-dd'T'HH:mm:ss'Z'"))
 
 (defn format-date [^Date inst]

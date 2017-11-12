@@ -36,6 +36,9 @@
 (def hostname (from-config "HOSTNAME" "http://grumpy.website"))
 
 
+(def forced-user (from-config "USER" nil))
+
+
 (def dev? (= "http://localhost:8080" hostname))
 
 

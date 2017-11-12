@@ -76,7 +76,7 @@
   (compojure/GET "/post/:post-id/edit" [post-id :as req]
     (or
       (auth/check-session req)
-      (grumpy/html-response (edit-post-page post-id (get-in req [:session :user])))))
+      (grumpy/html-response (edit-post-page post-id (auth/user req)))))
 
   (ring.middleware.multipart-params/wrap-multipart-params
     (compojure/POST "/post/:post-id/edit" [post-id :as req]

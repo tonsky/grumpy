@@ -85,9 +85,13 @@
         :cookie-attrs { :http-only true
                         :secure    false }}))) ;; FIXME
 
+(defn user [req]
+  (or grumpy/forced-user
+      (get-in req [:session :user])))
+
 
 (defn check-session [req]
-  (when (nil? (get-in req [:session :user]))
+  (when (nil? (user req))
     (grumpy/redirect "/forbidden" { :redirect-url (:uri req) })))
 
 

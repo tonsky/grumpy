@@ -24,7 +24,7 @@ button:active { background: #c3c; }
 
 /* EDIT POST */
 
-.edit-post textarea { height: 450px; }
+.edit-post textarea { height: 450px; resize: vertical; }
 
 .edit-post_picture { background: #EEE; margin: 0 -1.75em;  }
 .edit-post_picture > input { width: 100%; padding: 2em 1.75em; }

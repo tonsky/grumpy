@@ -7,7 +7,8 @@
     [ring.middleware.multipart-params]
     
     [grumpy.core :as grumpy]
-    [grumpy.auth :as auth]))
+    [grumpy.auth :as auth]
+    [grumpy.editor :as editor]))
 
 
 (defn next-post-id [^java.util.Date inst]
@@ -45,26 +46,16 @@
 
 (rum/defc edit-post-page [post-id user]
   (let [post    (grumpy/get-post post-id)
-        create? (nil? post)]
+        create? (nil? post)
+        data    { :post-id post-id
+                  :post    post
+                  :user    user }]
     (grumpy/page { :title (if create? "New post" "Edit post")
                    :styles ["authors.css"] }
-      [:form.edit-post
-        { :action (str "/post/" post-id "/edit")
-          :enctype "multipart/form-data"
-          :method "post" }
-        [:.form_row.edit-post_picture
-          [:input { :type "file" :name "picture"}]]
-        [:.form_row
-          [:textarea
-            { :value (:body post "")
-              :name "body"
-              :placeholder "Be grumpy here..."
-              :autofocus true }]]
-        [:.form_row
-          "Author: " [:input.edit-post_author { :type "text" :name "author" :value (or (:author post) user) }]]
-        [:.form_row
-          [:button (if create? "Grumpost now!" "Edit")]]]
-      [:script { :src "/static/editor.js" }])))
+      [:.mount { :data (pr-str data) }
+        (editor/editor data)]
+      [:script { :src "/static/editor.js" }]
+      [:script { :dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();" }}])))
 
 
 (compojure/defroutes routes

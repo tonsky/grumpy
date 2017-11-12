@@ -1,15 +1,15 @@
 (defproject grumpy "0.1.0-SNAPSHOT"
   :dependencies [
-    [org.clojure/clojure       "1.9.0-alpha19"]
+    [org.clojure/clojure       "1.9.0-RC1"]
     [org.clojure/data.xml      "0.0.8"]
-    [ring/ring-core            "1.6.2"]
+    [ring/ring-core            "1.6.3"]
     [org.immutant/web          "2.1.9"]
     [compojure                 "1.6.0"]
     [rum                       "0.10.8"]
-    [org.clojure/clojurescript "1.9.908" :scope "provided"]
+    [org.clojure/clojurescript "1.9.946" :scope "provided"]
   ]
 
-  :global-vars {*warn-on-reflection* true}
+  ; :global-vars {*warn-on-reflection* true}
   :jvm-opts ["-Xmx3500m"]
 
   :main grumpy.server
@@ -22,7 +22,7 @@
     }
     :dev {
       :dependencies [
-        [org.clojure/tools.nrepl "0.2.12"]
+        [org.clojure/tools.nrepl "0.2.13"]
         [cider/cider-nrepl "0.15.1"]
     ]}
   }
@@ -30,8 +30,8 @@
   :aliases { "package" ["do" ["clean"] ["cljsbuild" "once" "advanced"] ["uberjar"]] }
 
   :plugins [
-    [lein-cljsbuild "1.1.6"]
-    [lein-figwheel "0.5.13"]
+    [lein-cljsbuild "1.1.7"]
+    [lein-figwheel "0.5.14"]
   ]
 
   :figwheel {
@@ -58,22 +58,22 @@
           ; :source-map-timestamp true
           :source-map-path      "/static/editor-none"
           :optimizations        :none
-          :compiler-stats       true
           :parallel-build       true
         } }
       { :id "advanced"
         :source-paths ["src"]
+        :assert false
         :compiler {
           :main                 grumpy.editor
           :output-to            "resources/static/editor.js"
           :optimizations        :advanced
-          :pretty-print         true
-          :compiler-stats       true
           :output-dir           "resources/static/editor-advanced"
           :source-map           "resources/static/editor.js.map"
           :source-map-path      "/static/editor-advanced"
           ; :source-map-timestamp true
           :parallel-build       true
+          :elide-asserts        true
+          :closure-defines      {:goog.DEBUG false}
         } }
   ]}
   :clean-targets

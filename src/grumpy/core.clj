@@ -13,6 +13,13 @@
     [org.joda.time.format DateTimeFormat DateTimeFormatter ISODateTimeFormat]))
 
 
+(defn slurp [source]
+  (try
+    (clojure.core/slurp source)
+    (catch Exception e
+      nil)))
+
+
 (.mkdirs (io/file "grumpy_data"))
 
 
@@ -36,7 +43,7 @@
 (def hostname (from-config "HOSTNAME" "http://grumpy.website"))
 
 
-(def forced-user (from-config "USER" nil))
+(def forced-user (slurp "grumpy_data/FORCED_USER"))
 
 
 (def dev? (= "http://localhost:8080" hostname))
@@ -117,13 +124,6 @@
   ([path query]
     { :status 302
       :headers { "Location" (url path query) }}))
-
-
-(defn slurp [source]
-  (try
-    (clojure.core/slurp source)
-    (catch Exception e
-      nil)))
 
 
 (defn get-post [post-id]

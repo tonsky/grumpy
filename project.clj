@@ -73,7 +73,7 @@
           ; :source-map-timestamp true
           :parallel-build       true
           :elide-asserts        true
-          :closure-defines      {:goog.DEBUG false}
+          :closure-defines      {goog.DEBUG false}
         } }
   ]}
   :clean-targets

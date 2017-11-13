@@ -82,4 +82,7 @@
                       "resources/static/editor-advanced"
                       "resources/static/editor.js"
                       "resources/static/editor.js.map" ]
+  :mirrors {
+    "central" {:name "central" :url "https://repo.maven.apache.org/maven2/"}
+  }
 )

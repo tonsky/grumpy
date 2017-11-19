@@ -23,13 +23,16 @@ button:active { background: #c3c; }
 
 
 /* EDIT POST */
+body.dragover { background-color: #F0FCF0; }
+.edit-post { max-width: 550px; }
+.edit-post textarea { height: 350px; resize: vertical; }
 
-.edit-post textarea { height: 450px; resize: vertical; }
+.edit-post_picture { background: #EEE; min-height: 60px; }
+body.dragover .edit-post_picture { background: #DDE5DD; }
+.edit-post_picture_img { display: block; margin: 0; }
+.edit-post_file { display: none; }
 
-.edit-post_picture { background: #EEE; margin: 0 -1.75em;  }
-.edit-post_picture > input { width: 100%; padding: 2em 1.75em; }
-
-input[type=text].edit-post_author { display: inline-block; width: calc(100% - 100px); margin: 0; padding: 0; border: none; }
+input[type=text].edit-post_author { display: inline-block; width: calc(100% - 100px); margin: 0; padding: 0; border: none; background: transparent; }
 
 /* EMAIL SENT */
 

@@ -7,6 +7,7 @@
     [compojure                 "1.6.0"]
     [rum                       "0.10.8"]
     [org.clojure/clojurescript "1.9.946" :scope "provided"]
+    [cljs-drag-n-drop          "0.1.0"]
   ]
 
   ; :global-vars {*warn-on-reflection* true}

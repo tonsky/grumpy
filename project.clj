@@ -11,7 +11,7 @@
   ]
 
   ; :global-vars {*warn-on-reflection* true}
-  :jvm-opts ["-Xmx3500m"]
+  ; :jvm-opts ["-Xmx3500m"]
 
   :main grumpy.server
 

@@ -58,11 +58,13 @@
         :enc-type "multipart/form-data"
         :method   "post" }
       [:.form_row.edit-post_picture
-        #?(:cljs
-        { :on-click
-          (fn [e]
-            (.click (picture-input))
-            (.preventDefault e)) })
+        (merge
+          { :class (when (nil? @*picture-url) "edit-post_picture-empty") }
+          #?(:cljs
+          { :on-click
+            (fn [e]
+              (.click (picture-input))
+              (.preventDefault e)) }))
         (when-some [picture-url @*picture-url]
           [:img.post_img.edit-post_picture_img { :src picture-url }])]
       [:input.edit-post_file

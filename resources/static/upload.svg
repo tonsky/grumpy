@@ -1,0 +1,19 @@
+<svg width="60" height="60" viewBox="0 0 60 60" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<title>upload</title>
+<desc>Created using Figma</desc>
+<g id="Canvas" transform="translate(371 284)">
+<clipPath id="clip-0" clip-rule="evenodd">
+<path d="M -371 -284L -311 -284L -311 -224L -371 -224L -371 -284Z" fill="#FFFFFF"/>
+</clipPath>
+<g id="upload" clip-path="url(#clip-0)">
+<g id="Vector">
+<use xlink:href="#path0_fill" transform="translate(-359 -269)"/>
+<use xlink:href="#path1_fill" transform="translate(-359 -269)"/>
+</g>
+</g>
+</g>
+<defs>
+<path id="path0_fill" d="M 18 0L 4 15.5L 11 15.5L 11 23L 25 23L 25 15.5L 32 15.5L 18 0Z"/>
+<path id="path1_fill" d="M 4 23L 0 23L 0 30L 36 30L 36 23L 32 23L 32 27L 4 27L 4 23Z"/>
+</defs>
+</svg>

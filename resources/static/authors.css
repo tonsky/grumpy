@@ -28,7 +28,7 @@ body.dragover { background-color: #F0FCF0; }
 .edit-post textarea { height: 350px; resize: vertical; }
 
 .edit-post_picture { min-height: 60px; margin: 0 -1.75em; padding: 0 1.75em; }
-.edit-post_picture-empty { background-image: url(upload.svg); background-color: #999; background-repeat: no-repeat; background-position: center center; opacity: 0.2; }
+.edit-post_picture-empty { background-image: url("/static/upload.svg"); background-color: #999; background-repeat: no-repeat; background-position: center center; opacity: 0.2; }
 body.dragover .edit-post_picture { opacity: 0.5; }
 .edit-post_picture_img { display: block; margin: 0; }
 .edit-post_file { display: none; }

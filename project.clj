@@ -10,9 +10,6 @@
     [cljs-drag-n-drop          "0.1.0"]
   ]
 
-  ; :global-vars {*warn-on-reflection* true}
-  ; :jvm-opts ["-Xmx3500m"]
-
   :main grumpy.server
 
   :profiles {
@@ -63,7 +60,6 @@
         } }
       { :id "advanced"
         :source-paths ["src"]
-        :assert false
         :compiler {
           :main                 grumpy.editor
           :output-to            "resources/static/editor.js"
@@ -73,8 +69,6 @@
           :source-map-path      "/static/editor-advanced"
           ; :source-map-timestamp true
           :parallel-build       true
-          :elide-asserts        true
-          :closure-defines      {goog.DEBUG false}
         } }
   ]}
   :clean-targets

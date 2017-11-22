@@ -3,16 +3,16 @@
     [clojure.string :as str]
     #?(:clj  [clojure.edn :as edn]
        :cljs [cljs.reader :as edn])
-    #?(:cljs [goog.object :as gobj])
     #?(:cljs [cljs-drag-n-drop.core :as dnd])
-    [rum.core :as rum]))
+    [rum.core :as rum]
+    [grumpy.macros :refer [oget oset! js-fn]]))
 
 
 #?(:cljs (enable-console-print!))
 
 
 #?(:cljs
-(defn picture-input []
+(defn ^:export picture-input [] ;; ^:export == workaround for https://dev.clojure.org/jira/browse/CLJS-2410
   (js/document.querySelector "input[name=picture]")))
 
 
@@ -41,9 +41,9 @@
       (let [*picture-url (::picture-url state)]
         (dnd/subscribe! js/document.documentElement ::editor
           { :start (fn [_] (js/document.body.classList.add "dragover"))
-            :drop  (fn [_ files]
+            :drop  (fn [e files]
                      (update-preview! files *picture-url)
-                     (gobj/set (picture-input) "files" files))
+                     (oset! (picture-input) "files" files))
             :end   (fn [_] (js/document.body.classList.remove "dragover")) })
         state))
     :will-unmount
@@ -58,23 +58,18 @@
         :enc-type "multipart/form-data"
         :method   "post" }
       [:.form_row.edit-post_picture
-        (merge
-          { :class (when (nil? @*picture-url) "edit-post_picture-empty") }
-          #?(:cljs
-          { :on-click
-            (fn [e]
-              (.click (picture-input))
-              (.preventDefault e)) }))
+        { :class    (when (nil? @*picture-url) "edit-post_picture-empty")
+          :on-click (js-fn [e]
+                      (.click (picture-input))
+                      (.preventDefault e)) }
         (when-some [picture-url @*picture-url]
           [:img.post_img.edit-post_picture_img { :src picture-url }])]
       [:input.edit-post_file
         { :type "file"
           :name "picture"
-          :on-change
-          #?(:clj nil
-             :cljs (fn [e]
-                     (let [files (-> e (gobj/get "target") (gobj/get "files"))]
-                       (update-preview! files *picture-url)))) }]
+          :on-change (js-fn [e]
+                       (let [files (-> e (oget "target") (oget "files"))]
+                         (update-preview! files *picture-url))) }]
       [:.form_row
         [:textarea
           { :default-value (:body post "")

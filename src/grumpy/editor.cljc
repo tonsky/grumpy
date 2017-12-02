@@ -32,8 +32,8 @@
     (fn [state]
       (let [*picture-url     (::picture-url state)
             [{:keys [post]}] (:rum/args state)]
-        (when-some [[pic] (:pictures post)]
-          (reset! *picture-url (str "/post/" (:id post) "/" (first (:pictures post))))))
+        (when-some [pic (:picture post)]
+          (reset! *picture-url (str "/post/" (:id post) "/" (:url pic)))))
       state) }
   #?(:cljs
   { :will-mount

@@ -9,6 +9,7 @@
     [ring.middleware.params]
     [compojure.core :as compojure]
 
+    [grumpy.db]
     [grumpy.core :as grumpy]
     [grumpy.auth :as auth]
     [grumpy.authors :as authors]
@@ -30,13 +31,13 @@
                  (str "/static/" (:author post) ".jpg")
                  "/static/guest.jpg")}]]
     [:.post_content
-      (for [name (:pictures post)
-            :let [src (str "/post/" (:id post) "/" name)]]
-        (if (grumpy/video? name)
-          [:video.post_img { :autoplay true :loop true }
-            [:source { :type (grumpy/mime-type name) :src src }]]
-          [:a { :href src :target :_blank }
-            [:img.post_img { :src src }]]))
+      (when-some [pic (:picture post)]
+        (let [src (str "/post/" (:id post) "/" (:url pic))]
+          (if (grumpy/video? (:url pic))
+            [:video.post_img { :autoplay true :loop true }
+              [:source { :type (grumpy/mime-type (:url pic)) :src src }]]
+            [:a { :href src :target :_blank }
+              [:img.post_img { :src src }]])))
       [:.post_body
         { :dangerouslySetInnerHTML
           { :__html (grumpy/format-text

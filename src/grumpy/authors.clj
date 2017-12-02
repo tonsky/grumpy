@@ -17,26 +17,31 @@
     (grumpy/encode (rand-int (* 64 64 64)) 3)))
 
 
-(defn save-post! [post pictures {:keys [delete?]}]
-  (let [id            (:id post)
-        old-post      (grumpy/get-post id)
-        dir           (io/file (str "grumpy_data/posts/" id))
-        picture-names (for [[picture idx] (grumpy/zip pictures (range))
-                            :let [in-name  (:filename picture)
-                                  [_ ext]  (re-matches #".*(\.[^\.]+)" in-name)]]
-                        (str id "_" (inc idx) ext))]
+(defn picture-name [post-id picture]
+  (when (some? picture)
+    (let [in-name  (:filename picture)
+          [_ ext]  (re-matches #".*(\.[^\.]+)" in-name)]
+      (str post-id "~" (grumpy/encode (System/currentTimeMillis) 7) ext))))
+
+
+(defn save-post! [post picture]
+  (let [post-id       (:id post)
+        old-post      (grumpy/get-post post-id)
+        dir           (io/file (str "grumpy_data/posts/" post-id))
+        override?     (some? picture)
+        picture-name  (picture-name post-id picture)]
     (if (nil? old-post)
       (.mkdirs dir)
-      (when (not-empty picture-names)
-       (doseq [name (:pictures old-post)]
-         (io/delete-file (io/file dir name)))))
-    (doseq [[picture name] (grumpy/zip pictures picture-names)]
-      (io/copy (:tempfile picture) (io/file dir name))
-      (when delete?
-        (.delete (:tempfile picture))))
+      (when override?
+        (when-some [pic (:picture old-post)]
+          (io/delete-file (io/file dir (:url pic))))))
+    (when (some? picture)
+      (io/copy (:tempfile picture) (io/file dir picture-name))
+      (.delete (:tempfile picture)))
     (let [post' (merge
-                  { :pictures (or (not-empty (vec picture-names))
-                                  (:pictures old-post))
+                  { :picture  (if override?
+                                { :url picture-name }
+                                (:picture old-post))
                     :created  (grumpy/now)
                     :updated  (grumpy/now) }
                   post
@@ -80,6 +85,5 @@
                         :body   body
                         :author (get params "author") }
                       (when (some-> picture :size pos?)
-                        [picture])
-                      { :delete? true })
+                        picture))
           (grumpy/redirect "/"))))))

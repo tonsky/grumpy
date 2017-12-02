@@ -45,23 +45,23 @@
          [:link {:rel  "alternate"
                  :type "text/html"
                  :href url}]
-         (when-let [name (some-> post :pictures first)]
+         (when-some [pic (some-> post :picture)]
            [:link {:rel  "enclosure"
-                   :type (grumpy/mime-type name)
-                   :href (str url "/" name)}])
+                   :type (grumpy/mime-type (:url pic))
+                   :href (str url "/" (:url pic))}])
          [:id {} url]
          [:published {} (grumpy/format-iso-inst (:created post))]
          [:updated {} (grumpy/format-iso-inst (:updated post))]
          [:author {} [:name {} (:author post)]]
          [:content {:type "text/html" :href url}
            (rum/render-static-markup
-             (for [name (:pictures post)
-                   :let [src (str url "/" name)]]
-               [:p {}
-                 (if (grumpy/video? name)
-                   [:video {:autoplay "autoplay" :loop "loop"}
-                     [:source {:type (grumpy/mime-type name) :src src}]]
-                   [:img {:src src}])]))
+             (when-some [pic (:picture post)]
+               (let [src (str url "/" (:url pic))]
+                 [:p {}
+                   (if (grumpy/video? (:url pic))
+                     [:video {:autoplay "autoplay" :loop "loop"}
+                       [:source {:type (grumpy/mime-type (:url pic)) :src src}]]
+                     [:img {:src src}])])))
            (grumpy/format-text
              (str
                (rum/render-static-markup

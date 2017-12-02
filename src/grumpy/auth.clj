@@ -76,18 +76,31 @@
         (handler req)))))
 
 
+(defn force-user [handler]
+  (fn [req]
+    (if-some [u grumpy/forced-user]
+      (some-> req
+        (assoc-in [:session :user] u)
+        (handler)
+        (assoc :cookies { "grumpy_user" { :value u }}
+               :session { :user    u
+                          :created (grumpy/now) }))
+      (handler req))))
+    
+
 (defn wrap-session [handler]
   (-> handler
     (expire-session)
+    (force-user)
     (session/wrap-session
       { :store        (session.cookie/cookie-store { :key cookie-secret })
         :cookie-name  "grumpy_session"
         :cookie-attrs { :http-only true
-                        :secure    false }}))) ;; FIXME
+                        :secure    (not grumpy/dev?) }})))
+
 
 (defn user [req]
-  (or grumpy/forced-user
-      (get-in req [:session :user])))
+  (get-in req [:session :user]))
 
 
 (defn check-session [req]

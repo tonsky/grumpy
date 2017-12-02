@@ -1,5 +1,13 @@
-Minimalistic blog engine
+# Minimalistic blog engine
+
+https://grumpy.website
+
+## Development
 
 ```
-lein run --port 8080
+mkdir grumpy_data
+echo "nikitonsky" >> grumpy_data/FORCED_USER
+echo "http://localhost:8080" >> grumpy_data/HOSTNAME
+lein figwheel
+open http://localhost:8080
 ```

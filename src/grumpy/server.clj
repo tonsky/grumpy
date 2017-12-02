@@ -64,13 +64,8 @@
 
 
 (compojure/defroutes routes
-  (compojure/GET "/" []
-    (let [post-ids  (grumpy/post-ids)
-          first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)]
-      (grumpy/html-response (index-page first-ids))))
-
-  (compojure/GET "/post/:id/:img" [id img]
-    (ring.util.response/file-response (str "grumpy_data/posts/" id "/" img)))
+  (compojure/GET "/post/:post-id/:img" [post-id img]
+    (ring.util.response/file-response (str "grumpy_data/posts/" post-id "/" img)))
 
   (compojure/GET "/post/:post-id" [post-id]
     (grumpy/html-response (post-page post-id)))
@@ -105,7 +100,14 @@
   (auth/wrap-session
     (compojure/routes
       #'auth/routes
-      #'authors/routes)))
+      #'authors/routes))
+  
+  (cond->
+    (compojure/GET "/" []
+      (let [post-ids  (grumpy/post-ids)
+            first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)  ]
+        (grumpy/html-response (index-page first-ids))))
+    grumpy/dev? (auth/wrap-session)))
 
 
 (defn with-headers [handler headers]
@@ -129,15 +131,15 @@
 (def app
   (compojure/routes
     (->
+      (compojure.route/resources "/static" {:root "static"})
+      (with-headers { "Cache-Control" "no-cache"
+                      "Expires"       "-1" }))
+    (->
       routes
       (ring.middleware.params/wrap-params)
       (with-headers { "Cache-Control" "no-cache"
                       "Expires"       "-1" })
-      (print-errors))
-    (->
-      (compojure.route/resources "/static" {:root "static"})
-      (with-headers { "Cache-Control" "no-cache"
-                      "Expires"       "-1" }))
+      (print-errors)) 
     (fn [req]
       { :status 404
         :body "404 Not found" })))

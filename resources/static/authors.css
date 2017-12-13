@@ -35,6 +35,9 @@ body.dragover .edit-post_picture { opacity: 0.5; }
 
 input[type=text].edit-post_author { display: inline-block; width: calc(100% - 100px); margin: 0; padding: 0; border: none; background: transparent; }
 
+.edit-post_body-dirty { border-color: #d4d; }
+.edit-post_author-dirty { color: #c3c; }
+
 /* EMAIL SENT */
 
 .email-sent { padding: 1em 3em; margin: 0 -3em; background: #EEE; }

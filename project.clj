@@ -1,13 +1,15 @@
 (defproject grumpy "0.1.0-SNAPSHOT"
   :dependencies [
-    [org.clojure/clojure       "1.9.0-RC1"]
-    [org.clojure/data.xml      "0.0.8"]
-    [ring/ring-core            "1.6.3"]
-    [org.immutant/web          "2.1.9"]
-    [compojure                 "1.6.0"]
-    [rum                       "0.10.8"]
-    [org.clojure/clojurescript "1.9.946" :scope "provided"]
-    [cljs-drag-n-drop          "0.1.0"]
+    [org.clojure/clojure        "1.9.0-RC1"]
+    [org.clojure/data.xml       "0.0.8"]
+    [ring/ring-core             "1.6.3"]
+    [org.immutant/web           "2.1.9"]
+    [compojure                  "1.6.0"]
+    [rum                        "0.10.8"]
+    [org.clojure/clojurescript  "1.9.946" :scope "provided"]
+    [cljs-drag-n-drop           "0.1.0"]
+    [com.cognitect/transit-clj  "0.8.300"]
+    [com.cognitect/transit-cljs "0.8.243"]
   ]
 
   :main grumpy.server

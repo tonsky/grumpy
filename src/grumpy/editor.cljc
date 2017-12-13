@@ -5,6 +5,7 @@
        :cljs [cljs.reader :as edn])
     #?(:cljs [cljs-drag-n-drop.core :as dnd])
     [rum.core :as rum]
+    [grumpy.transit :as transit]
     [grumpy.macros :refer [oget oset! js-fn]]))
 
 
@@ -27,14 +28,23 @@
     (reset! *picture-url nil))))
 
 
-(rum/defcs editor < (rum/local nil ::picture-url)
+(defn local-init [key init-fn]
   { :will-mount
+    #?(:clj
     (fn [state]
-      (let [*picture-url     (::picture-url state)
-            [{:keys [post]}] (:rum/args state)]
-        (when-some [pic (:picture post)]
-          (reset! *picture-url (str "/post/" (:id post) "/" (:url pic)))))
-      state) }
+      (assoc state key (atom (apply init-fn (:rum/args state))))))
+    #?(:cljs
+    (fn [state]
+      (let [local-state (atom (apply init-fn (:rum/args state)))
+            component   (:rum/react-component state)]
+        (add-watch local-state key
+          (fn [_ _ _ _]
+            (rum/request-render component)))
+        (assoc state key local-state)))) })
+
+
+(def handle-drag-n-drop
+  #?(:clj {})
   #?(:cljs
   { :will-mount
     (fn [state]
@@ -46,13 +56,72 @@
                      (oset! (picture-input) "files" files))
             :end   (fn [_] (js/document.body.classList.remove "dragover")) })
         state))
+  
     :will-unmount
     (fn [state]
       (dnd/unsubscribe! js/document.documentElement ::editor)
-      state) })
-  [state {:keys [post-id post user]}]
-  (let [create? (nil? post)
-        {*picture-url ::picture-url} state]
+      state) }))
+
+
+#?(:cljs
+(defn fetch! [method url payload cb]
+  (let [xhr (js/XMLHttpRequest.)]
+    (.addEventListener xhr "load"
+      (fn []
+        (this-as resp
+          (let [status (oget resp "status")
+                body   (oget resp "responseText")]
+            (if (not= status 200)
+              (js/console.warn "Error fetching" url ":" body)
+              (cb body))))))
+    (.open xhr method url)
+    (.send xhr payload))))
+
+
+#?(:cljs
+(defn save! [post-id post *post-saved]
+  (fetch! "POST" (str "/post/" post-id "/save")
+    (transit/write-transit-str {:post post}) 
+    (fn [body]
+      (let [post (:post (transit/read-transit-str body))]
+        (reset! *post-saved post))))))
+
+
+(def handle-autosave
+  #?(:clj {})
+  #?(:cljs
+  { :will-mount
+    (fn [state]
+      (let [{*post-local ::post-local
+             *post-saved ::post-saved } state
+            [{post-id :post-id}] (:rum/args state)
+            cb #(when (not= (select-keys @*post-local [:body :author])
+                            (select-keys @*post-saved [:body :author]))
+                  (save! post-id @*post-local *post-saved))]
+        (assoc state ::autosave-timer (js/setInterval cb 1000)))) ;; FIXME
+    :will-unmount
+    (fn [state]
+      (js/clearInterval (::autosave-timer state))
+      (dissoc state ::autosave-timer)) }))
+
+
+(rum/defcs editor
+  < (local-init ::picture-url
+      (fn [{post :post}]
+        (when-some [pic (:picture post)]
+          (str "/post/" (:id post) "/" (:url pic)))))
+    (local-init ::post-saved (fn [data] (:post data)))
+    (local-init ::post-local (fn [data] (:post data)))
+    handle-drag-n-drop
+    handle-autosave
+
+  [state data]
+
+  (let [{ *picture-url ::picture-url
+          *post-local  ::post-local
+          *post-saved  ::post-saved } state
+        {:keys [create? post-id user]} data
+        dirty? (not= @*post-local @*post-saved)]
     [:form.edit-post
       { :action   (str "/post/" post-id "/edit")
         :enc-type "multipart/form-data"
@@ -72,16 +141,22 @@
                          (update-preview! files *picture-url))) }]
       [:.form_row
         [:textarea
-          { :default-value (:body post "")
-            :name          "body"
-            :placeholder   "Be grumpy here..."
-            :auto-focus    true }]]
+          { :value       (:body @*post-local)
+            :on-change   #(swap! *post-local assoc :body (.-value (.-target %)))
+            :name        "body"
+            :placeholder "Be grumpy here..."
+            :class       (when (not= (:body @*post-local) (:body @*post-saved))
+                           "edit-post_body-dirty")
+            :auto-focus  true }]]
       [:.form_row
         "Author: "
         [:input.edit-post_author
-          { :type "text"
-            :name "author"
-            :default-value (or (:author post) user) }]]
+          { :type      "text"
+            :name      "author"
+            :value     (:author @*post-local)
+            :on-change #(swap! *post-local assoc :author (.-value (.-target %)))
+            :class     (when (not= (:author @*post-local) (:author @*post-saved))
+                         "edit-post_author-dirty") }]]
       [:.form_row
         [:button (if create? "Grumpost now!" "Save")]]]))
 

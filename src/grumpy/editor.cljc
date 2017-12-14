@@ -13,19 +13,60 @@
 
 
 #?(:cljs
+(defn fetch! [method url opts]
+  (let [xhr (js/XMLHttpRequest.)
+        success (:success opts)
+        error   (:error opts)]
+    (.addEventListener xhr "load"
+      (fn []
+        (this-as resp
+          (let [status (oget resp "status")
+                body   (oget resp "responseText")]
+            (if (not= status 200)
+              (do
+                (js/console.warn "Error fetching" url ":" body)
+                (when (some? error)
+                  (error body)))
+              (success body))))))
+    (when-some [progress (:progress opts)]
+      (.addEventListener (oget xhr "upload") "progress"
+        (fn [e]
+          (when (some? (oget e "lengthComputable"))
+            (progress (-> (oget e "loaded") (* 100) (/ (oget e "total")) js/Math.floor))))))
+    (.open xhr method url)
+    (.send xhr (:body opts)))))
+
+
+#?(:cljs
 (defn ^:export picture-input [] ;; ^:export == workaround for https://dev.clojure.org/jira/browse/CLJS-2410
   (js/document.querySelector "input[name=picture]")))
 
 
 #?(:cljs
-(defn update-preview! [files *picture-url]
-  (when-some [picture-url @*picture-url]
+(defn update-preview! [files *post-local]
+  (when-some [picture-url (:url (:picture @*post-local))]
     (when (str/starts-with? picture-url "blob:")
       (js/URL.revokeObjectURL picture-url)))
   (if-some [file (when (> (alength files) 0)
                    (aget files 0))]
-    (reset! *picture-url (js/URL.createObjectURL file))
-    (reset! *picture-url nil))))
+    (swap! *post-local assoc :picture { :url (js/URL.createObjectURL file) })
+    (swap! *post-local dissoc :picture))))
+
+
+#?(:cljs
+(defn upload! [post-id files *upload-status *post-saved]
+  ;; TODO handle picture deletion
+  (when-some [file (when (> (alength files) 0) (aget files 0))]
+    (reset! *upload-status 0)
+    (fetch! "POST" (str "/post/" post-id "/upload")
+      { :body     file
+        :progress (fn [percent]
+                    (reset! *upload-status percent))
+        :success  (fn [payload]
+                    (reset! *upload-status ::uploaded)
+                    (reset! *post-saved (:post (transit/read-transit-str payload))))
+        :error    (fn [_]
+                    (reset! *upload-status ::failed)) }))))
 
 
 (defn local-init [key init-fn]
@@ -52,7 +93,6 @@
         (dnd/subscribe! js/document.documentElement ::editor
           { :start (fn [_] (js/document.body.classList.add "dragover"))
             :drop  (fn [e files]
-                     (update-preview! files *picture-url)
                      (oset! (picture-input) "files" files))
             :end   (fn [_] (js/document.body.classList.remove "dragover")) })
         state))
@@ -64,27 +104,18 @@
 
 
 #?(:cljs
-(defn fetch! [method url payload cb]
-  (let [xhr (js/XMLHttpRequest.)]
-    (.addEventListener xhr "load"
-      (fn []
-        (this-as resp
-          (let [status (oget resp "status")
-                body   (oget resp "responseText")]
-            (if (not= status 200)
-              (js/console.warn "Error fetching" url ":" body)
-              (cb body))))))
-    (.open xhr method url)
-    (.send xhr payload))))
-
-
-#?(:cljs
-(defn save! [post-id post *post-saved]
-  (fetch! "POST" (str "/post/" post-id "/save")
-    (transit/write-transit-str {:post post}) 
-    (fn [body]
-      (let [post (:post (transit/read-transit-str body))]
-        (reset! *post-saved post))))))
+(defn save-post! [post-id post *post-saved]
+  (let [saved   @*post-saved
+        updates (into {}
+                  (for [attr [:body :author]
+                        :when (not= (get post attr) (get saved attr))]
+                    [attr (get post attr)]))]
+    (when-not (empty? updates)
+      (fetch! "POST" (str "/post/" post-id "/save")
+        { :body (transit/write-transit-str {:post updates})
+          :success (fn [body]
+                    (let [post (:post (transit/read-transit-str body))]
+                      (reset! *post-saved post))) })))))
 
 
 (def handle-autosave
@@ -95,9 +126,7 @@
       (let [{*post-local ::post-local
              *post-saved ::post-saved } state
             [{post-id :post-id}] (:rum/args state)
-            cb #(when (not= (select-keys @*post-local [:body :author])
-                            (select-keys @*post-saved [:body :author]))
-                  (save! post-id @*post-local *post-saved))]
+            cb #(save-post! post-id @*post-local *post-saved)]
         (assoc state ::autosave-timer (js/setInterval cb 1000)))) ;; FIXME
     :will-unmount
     (fn [state]
@@ -106,46 +135,51 @@
 
 
 (rum/defcs editor
-  < (local-init ::picture-url
-      (fn [{post :post}]
-        (when-some [pic (:picture post)]
-          (str "/post/" (:id post) "/" (:url pic)))))
-    (local-init ::post-saved (fn [data] (:post data)))
+  < (local-init ::post-saved (fn [data] (:post data)))
     (local-init ::post-local (fn [data] (:post data)))
+    (rum/local ::uploaded ::upload-status)
     handle-drag-n-drop
     handle-autosave
 
   [state data]
 
-  (let [{ *picture-url ::picture-url
-          *post-local  ::post-local
-          *post-saved  ::post-saved } state
+  (let [{ *post-local    ::post-local
+          *post-saved    ::post-saved
+          *upload-status ::upload-status } state
         {:keys [create? post-id user]} data
-        dirty? (not= @*post-local @*post-saved)]
+        post-local  @*post-local
+        post-saved  @*post-saved
+        picture-url (:url (:picture post-local))]
     [:form.edit-post
-      { :action   (str "/post/" post-id "/edit")
-        :enc-type "multipart/form-data"
-        :method   "post" }
       [:.form_row.edit-post_picture
-        { :class    (when (nil? @*picture-url) "edit-post_picture-empty")
+        { :class    (when (nil? picture-url) "edit-post_picture-empty")
           :on-click (js-fn [e]
                       (.click (picture-input))
                       (.preventDefault e)) }
-        (when-some [picture-url @*picture-url]
-          [:img.post_img.edit-post_picture_img { :src picture-url }])]
+        (when (some? picture-url)
+          [:.edit-post_picture_inner
+            [:img.post_img.edit-post_picture_img 
+              { :src (if (str/starts-with? picture-url "blob:")
+                       picture-url
+                       (str "/draft/" post-id "/" picture-url)) }]
+            (when (= ::failed @*upload-status)
+              [:.edit-post_picture_failed])
+            (when (number? @*upload-status)
+              [:.edit-post_picture_progress { :style { :height (str (- 100 @*upload-status) "%")}}])])]
       [:input.edit-post_file
         { :type "file"
           :name "picture"
           :on-change (js-fn [e]
                        (let [files (-> e (oget "target") (oget "files"))]
-                         (update-preview! files *picture-url))) }]
+                         (update-preview! files *post-local)
+                         (upload! post-id files *upload-status *post-saved))) }]
       [:.form_row
         [:textarea
-          { :value       (:body @*post-local)
+          { :value       (:body post-local)
             :on-change   #(swap! *post-local assoc :body (.-value (.-target %)))
             :name        "body"
             :placeholder "Be grumpy here..."
-            :class       (when (not= (:body @*post-local) (:body @*post-saved))
+            :class       (when (not= (:body post-local) (:body post-saved))
                            "edit-post_body-dirty")
             :auto-focus  true }]]
       [:.form_row
@@ -153,9 +187,9 @@
         [:input.edit-post_author
           { :type      "text"
             :name      "author"
-            :value     (:author @*post-local)
+            :value     (:author post-local)
             :on-change #(swap! *post-local assoc :author (.-value (.-target %)))
-            :class     (when (not= (:author @*post-local) (:author @*post-saved))
+            :class     (when (not= (:author post-local) (:author post-saved))
                          "edit-post_author-dirty") }]]
       [:.form_row
         [:button (if create? "Grumpost now!" "Save")]]]))

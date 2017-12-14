@@ -5,6 +5,7 @@
     [clojure.string :as str]
     [clojure.java.io :as io]
     [compojure.core :as compojure]
+    [ring.util.response]
     [ring.middleware.multipart-params]
     
     [grumpy.core :as grumpy]
@@ -42,46 +43,28 @@
           nil))))
 
 
-(defn picture-name [post-id picture]
-  (when (some? picture)
-    (let [in-name  (:filename picture)
-          [_ ext]  (re-matches #".*(\.[^\.]+)" in-name)]
-      (str post-id "~" (grumpy/encode (System/currentTimeMillis) 7) ext))))
+(defn save-picture! [post-id content-type input-stream]
+  (let [[_ extension] (str/split content-type #"/")
+        name          (str (grumpy/encode (System/currentTimeMillis) 7) "." extension)
+        draft         (get-draft post-id)
+        dir           (io/file (str "grumpy_data/drafts/" post-id))
+        draft'        (assoc draft :picture { :url name })]
+    (when-some [picture (:picture draft)]
+      (let [file (io/file dir (:url picture))]
+        (when (.exists file)
+          (io/delete-file file))))
+    (io/copy input-stream (io/file dir name))
+    (spit (io/file dir "post.edn") draft')
+    draft'))
 
 
-; (defn save-picture [post picture]
-;   (let [post-id       (:id post)
-;         old-post      (grumpy/get-post post-id)
-;         dir           (io/file (str "grumpy_data/posts/" post-id))
-;         override?     (some? picture)
-;         picture-name  (picture-name post-id picture)]
-;     (if (nil? old-post)
-;       (.mkdirs dir)
-;       (when override?
-;         (when-some [pic (:picture old-post)]
-;           (io/delete-file (io/file dir (:url pic))))))
-;     (when (some? picture)
-;       (io/copy (:tempfile picture) (io/file dir picture-name))
-;       (.delete (:tempfile picture)))
-;     (let [post' (merge
-;                   { :picture  (if override?
-;                                 { :url picture-name }
-;                                 (:picture old-post))
-;                     :created  (grumpy/now)
-;                     :updated  (grumpy/now) }
-;                   post
-;                   (select-keys old-post [:created]))]
-;       (spit (io/file dir "post.edn") (pr-str post')))))
-
-
-(defn save-post! [post-id post]
-  (let [post' (merge
-                { :created (grumpy/now) }
-                post
-                { :updated (grumpy/now) })]
-    (spit (io/file (str "grumpy_data/drafts/" post-id "/post.edn"))
-      (pr-str post'))
-    post'))
+(defn save-post! [post-id updates]
+  (let [draft  (get-draft post-id)
+        draft' (merge draft updates)
+        dir    (str "grumpy_data/drafts/" post-id)
+        file   (io/file dir "post.edn")]
+    (spit (io/file file) (pr-str draft'))
+    draft'))
 
 
 (rum/defc edit-post-page [post-id user]
@@ -119,6 +102,16 @@
                         (transit/read-transit))
             saved   (save-post! post-id (:post payload))]
         { :body (transit/write-transit-str { :post saved }) })))
+
+  (compojure/POST "/post/:post-id/upload" [post-id :as req]
+    (or
+      (auth/check-session req)
+      (let [payload (:body req)
+            saved   (save-picture! post-id (get-in req [:headers "content-type"]) payload)]
+        { :body (transit/write-transit-str { :post saved }) })))
+
+  (compojure/GET "/draft/:post-id/:img" [post-id img]
+    (ring.util.response/file-response (str "grumpy_data/drafts/" post-id "/" img)))
 
   (ring.middleware.multipart-params/wrap-multipart-params
     (compojure/POST "/post/:post-id/edit" [post-id :as req]

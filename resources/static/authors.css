@@ -30,7 +30,11 @@ body.dragover { background-color: #F0FCF0; }
 .edit-post_picture { min-height: 60px; margin: 0 -1.75em; padding: 0 1.75em; }
 .edit-post_picture-empty { background-image: url("/static/upload.svg"); background-color: #999; background-repeat: no-repeat; background-position: center center; opacity: 0.2; }
 body.dragover .edit-post_picture { opacity: 0.5; }
+
+.edit-post_picture_inner { position: relative; }
 .edit-post_picture_img { display: block; margin: 0; }
+.edit-post_picture_progress { position: absolute; width: 100%; left: 0; bottom: 0; background: #fff; opacity: 0.9; }
+.edit-post_picture_failed { background: #c33; position: absolute; width: 100%; height: 100%; left:0; top: 0; opacity: 0.9; }
 .edit-post_file { display: none; }
 
 input[type=text].edit-post_author { display: inline-block; width: calc(100% - 100px); margin: 0; padding: 0; border: none; background: transparent; }

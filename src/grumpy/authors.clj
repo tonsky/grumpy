@@ -101,6 +101,15 @@
       post)))
 
 
+(defn delete! [post-id]
+  (let [dir   (io/file (str "grumpy_data/drafts/" post-id))
+        draft (get-draft post-id)]
+    (when-some [pic (:picture draft)]
+      (.delete (io/file dir (:url pic))))
+    (.delete (io/file dir "post.edn"))
+    (.delete dir)))
+
+
 (rum/defc edit-post-page [post-id user]
   (let [post    (or (get-draft (or post-id user))
                     { :body ""
@@ -151,6 +160,13 @@
             _       (save-post! post-id (:post payload))
             post'   (publish! post-id)]
       { :body (transit/write-transit-str { :post post' })})))
+
+  (compojure/POST "/draft/:post-id/delete" [post-id :as req]
+    (or
+      (auth/check-session req)
+      (do 
+        (delete! post-id)
+        { :status 200 })))
 
   (compojure/GET "/draft/:post-id/:img" [post-id img]
     (ring.util.response/file-response (str "grumpy_data/drafts/" post-id "/" img)))

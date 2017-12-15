@@ -48,6 +48,12 @@ body.dragover .edit-post_picture { opacity: 0.5; }
 
 input[type=text].edit-post_author { display: inline-block; width: calc(100% - 100px); margin: 0; padding: 0; }
 
+.edit-post_cancel,
+.edit-post_cancel:hover,
+.edit-post_cancel:active { background: none; color: #000; }
+
+.edit-post_cancel:hover { color: #555; }
+
 /* EMAIL SENT */
 
 .email-sent { padding: 1em 3em; margin: 0 -3em; background: #EEE; }

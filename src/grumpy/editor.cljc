@@ -102,6 +102,15 @@
                    (oset! js/location "href" (str "/post/" (:id post))))) })))
 
 
+#?(:cljs
+(defn delete! [post-id create?]
+  (fetch! "POST" (str "/draft/" post-id "/delete")
+    { :success (fn [_]
+                 (if create?  
+                   (oset! js/location "href" "/")
+                   (oset! js/location "href" (str "/post/" post-id)))) })))
+
+
 (defn local-init [key init-fn]
   { :will-mount
     #?(:clj
@@ -258,7 +267,12 @@
                          "edit-post_author-dirty") }]]
       [:.form_row
         [:button { :type "submit" :on-click submit! }
-          (if create? "Grumpost now!" "Publish changes")]]]))
+          (if create? "Grumpost now!" "Publish changes")]
+        [:button.edit-post_cancel
+          { :on-click (js-fn [e]
+                        (.preventDefault e)
+                        (delete! post-id create?)) }
+          (if create? "Delete draft" "Cancel")]]]))
 
 
 #?(:cljs

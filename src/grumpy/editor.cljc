@@ -43,30 +43,33 @@
 
 
 #?(:cljs
-(defn update-preview! [files *post-local]
+(defn upload! [post-id files *post-local *post-saved *autosave]
   (when-some [picture-url (:url (:picture @*post-local))]
     (when (str/starts-with? picture-url "blob:")
       (js/URL.revokeObjectURL picture-url)))
-  (if-some [file (when (> (alength files) 0)
-                   (aget files 0))]
-    (swap! *post-local assoc :picture { :url (js/URL.createObjectURL file) })
-    (swap! *post-local dissoc :picture))))
 
-
-#?(:cljs
-(defn upload! [post-id files *autosave *post-saved]
-  ;; TODO handle picture deletion
-  (when-some [file (when (> (alength files) 0) (aget files 0))]
-    (reset! *autosave 0)
-    (fetch! "POST" (str "/post/" post-id "/upload")
-      { :body     file
-        :progress (fn [percent]
-                    (reset! *autosave percent))
-        :success  (fn [payload]
-                    (reset! *autosave :autosave/clean)
-                    (reset! *post-saved (:post (transit/read-transit-str payload))))
-        :error    (fn [_]
-                    (reset! *autosave :autosave/error)) }))))
+  (if-some [file (when (> (alength files) 0) (aget files 0))]
+    (do
+      (swap! *post-local assoc :picture { :url (js/URL.createObjectURL file)
+                                          :content-type (oget file "type") })
+      (reset! *autosave 0)
+      (fetch! "POST" (str "/post/" post-id "/upload")
+        { :body     file
+          :progress (fn [percent]
+                      (reset! *autosave percent))
+          :success  (fn [payload]
+                      (reset! *autosave :autosave/clean)
+                      (reset! *post-saved (:post (transit/read-transit-str payload))))
+          :error    (fn [_]
+                      (reset! *autosave :autosave/error)) }))
+    (do ;; delete file
+      (swap! *post-local dissoc :picture)
+      (fetch! "POST" (str "/post/" post-id "/upload")
+        { :success (fn [payload]
+                     (reset! *autosave :autosave/clean)
+                     (reset! *post-saved (:post (transit/read-transit-str payload))))
+          :error   (fn [_]
+                     (reset! *autosave :autosave/error)) })))))
 
 
 #?(:cljs
@@ -150,6 +153,13 @@
       (dissoc state ::autosave-timer)) }))
 
 
+(rum/defc picture-delete-icon < rum/static []
+  [:svg { :width "20px" :height "20px" :viewBox "0 0 10 10" :version "1.1" :xmlns "http://www.w3.org/2000/svg" }
+    [:circle { :cx "5" :cy "5" :r "5"}]
+    [:path { :d "M3.5,6.5 L6.5,3.5" }]
+    [:path { :d "M3.5,3.5 L6.5,6.5" }]])
+
+
 (rum/defcs editor
   < (local-init ::post-saved (fn [data] (:post data)))
     (local-init ::post-local (fn [data] (:post data)))
@@ -163,37 +173,51 @@
           *post-saved ::post-saved
           *autosave   ::autosave } state
         {:keys [create? post-id user]} data
-        post-local    @*post-local
-        post-saved    @*post-saved
-        autosave      @*autosave
-        picture-url   (:url (:picture post-local))
-        submit!       (js-fn [e]
-                        (.preventDefault e)
-                        (publish! post-id @*post-local))]
+        post-local       @*post-local
+        post-saved       @*post-saved
+        autosave         @*autosave
+        picture-url      (:url (:picture post-local))
+        picture-src      (if (str/starts-with? picture-url "blob:")
+                           picture-url
+                           (str "/draft/" post-id "/" picture-url))
+        picture-type     (:content-type (:picture post-local))
+        submit!          (js-fn [e]
+                           (.preventDefault e)
+                           (publish! post-id @*post-local))]
     [:form.edit-post
       { :on-submit submit! }
-      [:.form_row.edit-post_picture
-        { :class    (when (nil? picture-url) "edit-post_picture-empty")
-          :on-click (js-fn [e]
-                      (.click (picture-input))
-                      (.preventDefault e)) }
-        (when (some? picture-url)
+      (if (nil? picture-url)
+        [:.form_row.edit-post_picture.edit-post_picture-empty
+          { :on-click (js-fn [e]
+                        (.click (picture-input))
+                        (.preventDefault e)) }]
+        [:.form_row.edit-post_picture
+          [:.edit-post_picture_delete
+            { :on-click (js-fn [e]
+                          (upload! post-id (make-array 0) *post-local *post-saved *autosave)) }
+            (picture-delete-icon)]
           [:.edit-post_picture_inner
-            [:img.post_img.edit-post_picture_img 
-              { :src (if (str/starts-with? picture-url "blob:")
-                       picture-url
-                       (str "/draft/" post-id "/" picture-url)) }]
+            { :on-click (js-fn [e]
+                          (.click (picture-input))
+                          (.preventDefault e)) }
+            (cond 
+              (str/starts-with? picture-type "video/")
+                [:video.post_img.edit-post_picture_img
+                  {:autoPlay "autoplay" :loop "loop"}
+                  [:source {:type picture-type :src picture-src}]]
+              (str/starts-with? picture-type "image/")
+                [:img.post_img.edit-post_picture_img
+                  { :src picture-src }])
             (when (= :autosave/error autosave)
               [:.edit-post_picture_failed])
             (when (number? autosave)
-              [:.edit-post_picture_progress { :style { :height (str (- 100 autosave) "%")}}])])]
+              [:.edit-post_picture_progress { :style { :height (str (- 100 autosave) "%")}}])]])
       [:input.edit-post_file
         { :type "file"
           :name "picture"
           :on-change (js-fn [e]
                        (let [files (-> e (oget "target") (oget "files"))]
-                         (update-preview! files *post-local)
-                         (upload! post-id files *autosave *post-saved))) }]
+                         (upload! post-id files *post-local *post-saved *autosave))) }]
       [:.form_row { :style { :position "relative" }}
         [:.autosave 
           { :class (cond
@@ -229,7 +253,7 @@
                          "edit-post_author-dirty") }]]
       [:.form_row
         [:button { :type "submit" :on-click submit! }
-          (if create? "Grumpost now!" "Update")]]]))
+          (if create? "Grumpost now!" "Publish changes")]]]))
 
 
 #?(:cljs

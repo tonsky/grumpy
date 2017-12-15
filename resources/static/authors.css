@@ -32,10 +32,13 @@ body.dragover { background-color: #F0FCF0; }
 .autosave-saving { border: 1px solid #aaa; background: #eee; }
 .autosave-error  { border: 1px solid #aaa; background: #c33; }
 
-
-.edit-post_picture { min-height: 60px; }
+.edit-post_picture { min-height: 60px; position: relative; }
 .edit-post_picture-empty { background-image: url("/static/upload.svg"); background-color: #999; background-repeat: no-repeat; background-position: center center; opacity: 0.2; }
 body.dragover .edit-post_picture { opacity: 0.5; }
+.edit-post_picture_delete { position: absolute; right: -30px; top: 0px; width: 20px; height: 20px; }
+.edit-post_picture_delete > svg > circle { fill: #ccc; }
+.edit-post_picture_delete:hover > svg > circle { fill: #999; }
+.edit-post_picture_delete > svg > path { stroke: #fff; stroke-width: 1px; }
 
 .edit-post_picture_inner { position: relative; }
 .edit-post_picture_img { display: block; margin: 0; }

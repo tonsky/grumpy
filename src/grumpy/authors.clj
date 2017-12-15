@@ -44,20 +44,22 @@
 
 
 (defn save-picture! [post-id content-type input-stream]
-  (let [[_ extension] (str/split content-type #"/")
-        name          (str (grumpy/encode (System/currentTimeMillis) 7) "." extension)
-        draft         (get-draft post-id)
-        dir           (io/file (str "grumpy_data/drafts/" post-id))
-        picture       { :url name
-                        :content-type content-type }
-        draft'        (assoc draft :picture picture)]
+  (let [draft (get-draft post-id)
+        dir   (io/file (str "grumpy_data/drafts/" post-id))]
     (when-some [picture (:picture draft)]
       (let [file (io/file dir (:url picture))]
         (when (.exists file)
           (io/delete-file file))))
-    (io/copy input-stream (io/file dir name))
-    (spit (io/file dir "post.edn") draft')
-    draft'))
+    (let [draft' (if (some? input-stream)
+                   (let [[_ ext] (str/split content-type #"/")
+                         name    (str (grumpy/encode (System/currentTimeMillis) 7) "." ext)
+                         picture { :url name
+                                   :content-type content-type }]
+                     (io/copy input-stream (io/file dir name))
+                     (assoc draft :picture picture))
+                   (dissoc draft :picture))]
+      (spit (io/file dir "post.edn") draft')
+      draft')))
 
 
 (defn save-post! [post-id updates]

@@ -94,19 +94,21 @@
 
 
 #?(:cljs
-(defn publish! [post-id post]
+(defn publish! [post-id post new?]
   (fetch! "POST" (str "/post/" post-id "/publish")
     { :body    (transit/write-transit-str { :post (select-keys post [:body :author]) })
       :success (fn [payload]
-                 (let [post (:post (transit/read-transit-str payload))]
-                   (oset! js/location "href" (str "/post/" (:id post))))) })))
+                 (if new?
+                   (oset! js/location "href" "/")
+                   (let [post (:post (transit/read-transit-str payload))]
+                     (oset! js/location "href" (str "/post/" (:id post)))))) })))
 
 
 #?(:cljs
-(defn delete! [post-id create?]
+(defn delete! [post-id new?]
   (fetch! "POST" (str "/draft/" post-id "/delete")
     { :success (fn [_]
-                 (if create?  
+                 (if new?  
                    (oset! js/location "href" "/")
                    (oset! js/location "href" (str "/post/" post-id)))) })))
 
@@ -183,7 +185,7 @@
           *post-saved ::post-saved
           *upload     ::upload
           *autosave   ::autosave } state
-        {:keys [create? post-id user]} data
+        {:keys [new? post-id user]} data
         post-local       @*post-local
         post-saved       @*post-saved
         upload           @*upload
@@ -196,7 +198,7 @@
         picture-type     (:content-type (:picture post-local))
         submit!          (js-fn [e]
                            (.preventDefault e)
-                           (publish! post-id @*post-local))]
+                           (publish! post-id @*post-local new?))]
     [:form.edit-post
       { :on-submit submit! }
       (if (nil? picture-url)
@@ -267,12 +269,12 @@
                          "edit-post_author-dirty") }]]
       [:.form_row
         [:button { :type "submit" :on-click submit! }
-          (if create? "Grumpost now!" "Publish changes")]
+          (if new? "Grumpost now!" "Publish changes")]
         [:button.edit-post_cancel
           { :on-click (js-fn [e]
                         (.preventDefault e)
-                        (delete! post-id create?)) }
-          (if create? "Delete draft" "Cancel")]]]))
+                        (delete! post-id new?)) }
+          (if new? "Delete draft" "Cancel")]]]))
 
 
 #?(:cljs

@@ -72,10 +72,10 @@
 
 
 (defn publish! [post-id]
-  (let [create?   (str/starts-with? post-id "@")
+  (let [new?      (str/starts-with? post-id "@")
         draft-dir (io/file (str "grumpy_data/drafts/" post-id))]
     ;; clean up old post
-    (when-not create?
+    (when-not new?
       (let [old (grumpy/get-post post-id)]
         (.delete (io/file (str "grumpy_data/posts/" post-id "/post.edn")))
         (when-some [pic (:picture old)]
@@ -83,12 +83,12 @@
     ;; create/update new post
     (let [now  (grumpy/now)
           post (cond-> (get-draft post-id)
-                 true    (assoc :updated now)
-                 create? (assoc :created now
-                                :id (next-post-id now))) ;; assign post id
+                 true (assoc :updated now)
+                 new? (assoc :created now
+                             :id (next-post-id now))) ;; assign post id
           post-dir (io/file (str "grumpy_data/posts/" (:id post)))]
       ;; create new post dir
-      (when create?
+      (when new?
         (.mkdirs post-dir))
       ;; write post.edn
       (spit (io/file post-dir "post.edn") (pr-str post))
@@ -111,15 +111,15 @@
 
 
 (rum/defc edit-post-page [post-id user]
-  (let [post    (or (get-draft (or post-id user))
-                    { :body ""
-                      :author user })
-        create? (str/starts-with? post-id "@")
-        data    { :create? create?
-                  :post-id post-id
-                  :post    post
-                  :user    user }]
-    (grumpy/page { :title (if create? "Edit draft" "Edit post")
+  (let [post (or (get-draft (or post-id user))
+                 { :body ""
+                   :author user })
+        new? (str/starts-with? post-id "@")
+        data { :new?    new?
+               :post-id post-id
+               :post    post
+               :user    user }]
+    (grumpy/page { :title (if new? "Edit draft" "Edit post")
                    :styles ["authors.css"] }
       [:.mount { :data (pr-str data) }
         (editor/editor data)]

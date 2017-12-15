@@ -43,7 +43,7 @@
 
 
 #?(:cljs
-(defn upload! [post-id files *post-local *post-saved *autosave]
+(defn upload! [post-id files *post-local *post-saved *upload]
   (when-some [picture-url (:url (:picture @*post-local))]
     (when (str/starts-with? picture-url "blob:")
       (js/URL.revokeObjectURL picture-url)))
@@ -52,24 +52,24 @@
     (do
       (swap! *post-local assoc :picture { :url (js/URL.createObjectURL file)
                                           :content-type (oget file "type") })
-      (reset! *autosave 0)
+      (reset! *upload 0)
       (fetch! "POST" (str "/post/" post-id "/upload")
         { :body     file
           :progress (fn [percent]
-                      (reset! *autosave percent))
+                      (reset! *upload percent))
           :success  (fn [payload]
-                      (reset! *autosave :autosave/clean)
+                      (reset! *upload :upload/clean)
                       (reset! *post-saved (:post (transit/read-transit-str payload))))
           :error    (fn [_]
-                      (reset! *autosave :autosave/error)) }))
+                      (reset! *upload :upload/error)) }))
     (do ;; delete file
       (swap! *post-local dissoc :picture)
       (fetch! "POST" (str "/post/" post-id "/upload")
         { :success (fn [payload]
-                     (reset! *autosave :autosave/clean)
+                     (reset! *upload :upload/clean)
                      (reset! *post-saved (:post (transit/read-transit-str payload))))
           :error   (fn [_]
-                     (reset! *autosave :autosave/error)) })))))
+                     (reset! *upload :upload/error)) })))))
 
 
 #?(:cljs
@@ -163,6 +163,7 @@
 (rum/defcs editor
   < (local-init ::post-saved (fn [data] (:post data)))
     (local-init ::post-local (fn [data] (:post data)))
+    (rum/local :upload/clean ::upload)
     (rum/local :autosave/clean ::autosave)
     handle-drag-n-drop
     handle-autosave
@@ -171,15 +172,18 @@
 
   (let [{ *post-local ::post-local
           *post-saved ::post-saved
+          *upload     ::upload
           *autosave   ::autosave } state
         {:keys [create? post-id user]} data
         post-local       @*post-local
         post-saved       @*post-saved
+        upload           @*upload
         autosave         @*autosave
         picture-url      (:url (:picture post-local))
-        picture-src      (if (str/starts-with? picture-url "blob:")
-                           picture-url
-                           (str "/draft/" post-id "/" picture-url))
+        picture-src      (when (some? picture-url)
+                           (if (str/starts-with? picture-url "blob:")
+                             picture-url
+                             (str "/draft/" post-id "/" picture-url)))
         picture-type     (:content-type (:picture post-local))
         submit!          (js-fn [e]
                            (.preventDefault e)
@@ -194,7 +198,7 @@
         [:.form_row.edit-post_picture
           [:.edit-post_picture_delete
             { :on-click (js-fn [e]
-                          (upload! post-id (make-array 0) *post-local *post-saved *autosave)) }
+                          (upload! post-id (make-array 0) *post-local *post-saved *upload)) }
             (picture-delete-icon)]
           [:.edit-post_picture_inner
             { :on-click (js-fn [e]
@@ -208,20 +212,21 @@
               (str/starts-with? picture-type "image/")
                 [:img.post_img.edit-post_picture_img
                   { :src picture-src }])
-            (when (= :autosave/error autosave)
+            (when (= :upload/error upload)
               [:.edit-post_picture_failed])
-            (when (number? autosave)
-              [:.edit-post_picture_progress { :style { :height (str (- 100 autosave) "%")}}])]])
+            (when (number? upload)
+              [:.edit-post_picture_progress { :style { :height (str (- 100 upload) "%")}}])]])
       [:input.edit-post_file
         { :type "file"
           :name "picture"
           :on-change (js-fn [e]
                        (let [files (-> e (oget "target") (oget "files"))]
-                         (upload! post-id files *post-local *post-saved *autosave))) }]
+                         (upload! post-id files *post-local *post-saved *upload))) }]
       [:.form_row { :style { :position "relative" }}
         [:.autosave 
           { :class (cond
-                     (number? autosave)            "autosave-saving"
+                     (number? upload)              "autosave-saving"
+                     (= :upload/error upload)      "autosave-error"
                      (= :autosave/dirty autosave)  "autosave-dirty"
                      (= :autosave/saving autosave) "autosave-saving"
                      (= :autosave/error autosave)  "autosave-error"

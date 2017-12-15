@@ -14,7 +14,7 @@
 
 #?(:cljs
 (defn fetch! [method url opts]
-  (let [xhr (js/XMLHttpRequest.)
+  (let [xhr     (js/XMLHttpRequest.)
         success (:success opts)
         error   (:error opts)]
     (.addEventListener xhr "load"
@@ -69,6 +69,30 @@
                     (reset! *upload-status ::failed)) }))))
 
 
+#?(:cljs
+(defn save-post! [post-id post *post-saved]
+  (let [saved   @*post-saved
+        updates (into {}
+                  (for [attr [:body :author]
+                        :when (not= (get post attr) (get saved attr))]
+                    [attr (get post attr)]))]
+    (when-not (empty? updates)
+      (fetch! "POST" (str "/post/" post-id "/save")
+        { :body (transit/write-transit-str {:post updates})
+          :success (fn [body]
+                    (let [post (:post (transit/read-transit-str body))]
+                      (reset! *post-saved post))) })))))
+
+
+#?(:cljs
+(defn publish! [post-id post]
+  (fetch! "POST" (str "/post/" post-id "/publish")
+    { :body    (transit/write-transit-str { :post (select-keys post [:body :author]) })
+      :success (fn [payload]
+                 (let [post (:post (transit/read-transit-str payload))]
+                   (oset! js/location "href" (str "/post/" (:id post))))) })))
+
+
 (defn local-init [key init-fn]
   { :will-mount
     #?(:clj
@@ -103,21 +127,6 @@
       state) }))
 
 
-#?(:cljs
-(defn save-post! [post-id post *post-saved]
-  (let [saved   @*post-saved
-        updates (into {}
-                  (for [attr [:body :author]
-                        :when (not= (get post attr) (get saved attr))]
-                    [attr (get post attr)]))]
-    (when-not (empty? updates)
-      (fetch! "POST" (str "/post/" post-id "/save")
-        { :body (transit/write-transit-str {:post updates})
-          :success (fn [body]
-                    (let [post (:post (transit/read-transit-str body))]
-                      (reset! *post-saved post))) })))))
-
-
 (def handle-autosave
   #?(:clj {})
   #?(:cljs
@@ -149,8 +158,12 @@
         {:keys [create? post-id user]} data
         post-local  @*post-local
         post-saved  @*post-saved
-        picture-url (:url (:picture post-local))]
+        picture-url (:url (:picture post-local))
+        submit!     (js-fn [e]
+                      (.preventDefault e)
+                      (publish! post-id @*post-local))]
     [:form.edit-post
+      { :on-submit submit! }
       [:.form_row.edit-post_picture
         { :class    (when (nil? picture-url) "edit-post_picture-empty")
           :on-click (js-fn [e]
@@ -176,6 +189,10 @@
       [:.form_row
         [:textarea
           { :value       (:body post-local)
+            :on-key-down (js-fn [e]
+                           (when (and (= 13 (oget e "keyCode"))
+                                      (or (oget e "ctrlKey") (oget e "metaKey")))
+                             (submit! e)))
             :on-change   #(swap! *post-local assoc :body (.-value (.-target %)))
             :name        "body"
             :placeholder "Be grumpy here..."
@@ -192,7 +209,8 @@
             :class     (when (not= (:author post-local) (:author post-saved))
                          "edit-post_author-dirty") }]]
       [:.form_row
-        [:button (if create? "Grumpost now!" "Save")]]]))
+        [:button { :type "submit" :on-click submit! }
+          (if create? "Grumpost now!" "Update")]]]))
 
 
 #?(:cljs

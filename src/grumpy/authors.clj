@@ -48,7 +48,9 @@
         name          (str (grumpy/encode (System/currentTimeMillis) 7) "." extension)
         draft         (get-draft post-id)
         dir           (io/file (str "grumpy_data/drafts/" post-id))
-        draft'        (assoc draft :picture { :url name })]
+        picture       { :url name
+                        :content-type content-type }
+        draft'        (assoc draft :picture picture)]
     (when-some [picture (:picture draft)]
       (let [file (io/file dir (:url picture))]
         (when (.exists file)
@@ -65,6 +67,36 @@
         file   (io/file dir "post.edn")]
     (spit (io/file file) (pr-str draft'))
     draft'))
+
+
+(defn publish! [post-id]
+  (let [create?   (str/starts-with? post-id "@")
+        draft-dir (io/file (str "grumpy_data/drafts/" post-id))]
+    ;; clean up old post
+    (when-not create?
+      (let [old (grumpy/get-post post-id)]
+        (.delete (io/file (str "grumpy_data/posts/" post-id "/post.edn")))
+        (when-some [pic (:picture old)]
+          (.delete (io/file (str "grumpy_data/posts/" post-id "/" (:url pic)))))))
+    ;; create/update new post
+    (let [now  (grumpy/now)
+          post (cond-> (get-draft post-id)
+                 true    (assoc :updated now)
+                 create? (assoc :created now
+                                :id (next-post-id now))) ;; assign post id
+          post-dir (io/file (str "grumpy_data/posts/" (:id post)))]
+      ;; create new post dir
+      (when create?
+        (.mkdirs post-dir))
+      ;; write post.edn
+      (spit (io/file post-dir "post.edn") (pr-str post))
+      ;; move picture
+      (when-some [pic (:picture post)]
+        (.renameTo (io/file draft-dir (:url pic)) (io/file post-dir (:url pic))))
+      ;; cleanup
+      (.delete (io/file draft-dir "post.edn"))
+      (.delete draft-dir)
+      post)))
 
 
 (rum/defc edit-post-page [post-id user]
@@ -109,6 +141,14 @@
       (let [payload (:body req)
             saved   (save-picture! post-id (get-in req [:headers "content-type"]) payload)]
         { :body (transit/write-transit-str { :post saved }) })))
+
+  (compojure/POST "/post/:post-id/publish" [post-id :as req]
+    (or
+      (auth/check-session req)
+      (let [payload (transit/read-transit (:body req))
+            _       (save-post! post-id (:post payload))
+            post'   (publish! post-id)]
+      { :body (transit/write-transit-str { :post post' })})))
 
   (compojure/GET "/draft/:post-id/:img" [post-id img]
     (ring.util.response/file-response (str "grumpy_data/drafts/" post-id "/" img)))

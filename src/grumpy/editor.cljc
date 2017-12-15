@@ -54,34 +54,40 @@
 
 
 #?(:cljs
-(defn upload! [post-id files *upload-status *post-saved]
+(defn upload! [post-id files *autosave *post-saved]
   ;; TODO handle picture deletion
   (when-some [file (when (> (alength files) 0) (aget files 0))]
-    (reset! *upload-status 0)
+    (reset! *autosave 0)
     (fetch! "POST" (str "/post/" post-id "/upload")
       { :body     file
         :progress (fn [percent]
-                    (reset! *upload-status percent))
+                    (reset! *autosave percent))
         :success  (fn [payload]
-                    (reset! *upload-status ::uploaded)
+                    (reset! *autosave :autosave/clean)
                     (reset! *post-saved (:post (transit/read-transit-str payload))))
         :error    (fn [_]
-                    (reset! *upload-status ::failed)) }))))
+                    (reset! *autosave :autosave/error)) }))))
 
 
 #?(:cljs
-(defn save-post! [post-id post *post-saved]
+(defn save-post! [post-id post *post-saved *autosave]
   (let [saved   @*post-saved
         updates (into {}
                   (for [attr [:body :author]
                         :when (not= (get post attr) (get saved attr))]
                     [attr (get post attr)]))]
-    (when-not (empty? updates)
-      (fetch! "POST" (str "/post/" post-id "/save")
-        { :body (transit/write-transit-str {:post updates})
-          :success (fn [body]
-                    (let [post (:post (transit/read-transit-str body))]
-                      (reset! *post-saved post))) })))))
+    (if-not (empty? updates)
+      (do
+        (reset! *autosave :autosave/saving)
+        (fetch! "POST" (str "/post/" post-id "/save")
+          { :body (transit/write-transit-str {:post updates})
+            :success (fn [body]
+                      (let [post (:post (transit/read-transit-str body))]
+                        (reset! *post-saved post)
+                        (reset! *autosave :autosave/clean)))
+            :error (fn [error]
+                     (reset! *autosave :autosave/error)) }))
+      (reset! *autosave :autosave/clean)))))
 
 
 #?(:cljs
@@ -133,10 +139,11 @@
   { :will-mount
     (fn [state]
       (let [{*post-local ::post-local
-             *post-saved ::post-saved } state
+             *post-saved ::post-saved
+             *autosave   ::autosave } state
             [{post-id :post-id}] (:rum/args state)
-            cb #(save-post! post-id @*post-local *post-saved)]
-        (assoc state ::autosave-timer (js/setInterval cb 1000)))) ;; FIXME
+            cb #(save-post! post-id @*post-local *post-saved *autosave)]
+        (assoc state ::autosave-timer (js/setInterval cb 5000))))
     :will-unmount
     (fn [state]
       (js/clearInterval (::autosave-timer state))
@@ -146,22 +153,23 @@
 (rum/defcs editor
   < (local-init ::post-saved (fn [data] (:post data)))
     (local-init ::post-local (fn [data] (:post data)))
-    (rum/local ::uploaded ::upload-status)
+    (rum/local :autosave/clean ::autosave)
     handle-drag-n-drop
     handle-autosave
 
   [state data]
 
-  (let [{ *post-local    ::post-local
-          *post-saved    ::post-saved
-          *upload-status ::upload-status } state
+  (let [{ *post-local ::post-local
+          *post-saved ::post-saved
+          *autosave   ::autosave } state
         {:keys [create? post-id user]} data
-        post-local  @*post-local
-        post-saved  @*post-saved
-        picture-url (:url (:picture post-local))
-        submit!     (js-fn [e]
-                      (.preventDefault e)
-                      (publish! post-id @*post-local))]
+        post-local    @*post-local
+        post-saved    @*post-saved
+        autosave      @*autosave
+        picture-url   (:url (:picture post-local))
+        submit!       (js-fn [e]
+                        (.preventDefault e)
+                        (publish! post-id @*post-local))]
     [:form.edit-post
       { :on-submit submit! }
       [:.form_row.edit-post_picture
@@ -175,25 +183,34 @@
               { :src (if (str/starts-with? picture-url "blob:")
                        picture-url
                        (str "/draft/" post-id "/" picture-url)) }]
-            (when (= ::failed @*upload-status)
+            (when (= :autosave/error autosave)
               [:.edit-post_picture_failed])
-            (when (number? @*upload-status)
-              [:.edit-post_picture_progress { :style { :height (str (- 100 @*upload-status) "%")}}])])]
+            (when (number? autosave)
+              [:.edit-post_picture_progress { :style { :height (str (- 100 autosave) "%")}}])])]
       [:input.edit-post_file
         { :type "file"
           :name "picture"
           :on-change (js-fn [e]
                        (let [files (-> e (oget "target") (oget "files"))]
                          (update-preview! files *post-local)
-                         (upload! post-id files *upload-status *post-saved))) }]
-      [:.form_row
+                         (upload! post-id files *autosave *post-saved))) }]
+      [:.form_row { :style { :position "relative" }}
+        [:.autosave 
+          { :class (cond
+                     (number? autosave)            "autosave-saving"
+                     (= :autosave/dirty autosave)  "autosave-dirty"
+                     (= :autosave/saving autosave) "autosave-saving"
+                     (= :autosave/error autosave)  "autosave-error"
+                     (= :autosave/clean autosave)  "autosave-clean") }]
         [:textarea
           { :value       (:body post-local)
             :on-key-down (js-fn [e]
                            (when (and (= 13 (oget e "keyCode"))
                                       (or (oget e "ctrlKey") (oget e "metaKey")))
                              (submit! e)))
-            :on-change   #(swap! *post-local assoc :body (.-value (.-target %)))
+            :on-change   (js-fn [e]
+                           (swap! *post-local assoc :body (.-value (.-target e)))
+                           (reset! *autosave :autosave/dirty))
             :name        "body"
             :placeholder "Be grumpy here..."
             :class       (when (not= (:body post-local) (:body post-saved))
@@ -205,7 +222,9 @@
           { :type      "text"
             :name      "author"
             :value     (:author post-local)
-            :on-change #(swap! *post-local assoc :author (.-value (.-target %)))
+            :on-change (js-fn [e]
+                         (swap! *post-local assoc :author (.-value (.-target e)))
+                         (reset! *autosave :autosave/dirty))
             :class     (when (not= (:author post-local) (:author post-saved))
                          "edit-post_author-dirty") }]]
       [:.form_row

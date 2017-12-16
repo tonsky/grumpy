@@ -33,11 +33,13 @@
     [:.post_content
       (when-some [pic (:picture post)]
         (let [src (str "/post/" (:id post) "/" (:url pic))]
-          (if (grumpy/video? (:url pic))
-            [:video.post_img { :autoplay true :loop true }
-              [:source { :type (grumpy/mime-type (:url pic)) :src src }]]
-            [:a { :href src :target :_blank }
-              [:img.post_img { :src src }]])))
+          (case (grumpy/content-type pic)
+            :content.type/video
+              [:video.post_img { :autoplay true :loop true }
+                [:source { :type (grumpy/mime-type (:url pic)) :src src }]]
+            :content.type/image
+              [:a { :href src :target :_blank }
+                [:img.post_img { :src src }]])))
       [:.post_body
         { :dangerouslySetInnerHTML
           { :__html (grumpy/format-text

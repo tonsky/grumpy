@@ -98,8 +98,12 @@
   (mime-type/ext-mime-type filename { nil "application/octet-stream" }))
 
 
-(defn video? [filename]
-  (str/starts-with? (mime-type filename) "video/"))
+(defn content-type [picture]
+  (let [mime-type (or (:content-type picture)
+                      (mime-type (:url picture)))]
+    (cond
+      (str/starts-with? mime-type "video/") :content.type/video
+      (str/starts-with? mime-type "image/") :content.type/image)))
 
 
 (def ^:const encode-table "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")

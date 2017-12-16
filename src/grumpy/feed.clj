@@ -58,10 +58,17 @@
              (when-some [pic (:picture post)]
                (let [src (str url "/" (:url pic))]
                  [:p {}
-                   (if (grumpy/video? (:url pic))
-                     [:video {:autoplay "autoplay" :loop "loop"}
-                       [:source {:type (grumpy/mime-type (:url pic)) :src src}]]
-                     [:img {:src src}])])))
+                   (case (grumpy/content-type pic)
+                     :content.type/video
+                       [:video
+                         { :autoplay "autoplay"
+                           :loop "loop"
+                           :style { :max-width 550 :height "auto" :max-height 500 }}
+                         [:source {:type (grumpy/mime-type (:url pic)) :src src}]]
+                     :content.type/image
+                       [:img
+                         { :src src
+                           :style { :max-width 550 :height "auto" :max-height 500 }}])])))
            (grumpy/format-text
              (str
                (rum/render-static-markup

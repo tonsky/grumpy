@@ -170,6 +170,12 @@
     [:path { :d "M3.5,6.5 L6.5,3.5" }]
     [:path { :d "M3.5,3.5 L6.5,6.5" }]])
 
+(defn content-type [picture]
+  (cond
+    (str/starts-with? (:content-type picture "") "video/") :content.type/video
+    (str/starts-with? (:content-type picture "") "image/") :content.type/image
+    (str/ends-with?   (:url picture "")          ".mp4")   :content.type/video
+    :else                                                  :content.type/image))
 
 (rum/defcs editor
   < (local-init ::post-saved (fn [data] (:post data)))
@@ -186,27 +192,21 @@
           *upload     ::upload
           *autosave   ::autosave } state
         {:keys [new? post-id user]} data
-        post-local       @*post-local
-        post-saved       @*post-saved
-        upload           @*upload
-        autosave         @*autosave
-        picture-url      (:url (:picture post-local))
-        picture-src      (when (some? picture-url)
-                           (if (str/starts-with? picture-url "blob:")
-                             picture-url
-                             (str "/draft/" post-id "/" picture-url)))
-        content-type     (:content-type (:picture post-local))
-        picture-type     (cond
-                           (str/starts-with? (or content-type "") "video/") ::video
-                           (str/starts-with? (or content-type "") "image/") ::image
-                           (str/ends-with? (or picture-url "") ".mp4")      ::video
-                           :else                                            ::image)
-        submit!          (js-fn [e]
-                           (.preventDefault e)
-                           (publish! post-id @*post-local new?))]
+        post-local  @*post-local
+        post-saved  @*post-saved
+        upload      @*upload
+        autosave    @*autosave
+        picture     (:picture post-local)
+        picture-src (when (some? picture)
+                      (if (str/starts-with? (:url picture) "blob:")
+                        (:url picture)
+                        (str "/draft/" post-id "/" (:url picture))))
+        submit!     (js-fn [e]
+                      (.preventDefault e)
+                      (publish! post-id @*post-local new?))]
     [:form.edit-post
       { :on-submit submit! }
-      (if (nil? picture-url)
+      (if (nil? picture)
         [:.form_row.edit-post_picture.edit-post_picture-empty
           { :on-click (js-fn [e]
                         (.click (picture-input))
@@ -220,12 +220,12 @@
             { :on-click (js-fn [e]
                           (.click (picture-input))
                           (.preventDefault e)) }
-            (case picture-type
-              ::video
+            (case (content-type picture)
+              :content.type/video
                 [:video.post_img.edit-post_picture_img
                   {:autoPlay "autoplay" :loop "loop"}
-                  [:source {:type content-type :src picture-src}]]
-              ::image
+                  [:source {:type (:content-type picture) :src picture-src}]]
+              :content.type/image
                 [:img.post_img.edit-post_picture_img
                   { :src picture-src }])
             (when (= :upload/error upload)
@@ -274,7 +274,7 @@
                          "edit-post_author-dirty") }]]
       [:.form_row
         [:button { :type "submit" :on-click submit! }
-          (if new? "Grumpost now!" "Publish changes")]
+          (if new? "Grumpost now!" "Update post")]
         [:button.edit-post_cancel
           { :on-click (js-fn [e]
                         (.preventDefault e)

@@ -22,6 +22,16 @@
 (def page-size 5)
 
 
+(defn fit [x y maxx maxy]
+  (cond
+    (> x maxx)
+      (fit maxx (* y (/ maxx x)) maxx maxy)
+    (> y maxy)
+      (fit (* x (/ maxy y)) maxy maxx maxy)
+    :else
+      [(int x) (int y)]))
+
+
 (rum/defc post [post]
   [:.post
     { :data-id (:id post) }
@@ -32,14 +42,22 @@
                  "/static/guest.jpg")}]]
     [:.post_content
       (when-some [pic (:picture post)]
-        (let [src (str "/post/" (:id post) "/" (:url pic))]
+        (let [src (str "/post/" (:id post) "/" (:url pic))
+              href (if-some [orig (:picture-original post)]
+                     (str "/post/" (:id post) "/" (:url orig))
+                     src)]
           (case (grumpy/content-type pic)
             :content.type/video
               [:video.post_img { :autoplay true :loop true }
                 [:source { :type (grumpy/mime-type (:url pic)) :src src }]]
             :content.type/image
-              [:a { :href src :target :_blank }
-                [:img.post_img { :src src }]])))
+              [:a { :href href :target :_blank }
+                [:img.post_img
+                  { :src src
+                    :style (when-some [[w h] (:dimensions pic)]
+                             (let [[w' h'] (fit w h 550 500)]
+                               { :width  w'
+                                 :height h' }))}]])))
       [:.post_body
         { :dangerouslySetInnerHTML
           { :__html (grumpy/format-text

@@ -2,6 +2,7 @@
   (:require
     [rum.core :as rum]
     [clojure.edn :as edn]
+    [clojure.java.shell :as shell]
     [clojure.string :as str]
     [clojure.java.io :as io]
     [compojure.core :as compojure]
@@ -43,21 +44,59 @@
           nil))))
 
 
+(defn image-dimensions [file]
+  (let [out (:out (shell/sh "convert" (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
+        [w h] (edn/read-string out)]
+    [w h]))
+
+
 (defn save-picture! [post-id content-type input-stream]
   (let [draft (get-draft post-id)
         dir   (io/file (str "grumpy_data/drafts/" post-id))]
-    (when-some [picture (:picture draft)]
-      (let [file (io/file dir (:url picture))]
-        (when (.exists file)
-          (io/delete-file file))))
+    (doseq [key   [:picture :picture-original]
+            :let  [picture (get draft key)]
+            :when (some? picture)
+            :let  [file (io/file dir (:url picture))]
+            :when (.exists file)]
+      (io/delete-file file))
     (let [draft' (if (some? input-stream)
-                   (let [[_ ext] (str/split content-type #"/")
-                         name    (str (grumpy/encode (System/currentTimeMillis) 7) "." ext)
-                         picture { :url name
-                                   :content-type content-type }]
-                     (io/copy input-stream (io/file dir name))
-                     (assoc draft :picture picture))
-                   (dissoc draft :picture))]
+                   (let [[_ ext]  (str/split content-type #"/")
+                         prefix   (grumpy/encode (System/currentTimeMillis) 7)
+                         original (io/file dir (str prefix "." ext))
+                         _        (io/copy input-stream original)
+                         image?   (str/starts-with? content-type "image/")
+                         [w h]    (when image? (image-dimensions original))
+                         resize?  (and image? (or (> w 1100) (> h 1000)))]
+                     (cond
+                       ;; video
+                       (not image?)
+                       (assoc draft
+                         :picture { :url (.getName original)
+                                    :content-type content-type })
+                       
+                       ;; small jpeg
+                       (and (= "image/jpeg" content-type) (not resize?))
+                       (assoc draft
+                         :picture { :url (.getName original)
+                                    :content-type content-type
+                                    :dimensions [w h] })
+
+                       :else
+                       (let [converted (io/file dir (str prefix ".fit.jpeg"))]
+                         (if resize?
+                           (shell/sh "convert" (.getPath original) "-resize" "1100x1000" "-quality" "85" (.getPath converted))
+                           (shell/sh "convert" (.getPath original) "-quality" "85" (.getPath converted)))
+                         (assoc draft
+                           :picture
+                           { :url          (.getName converted)
+                             :content-type "image/jpeg"
+                             :dimensions   (image-dimensions converted) }
+                           :picture-original
+                           { :url          (.getName original)
+                             :content-type content-type
+                             :dimensions   [w h] }))))
+                       
+                   (dissoc draft :picture :picture-original))]
       (spit (io/file dir "post.edn") draft')
       draft')))
 
@@ -78,7 +117,9 @@
     (when-not new?
       (let [old (grumpy/get-post post-id)]
         (.delete (io/file (str "grumpy_data/posts/" post-id "/post.edn")))
-        (when-some [pic (:picture old)]
+        (doseq [key   [:picture :picture-original]
+                :let  [pic (get old key)]
+                :when (some? pic)]
           (.delete (io/file (str "grumpy_data/posts/" post-id "/" (:url pic)))))))
     ;; create/update new post
     (let [now  (grumpy/now)
@@ -93,7 +134,9 @@
       ;; write post.edn
       (spit (io/file post-dir "post.edn") (pr-str post))
       ;; move picture
-      (when-some [pic (:picture post)]
+      (doseq [key   [:picture :picture-original]
+              :let  [pic (get post key)]
+              :when (some? pic)]
         (.renameTo (io/file draft-dir (:url pic)) (io/file post-dir (:url pic))))
       ;; cleanup
       (.delete (io/file draft-dir "post.edn"))
@@ -104,7 +147,9 @@
 (defn delete! [post-id]
   (let [dir   (io/file (str "grumpy_data/drafts/" post-id))
         draft (get-draft post-id)]
-    (when-some [pic (:picture draft)]
+    (doseq [key   [:picture :picture-original]
+            :let  [pic (get draft key)]
+            :when (some? pic)]
       (.delete (io/file dir (:url pic))))
     (.delete (io/file dir "post.edn"))
     (.delete dir)))

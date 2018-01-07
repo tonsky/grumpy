@@ -126,7 +126,7 @@
   (cond->
     (compojure/GET "/" []
       (let [post-ids  (grumpy/post-ids)
-            first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)  ]
+            first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)]
         (grumpy/html-response (index-page first-ids))))
     grumpy/dev? (auth/wrap-session)))
 
@@ -152,15 +152,17 @@
 (def app
   (compojure/routes
     (->
-      (compojure.route/resources "/static" {:root "static"})
-      (with-headers { "Cache-Control" "no-cache"
-                      "Expires"       "-1" }))
-    (->
       routes
       (ring.middleware.params/wrap-params)
       (with-headers { "Cache-Control" "no-cache"
                       "Expires"       "-1" })
-      (print-errors)) 
+      (print-errors))
+    (->
+      (compojure.route/resources "/static" {:root "static"})
+      (with-headers (if grumpy/dev?
+                      { "Cache-Control" "no-cache"
+                        "Expires"       "-1" }
+                      { "Cache-Control" "max-age=315360000" })))
     (fn [req]
       { :status 404
         :body "404 Not found" })))

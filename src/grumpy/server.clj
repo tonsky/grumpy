@@ -22,16 +22,6 @@
 (def page-size 5)
 
 
-(defn fit [x y maxx maxy]
-  (cond
-    (> x maxx)
-      (fit maxx (* y (/ maxx x)) maxx maxy)
-    (> y maxy)
-      (fit (* x (/ maxy y)) maxy maxx maxy)
-    :else
-      [(int x) (int y)]))
-
-
 (rum/defc post [post]
   [:.post
     { :data-id (:id post) }
@@ -48,16 +38,19 @@
                      src)]
           (case (grumpy/content-type pic)
             :content.type/video
-              [:video.post_img { :autoplay true :loop true }
+              [:video.post_video { :autoplay true :loop true }
                 [:source { :type (grumpy/mime-type (:url pic)) :src src }]]
             :content.type/image
-              [:a { :href href :target :_blank }
-                [:img.post_img
-                  { :src src
-                    :style (when-some [[w h] (:dimensions pic)]
-                             (let [[w' h'] (fit w h 550 500)]
-                               { :width  w'
-                                 :height h' }))}]])))
+              (if-some [[w h] (:dimensions pic)]
+                (let [[w' h'] (grumpy/fit w h 550 500)]
+                  [:div { :style { :max-width w' }}
+                    [:a.post_img.post_img-fix
+                      { :href href
+                        :target "_blank"
+                        :style { :padding-bottom (-> (/ h w) (* 100) (double) (str "%")) }}
+                      [:img { :src src }]]])
+                [:a.post_img.post_img-flex { :href href, :target "_blank" }
+                  [:img { :src src }]]))))
       [:.post_body
         { :dangerouslySetInnerHTML
           { :__html (grumpy/format-text

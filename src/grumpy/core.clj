@@ -122,6 +122,16 @@
              (dec len)))))
 
 
+(defn fit [x y maxx maxy]
+  (cond
+    (> x maxx)
+      (fit maxx (* y (/ maxx x)) maxx maxy)
+    (> y maxy)
+      (fit (* x (/ maxy y)) maxy maxx maxy)
+    :else
+      [(int x) (int y)]))
+
+
 (defn redirect
   ([path]
     { :status 302

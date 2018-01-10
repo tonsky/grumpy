@@ -40,7 +40,11 @@ body.anonymous .title_new { display: none; }
 }
 .post_avatar { width: 50px; height: 50px; }
 
-.post_img { max-width: 100%; height: auto; max-height: 500px; margin-bottom: 1em; }
+.post_img { display: block; margin-bottom: 1em; }
+.post_img-fix { display: block; background-size: 100%; position: relative; }
+.post_img-fix > img { position: absolute; height: 100%; }
+.post_video,
+.post_img-flex > img { display: block; max-width: 100%; height: auto; max-height: 500px; }
 .post_author { font-weight: bold; }
 .post_content { width: 100%; }
 .post_body > p { margin: 0 0 1em 0; }

@@ -66,9 +66,20 @@
                            :style { :max-width 550 :height "auto" :max-height 500 }}
                          [:source {:type (grumpy/mime-type (:url pic)) :src src}]]
                      :content.type/image
-                       [:img
-                         { :src src
-                           :style { :max-width 550 :height "auto" :max-height 500 }}])])))
+                       (let [img (if-some [[w h] (:dimensions pic)]
+                                   (let [[w' h'] (grumpy/fit w h 550 500)]
+                                     [:img { :src src
+                                             :style { :width w'
+                                                      :height h' }
+                                             :width w'
+                                             :height h' }])
+                                   [:img { :src src
+                                           :style { :max-width 550
+                                                    :height "auto"
+                                                    :max-height 500 }}])]
+                       (if-some [orig (:picture-original post)]
+                         [:a { :href (str url "/" (:url orig)) } img]
+                         img)))])))
            (grumpy/format-text
              (str
                (rum/render-static-markup

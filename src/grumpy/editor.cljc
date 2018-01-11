@@ -222,12 +222,13 @@
                           (.preventDefault e)) }
             (case (content-type picture)
               :content.type/video
-                [:video.post_img.edit-post_picture_img
+                [:video.post_video.edit-post_picture_img
                   {:autoPlay "autoplay" :loop "loop"}
                   [:source {:type (:content-type picture) :src picture-src}]]
               :content.type/image
-                [:img.post_img.edit-post_picture_img
-                  { :src picture-src }])
+                [:.post_img.post_img-flex
+                  [:img.edit-post_picture_img
+                    { :src picture-src }]])
             (when (= :upload/error upload)
               [:.edit-post_picture_failed])
             (when (number? upload)

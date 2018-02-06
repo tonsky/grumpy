@@ -26,15 +26,21 @@
 
 
 (defn post-picture! [post]
-  (let [picture (:picture-original post)]
+  (let [key (cond
+              (contains? post :picture-original) :picture-original
+              (contains? post :picture) :picture
+              :else nil)]
     (cond
-      grumpy/dev?    post
-      (nil? token)   post
-      (nil? picture) post
+      grumpy/dev?  post
+      (nil? token) post
+      (nil? key)   post
       :else
-      (let [url  (str grumpy/hostname "/post/" (:id post) "/" (:url picture))
-            resp (post! "/sendPhoto" {:photo url})]
-        (update post :picture-original
+      (let [picture (get post key)
+            url     (str grumpy/hostname "/post/" (:id post) "/" (:url picture))
+            resp    (case (grumpy/content-type picture)
+                      :content.type/video (post! "/sendVideo" {:video url})
+                      :content.type/image (post! "/sendPhoto" {:photo url}))]
+        (update post key
           assoc :telegram/message_id (get-in resp ["result" "message_id"])
                 :telegram/photo      (get-in resp ["result" "photo"]))))))
 
@@ -70,3 +76,11 @@
                   :parse_mode "Markdown"
                   :disable_web_page_preview "true" })]
         post))))
+
+
+(comment
+  (binding [grumpy/hostname "https://grumpy.website"
+            grumpy/dev? false]
+    #_(post-picture! (clojure.edn/read-string (slurp "grumpy_data/posts/0PEV9bEZ6/post.edn")))
+    (post-picture! (clojure.edn/read-string (slurp "grumpy_data/posts/0PR1HUElb/post.edn"))))
+)

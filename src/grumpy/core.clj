@@ -41,13 +41,13 @@
   (first (filter #(= (get % attr) value) authors)))
 
 
-(def hostname (from-config "HOSTNAME" "http://grumpy.website"))
+(def ^:dynamic hostname (from-config "HOSTNAME" "http://grumpy.website"))
 
 
 (def forced-user (slurp "grumpy_data/FORCED_USER"))
 
 
-(def dev? (= "http://localhost:8080" hostname))
+(def ^:dynamic dev? (= "http://localhost:8080" hostname))
 
 
 (defn zip [coll1 coll2]

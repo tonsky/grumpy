@@ -13,7 +13,6 @@
 (defn post! [url params]
   (let [url'    (str "https://api.telegram.org/bot" token url)
         params' (assoc params :chat_id (str "@" channel))]
-    (println "TELEGRAM POST" url' (pr-str params'))
     (:body
       (http/post url'
         { :form-params  params'

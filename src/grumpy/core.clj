@@ -15,7 +15,7 @@
 
 (defn slurp [source]
   (try
-    (clojure.core/slurp source)
+    (str/trim (clojure.core/slurp source))
     (catch Exception e
       nil)))
 

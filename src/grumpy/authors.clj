@@ -5,6 +5,7 @@
     [clojure.java.shell :as shell]
     [clojure.string :as str]
     [clojure.java.io :as io]
+    [clojure.stacktrace :as stacktrace]
     [compojure.core :as compojure]
     [ring.util.response]
     [ring.middleware.multipart-params]
@@ -12,7 +13,8 @@
     [grumpy.core :as grumpy]
     [grumpy.auth :as auth]
     [grumpy.editor :as editor]
-    [grumpy.transit :as transit]))
+    [grumpy.transit :as transit]
+    [grumpy.telegram :as telegram]))
 
 
 (defn next-post-id [^java.util.Date inst]
@@ -131,17 +133,28 @@
       ;; create new post dir
       (when new?
         (.mkdirs post-dir))
-      ;; write post.edn
-      (spit (io/file post-dir "post.edn") (pr-str post))
+
       ;; move picture
       (doseq [key   [:picture :picture-original]
               :let  [pic (get post key)]
               :when (some? pic)]
         (.renameTo (io/file draft-dir (:url pic)) (io/file post-dir (:url pic))))
-      ;; cleanup
-      (.delete (io/file draft-dir "post.edn"))
-      (.delete draft-dir)
-      post)))
+
+      (let [post' (try
+                    (if new?
+                      (-> post (telegram/post-picture!) (telegram/post-text!))
+                      (-> post (telegram/update-text!)))
+                    (catch Exception e
+                      (println "Telegram post error:" (pr-str (ex-data e)))
+                      (stacktrace/print-stack-trace (stacktrace/root-cause e))
+                      post))]
+        ;; write post.edn
+        (spit (io/file post-dir "post.edn") (pr-str post'))
+      
+        ;; cleanup
+        (.delete (io/file draft-dir "post.edn"))
+        (.delete draft-dir)
+        post'))))
 
 
 (defn delete! [post-id]

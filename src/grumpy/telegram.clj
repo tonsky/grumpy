@@ -13,12 +13,16 @@
 (defn post! [url params]
   (let [url'    (str "https://api.telegram.org/bot" token url)
         params' (assoc params :chat_id (str "@" channel))]
-    (:body
-      (http/post url'
-        { :form-params  params'
-          :content-type :json
-          :as           :json-string-keys
-          :coerce       :always}))))
+    (try
+      (:body
+        (http/post url'
+          { :form-params  params'
+            :content-type :json
+            :as           :json-string-keys
+            :coerce       :always}))
+      (catch Exception e
+        (println "Telegram request failed:" url' (pr-str params'))
+        (throw e)))))
 
 
 (defn post-picture! [post]

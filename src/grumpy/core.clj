@@ -31,10 +31,10 @@
 
 
 (def authors 
-  [ { :email "prokopov@gmail.com"   :user "nikitonsky" :telegram/user "nikitonsky" :name "Nikita Prokopov"      :url "https://twitter.com/nikitonsky" }
-    { :email "freetonik@gmail.com"  :user "freetonik"  :telegram/user "freetonik" :name "Rakhim Davletkaliyev" :url "https://twitter.com/freetonik" }
-    { :email "ivan@grishaev.me"     :user "igrishaev"  :telegram/user "igrishaev" :name "Ivan Grishaev"        :url "http://grishaev.me/" }
-    { :email "dmitrii@dmitriid.com" :user "dmitriid"   :name "Dmitrii Dimandt"      :url "https://twitter.com/dmitriid" } ])
+  [ { :email "prokopov@gmail.com"   :user "nikitonsky" :telegram/user "nikitonsky"  :name "Nikita Prokopov"      :url "https://twitter.com/nikitonsky" }
+    { :email "freetonik@gmail.com"  :user "freetonik"  :telegram/user "freetonik"   :name "Rakhim Davletkaliyev" :url "https://twitter.com/freetonik" }
+    { :email "ivan@grishaev.me"     :user "igrishaev"  :telegram/user "igrishaev"   :name "Ivan Grishaev"        :url "http://grishaev.me/" }
+    { :email "dmitrii@dmitriid.com" :user "dmitriid"   :telegram/user "mamutnespit" :name "Dmitrii Dimandt"      :url "https://twitter.com/dmitriid" } ])
 
 
 (defn author-by [attr value]

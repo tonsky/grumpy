@@ -54,6 +54,11 @@ input[type=text].edit-post_author { display: inline-block; width: calc(100% - 10
 
 .edit-post_cancel:hover { color: #555; }
 
+.form_row-progress { font-weight: bold; }
+.spinner { width: 38px; height: 38px; margin: -3px 10px 3px 0; display: inline-block; vertical-align: middle; }
+.spinner > img { width: 38px; height: 38px; border: 2px solid #000; border-radius: 50%; }
+.spinner > img { animation: rotating 1s ease-in-out infinite; }
+
 /* EMAIL SENT */
 
 .email-sent { padding: 1em 3em; margin: 0 -3em; background: #EEE; }

@@ -94,23 +94,27 @@
 
 
 #?(:cljs
-(defn publish! [post-id post new?]
-  (fetch! "POST" (str "/post/" post-id "/publish")
-    { :body    (transit/write-transit-str { :post (select-keys post [:body :author]) })
-      :success (fn [payload]
-                 (if new?
-                   (oset! js/location "href" "/")
-                   (let [post (:post (transit/read-transit-str payload))]
-                     (oset! js/location "href" (str "/post/" (:id post)))))) })))
+(defn publish! [*publishing? post-id post new?]
+  (when-not @*publishing?
+    (reset! *publishing? (if new? :publishing/new :publishing/update))
+    (fetch! "POST" (str "/post/" post-id "/publish")
+      { :body    (transit/write-transit-str { :post (select-keys post [:body :author]) })
+        :success (fn [payload]
+                  (if new?
+                    (oset! js/location "href" "/")
+                    (let [post (:post (transit/read-transit-str payload))]
+                      (oset! js/location "href" (str "/post/" (:id post)))))) }))))
 
 
 #?(:cljs
-(defn delete! [post-id new?]
-  (fetch! "POST" (str "/draft/" post-id "/delete")
-    { :success (fn [_]
-                 (if new?  
-                   (oset! js/location "href" "/")
-                   (oset! js/location "href" (str "/post/" post-id)))) })))
+(defn delete! [*publishing? post-id new?]
+  (when-not @*publishing?
+    (reset! *publishing? :publishing/delete)
+    (fetch! "POST" (str "/draft/" post-id "/delete")
+      { :success (fn [_]
+                   (if new?  
+                     (oset! js/location "href" "/")
+                     (oset! js/location "href" (str "/post/" post-id)))) }))))
 
 
 (defn local-init [key init-fn]
@@ -182,15 +186,17 @@
     (local-init ::post-local (fn [data] (:post data)))
     (rum/local :upload/clean ::upload)
     (rum/local :autosave/clean ::autosave)
+    (rum/local false ::publishing?)
     handle-drag-n-drop
     handle-autosave
 
   [state data]
 
-  (let [{ *post-local ::post-local
-          *post-saved ::post-saved
-          *upload     ::upload
-          *autosave   ::autosave } state
+  (let [{ *post-local  ::post-local
+          *post-saved  ::post-saved
+          *upload      ::upload
+          *autosave    ::autosave
+          *publishing? ::publishing? } state
         {:keys [new? post-id user]} data
         post-local  @*post-local
         post-saved  @*post-saved
@@ -203,7 +209,7 @@
                         (str "/draft/" post-id "/" (:url picture))))
         submit!     (js-fn [e]
                       (.preventDefault e)
-                      (publish! post-id @*post-local new?))]
+                      (publish! *publishing? post-id @*post-local new?))]
     [:form.edit-post
       { :on-submit submit! }
       (if (nil? picture)
@@ -273,14 +279,22 @@
                          (reset! *autosave :autosave/dirty))
             :class     (when (not= (:author post-local) (:author post-saved))
                          "edit-post_author-dirty") }]]
-      [:.form_row
-        [:button { :type "submit" :on-click submit! }
-          (if new? "Grumpost now!" "Update post")]
-        [:button.edit-post_cancel
-          { :on-click (js-fn [e]
-                        (.preventDefault e)
-                        (delete! post-id new?)) }
-          (if new? "Delete draft" "Cancel")]]]))
+      (if @*publishing?  
+        [:.form_row.form_row-progress
+          [:.spinner [:img { :src "/static/favicons/apple-touch-icon-152x152.png" }]]
+          (case @*publishing?
+            :publishing/new    "Publishing..."
+            :publishing/update "Updating..."
+            :publishing/delete (if new? "Deleting..." "Cancelling edit..."))]
+        [:.form_row
+          [:button { :type "submit" :on-click submit! }
+            (if new? "Grumpost now!" "Update post")]
+          (when-not @*publishing?
+            [:button.edit-post_cancel
+              { :on-click (js-fn [e]
+                            (.preventDefault e)
+                            (delete! *publishing? post-id new?)) }
+              (if new? "Delete draft" "Cancel")])])]))
 
 
 #?(:cljs

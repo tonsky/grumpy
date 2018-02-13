@@ -6,9 +6,8 @@
     [grumpy.core :as grumpy]))
 
 
-(def token (grumpy/slurp "grumpy_data/TELEGRAM_TOKEN"))
-(def channel (or (grumpy/slurp "grumpy_data/TELEGRAM_CHANNEL") "whining_test"))
-
+(def ^:dynamic token (grumpy/slurp "grumpy_data/TELEGRAM_TOKEN"))
+(def ^:dynamic channel (or (grumpy/slurp "grumpy_data/TELEGRAM_CHANNEL") "whining_test"))
 
 (defn post! [url params]
   (let [url'    (str "https://api.telegram.org/bot" token url)
@@ -18,8 +17,7 @@
         (http/post url'
           { :form-params  params'
             :content-type :json
-            :as           :json-string-keys
-            :coerce       :always}))
+            :as           :json-string-keys}))
       (catch Exception e
         (println "Telegram request failed:" url' (pr-str params'))
         (throw e)))))
@@ -80,7 +78,9 @@
 
 (comment
   (binding [grumpy/hostname "https://grumpy.website"
-            grumpy/dev? false]
-    #_(post-picture! (clojure.edn/read-string (slurp "grumpy_data/posts/0PEV9bEZ6/post.edn")))
-    (post-picture! (clojure.edn/read-string (slurp "grumpy_data/posts/0PR1HUElb/post.edn"))))
+            grumpy/dev? false
+            channel "whining"]
+    (-> (clojure.edn/read-string (slurp "grumpy_data/posts/0PVbF6Vrb/post.edn"))
+      (post-picture!)
+      (post-text!)))
 )

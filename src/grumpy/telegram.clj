@@ -56,7 +56,7 @@
     :else
     (let [resp (post! "/sendMessage"
                  {:text (str (format-user (:author post)) ": " (:body post))
-                  :parse_mode "Markdown"
+                  ; :parse_mode "Markdown"
                   :disable_web_page_preview "true"})]
         (assoc post
           :telegram/message_id (get-in resp ["result" "message_id"])))))
@@ -71,7 +71,7 @@
       (let [_ (post! "/editMessageText"
                 { :message_id id
                   :text (str (format-user (:author post)) ": " (:body post))
-                  :parse_mode "Markdown"
+                  ; :parse_mode "Markdown"
                   :disable_web_page_preview "true" })]
         post))))
 

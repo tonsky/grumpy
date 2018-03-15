@@ -46,7 +46,7 @@
 (defn format-user [user]
   (if-some [telegram-user (:telegram/user (grumpy/author-by :user user))]
     (str "@" telegram-user)
-    (str "*" user "*")))
+    (str "@" user)))
 
 
 (defn post-text! [post]
@@ -80,7 +80,7 @@
   (binding [grumpy/hostname "https://grumpy.website"
             grumpy/dev? false
             channel "whining"]
-    (-> (clojure.edn/read-string (slurp "grumpy_data/posts/0PVbF6Vrb/post.edn"))
-      (post-picture!)
+    (-> (clojure.edn/read-string (slurp "grumpy_data/posts/0PZy7WhCE/post.edn"))
+      #_(post-picture!)
       (post-text!)))
 )

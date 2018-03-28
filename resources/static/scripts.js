@@ -24,7 +24,8 @@ var subtitles =
     'We use cookies on this website to make your browsing experience better',
     'By using the site you agree to our use of cookies',
     '[ ] Don\'t show this again',
-    'This page requires you to use a recent browser (Internet Explorer 5+ or Netscape Navigator 7.0)' ],
+    'This page requires you to use a recent browser (Internet Explorer 5+ or Netscape Navigator 7.0)',
+    'Like failed' ],
   subtitle_el = document.querySelector('.subtitle > span');
 
 

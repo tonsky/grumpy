@@ -26,8 +26,9 @@ var subtitles =
     '[ ] Don\'t show this again',
     'This page requires you to use a recent browser (Internet Explorer 5+ or Netscape Navigator 7.0)',
     'Like failed',
-    'Add to Home Screen' ],
-  subtitle_el = document.querySelector('.subtitle > span');
+    'Add to Home Screen',
+    'In high demand—6 other people are looking at this page' ],
+  subtitle_el = document.querySelector('.subtitle-text');
 
 
 function reload_subtitle() {

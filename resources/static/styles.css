@@ -6,8 +6,11 @@ body {
   padding: 0.25em 1em;
   max-width: 652px; /* .post_img =>> 550px */
   margin: 0 auto;
+  transition: 500ms ease-in-out;
 }
 
+.body_rotated { transform: rotate(180deg); }
+.icon_rotate { width: 20px; height: 20px; display: inline-block; background: url("/static/rotate.svg"); margin: 5px 5px -5px -25px; } 
 
 /* HEADER */
 

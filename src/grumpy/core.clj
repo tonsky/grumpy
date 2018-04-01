@@ -223,7 +223,9 @@
             :index [:h1.title title [:a.title_new { :href "/new" } "+"]]
             :post  [:h1.title [:a {:href "/"} title ]]
                    [:h1.title [:a.title_back {:href "/"} "◄"] title])
-          [:p.subtitle [:span " "]]]
+          [:p.subtitle
+            [:span.icon_rotate {:on-click "document.body.classList.toggle('body_rotated');"}]
+            [:span.subtitle-text " "]]]
         children
         (when (= page :index)
           [:.loader [:img { :src "/static/favicons/apple-touch-icon-152x152.png" }]])

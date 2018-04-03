@@ -43,7 +43,7 @@
 
 
 (defn send-email! [{:keys [to subject body]}]
-  (println "[ Email sent ]\n  To:" to "\n  Subject:" subject "\n  Body:" body)
+  (println (str (java.time.Instant/now)) "[ Email sent ]\n  To:" to "\n  Subject:" subject "\n  Body:" body)
   (shell/sh
     "mail"
     "-s"

@@ -61,7 +61,9 @@
             :let  [file (io/file dir (:url picture))]
             :when (.exists file)]
       (io/delete-file file))
-    (let [draft' (if (some? input-stream)
+    (let [draft' (if (and (some? input-stream)
+                          (some? content-type)
+                          (pos? (.available input-stream)))
                    (let [[_ ext]  (str/split content-type #"/")
                          prefix   (grumpy/encode (System/currentTimeMillis) 7)
                          original (io/file dir (str prefix "." ext))

@@ -27,17 +27,42 @@ var subtitles =
     'This page requires you to use a recent browser (Internet Explorer 5+ or Netscape Navigator 7.0)',
     'Like failed',
     'Add to Home Screen',
-    'In high demand—6 other people are looking at this page' ],
-  subtitle_el = document.querySelector('.subtitle-text');
+    'In high demand—6 other people are looking at this page',
+    'You’ve read 9 stories this month. Let’s make things official',
+    'Medium follows Do Not Track but we track to personalize your experience and send data to select third-parties to make our features work',
+    'Plugin is ready to update',
+    'Part 2 of 3: Installing features and drivers. 50% complete',
+    'Don’t turn off your computer, this will take a while',
+    'Данный ресурс заблокирован! по решению Роскомнадзора',
+    'Already a member? Sign in.',
+    'Trust this computer?',
+    'Why am I seeing this?',
+    'Drop images here to send them in a quick way',
+    'Choose an account to continue',
+    'The operation can’t be completed because it isn’t supported',
+    'Are you sure you want to close all programs and shut down the computer?',
+    'Please take a moment to rate your experience',
+    'Would you like to save this file?' ],
+  subtitle_el = document.querySelector('.subtitle-text'),
+  subtitle_idx = subtitles.length;
 
-
-function reload_subtitle() {
-  do {
-    var subtitle = subtitles[Math.floor(Math.random() * subtitles.length)];
-  } while (subtitle === subtitle_el.innerText);
-  subtitle_el.innerHTML = subtitle;
+function shuffle(array) {
+  for (var i = array.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
 }
 
+function reload_subtitle() {
+  ++subtitle_idx;
+  if (subtitle_idx >= subtitles.length) {
+    shuffle(subtitles);
+    subtitle_idx = 0;
+  } 
+  subtitle_el.innerHTML = subtitles[subtitle_idx];
+}
 
 window.addEventListener("load", function() {
   subtitle_el.onclick = reload_subtitle;

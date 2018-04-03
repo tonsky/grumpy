@@ -78,6 +78,13 @@
                          :picture { :url (.getName original)
                                     :content-type content-type })
                        
+                       ;; gif
+                       (= "image/gif" content-type)
+                       (assoc draft
+                         :picture { :url (.getName original)
+                                    :content-type content-type
+                                    :dimensions [w h] })
+
                        ;; small jpeg
                        (and (= "image/jpeg" content-type) (not resize?))
                        (assoc draft

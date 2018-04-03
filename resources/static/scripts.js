@@ -71,3 +71,10 @@ window.addEventListener("load", function() {
     document.body.classList.remove("anonymous");
   }
 });
+
+var rotate_angle_deg = 0;
+
+function body_rotate() {
+  rotate_angle_deg += 180;
+  document.body.style.transform = "rotate(" + rotate_angle_deg + "deg)";
+}

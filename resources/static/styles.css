@@ -9,8 +9,10 @@ body {
   transition: 500ms ease-in-out;
 }
 
-.body_rotated { transform: rotate(180deg); }
 .icon_rotate { width: 20px; height: 20px; display: inline-block; background: url("/static/rotate.svg"); margin: 5px 5px -5px -25px; } 
+@media (max-width: 679px) {
+  .icon_rotate { display: none; }
+}
 
 /* HEADER */
 

@@ -224,7 +224,7 @@
             :post  [:h1.title [:a {:href "/"} title ]]
                    [:h1.title [:a.title_back {:href "/"} "◄"] title])
           [:p.subtitle
-            [:span.icon_rotate {:on-click "document.body.classList.toggle('body_rotated');"}]
+            [:span.icon_rotate {:on-click "body_rotate()"}]
             [:span.subtitle-text " "]]]
         children
         (when (= page :index)

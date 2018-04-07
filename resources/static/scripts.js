@@ -42,7 +42,8 @@ var subtitles =
     'The operation can’t be completed because it isn’t supported',
     'Are you sure you want to close all programs and shut down the computer?',
     'Please take a moment to rate your experience',
-    'Would you like to save this file?' ],
+    'Would you like to save this file?',
+    ',   ?'],
   subtitle_el = document.querySelector('.subtitle-text'),
   subtitle_idx = subtitles.length;
 

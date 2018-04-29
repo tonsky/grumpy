@@ -43,7 +43,8 @@ var subtitles =
     'Are you sure you want to close all programs and shut down the computer?',
     'Please take a moment to rate your experience',
     'Would you like to save this file?',
-    ',   ?'],
+    ',   ?',
+    'This app is using significant energy'],
   subtitle_el = document.querySelector('.subtitle-text'),
   subtitle_idx = subtitles.length;
 

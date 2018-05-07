@@ -174,7 +174,7 @@
       (fn [paragraph]
         (as-> paragraph paragraph
           ;; highlight links
-          (str/replace paragraph #"https?://([^\s<>]+[^\s.,!?:;'\"\-<>()\[\]{}*_])"
+          (str/replace paragraph #"https?://([^\s<>]+[^\s.,!?:;'\"<>()\[\]{}*])"
             (fn [[href path]]
               (let [norm-path     (re-find #"[^?#]+" path)
                     without-slash (str/replace norm-path #"/$" "")]

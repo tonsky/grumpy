@@ -38,8 +38,16 @@
                      src)]
           (case (grumpy/content-type pic)
             :content.type/video
-              [:video.post_video { :autoplay true :loop true }
-                [:source { :type (grumpy/mime-type (:url pic)) :src src }]]
+              [:.post_video_outer
+                [:video.post_video
+                  { :autoplay true
+                    :muted true
+                    :loop true
+                    :preload "auto"
+                    :playsinline true
+                    :onplay "toggle_video(this.parentNode, true);" }
+                  [:source { :type (grumpy/mime-type (:url pic)) :src src }]]
+                [:.post_video_overlay.post_video_overlay-paused { :onclick "toggle_video(this.parentNode);"}]]
             :content.type/image
               (if-some [[w h] (:dimensions pic)]
                 (let [[w' h'] (grumpy/fit w h 550 500)]

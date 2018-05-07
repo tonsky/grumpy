@@ -80,3 +80,17 @@ function body_rotate() {
   rotate_angle_deg += 180;
   document.body.style.transform = "rotate(" + rotate_angle_deg + "deg)";
 }
+
+function toggle_video(wrapper, play) {
+  var video = wrapper.querySelector("video"),
+      overlay = wrapper.querySelector(".post_video_overlay");
+  if (play) {
+    overlay.classList.remove("post_video_overlay-paused");
+  } else if (video.paused) {
+    video.play();
+    overlay.classList.remove("post_video_overlay-paused");
+  } else {
+    video.pause();
+    overlay.classList.add("post_video_overlay-paused");
+  }
+}

@@ -51,6 +51,15 @@
         [w h] (edn/read-string out)]
     [w h]))
 
+(defn convert! [from to opts]
+  (apply shell/sh "convert"
+    (.getPath from)
+    (concat
+      (flatten
+        (for [[k v] opts
+              :when (some? v)]
+          [(str "-" (name k)) (str v)]))
+      [(.getPath to)])))
 
 (defn save-picture! [post-id content-type input-stream]
   (let [draft (get-draft post-id)
@@ -94,9 +103,10 @@
 
                        :else
                        (let [converted (io/file dir (str prefix ".fit.jpeg"))]
-                         (if resize?
-                           (shell/sh "convert" (.getPath original) "-resize" "1100x1000" "-quality" "85" (.getPath converted))
-                           (shell/sh "convert" (.getPath original) "-quality" "85" (.getPath converted)))
+                         (convert! original converted { :quality 85
+                                                        :fill    "white"
+                                                        :opaque  "none"
+                                                        :resize  (when resize? "1100x1000") })
                          (assoc draft
                            :picture
                            { :url          (.getName converted)

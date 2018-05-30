@@ -44,7 +44,10 @@ var subtitles =
     'Please take a moment to rate your experience',
     'Would you like to save this file?',
     ',   ?',
-    'This app is using significant energy'],
+    'This app is using significant energy',
+    'The disk was not ejected properly',
+    'Trying to regain internet connection... Hide this message.',
+    'Loading...'],
   subtitle_el = document.querySelector('.subtitle-text'),
   subtitle_idx = subtitles.length;
 

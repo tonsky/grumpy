@@ -30,7 +30,7 @@
     (clojure.core/slurp file#)))
 
 
-(def authors 
+(def authors
   [ { :email "prokopov@gmail.com"   :user "nikitonsky" :telegram/user "nikitonsky"  :name "Nikita Prokopov"      :url "https://twitter.com/nikitonsky" }
     { :email "freetonik@gmail.com"  :user "freetonik"  :telegram/user "freetonik"   :name "Rakhim Davletkaliyev" :url "https://twitter.com/freetonik" }
     { :email "ivan@grishaev.me"     :user "igrishaev"  :telegram/user "igrishaev"   :name "Ivan Grishaev"        :url "http://grishaev.me/" }
@@ -156,7 +156,7 @@
         (proxy [java.io.FilenameFilter] []
           (accept ^boolean [^java.io.File file ^String name]
             (boolean (re-matches re name))))))))
-  
+
 
 (defn post-ids []
   (->>
@@ -233,8 +233,8 @@
           (interpose ", "
             (for [author authors]
               [:a { :href (:url author) } (:name author)]))
-          ". 2017. All fights retarded."]
-        
+          ". 2018. All fights retarded."]
+
         [:script {:dangerouslySetInnerHTML { :__html (resource "scripts.js") }}]
         (for [script scripts]
           [:script {:dangerouslySetInnerHTML { :__html (resource script) }}])]]))

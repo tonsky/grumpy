@@ -1,6 +1,6 @@
 var subtitles =
-  [ 'Do you want to cancel? – YES / CANCEL', 
-    'Select purchase to purchase for $0.00 – PURCHASE / CANCEL', 
+  [ 'Do you want to cancel? – YES / CANCEL',
+    'Select purchase to purchase for $0.00 – PURCHASE / CANCEL',
     'This isn not text, this is a link. No not press.',
     'Do not refresh this page, do not click Back',
     'Error occured — OK',
@@ -9,7 +9,7 @@ var subtitles =
     'Open in app',
     'Warning: No pixels were selected',
     'You need to be logged in to log out. Please log in to log out.',
-    // 'Cancel changes? – CANCEL / CHANGE', 
+    // 'Cancel changes? – CANCEL / CHANGE',
     'Cancel subscription? – YES / CANCEL',
     'Please, try again later',
     'You need to login to unsubscribe',
@@ -47,7 +47,11 @@ var subtitles =
     'This app is using significant energy',
     'The disk was not ejected properly',
     'Trying to regain internet connection... Hide this message.',
-    'Loading...'],
+    'Loading...',
+    'Remind me tomorrow',
+    'Stop showing me this',
+    'Why am I seeing this?',
+    'See fewer posts like this'],
   subtitle_el = document.querySelector('.subtitle-text'),
   subtitle_idx = subtitles.length;
 
@@ -65,7 +69,7 @@ function reload_subtitle() {
   if (subtitle_idx >= subtitles.length) {
     shuffle(subtitles);
     subtitle_idx = 0;
-  } 
+  }
   subtitle_el.innerHTML = subtitles[subtitle_idx];
 }
 

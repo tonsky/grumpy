@@ -175,7 +175,7 @@
       (if new?
         (grumpy/try-async
           "telegram/post-picture!"
-          #(update-post! (:id post) identity #_telegram/post-picture!)
+          #(update-post! (:id post) telegram/post-picture!)
           { :after (fn [_] (grumpy/try-async
                              "telegram/post-text!"
                              #(update-post! (:id post) telegram/post-text!))) })

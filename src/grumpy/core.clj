@@ -244,3 +244,31 @@
   { :status 200
     :headers { "Content-Type" "text/html; charset=utf-8" }
     :body    (str "<!DOCTYPE html>\n" (rum/render-static-markup component)) })
+
+
+(defn try-async
+  ([name f] (try-async name f {}))
+  ([name f {:keys [after retries interval-ms]
+            :or {after       identity
+                 retries     5
+                 interval-ms 1000}}]
+    (future
+      (try
+        (loop [i 0]
+          (if (< i retries)
+            (let [[success? res] (try
+                                  [true (f)]
+                                  (catch Exception e
+                                    (println "[" name "] Try #" i" failed" (pr-str (ex-data e)))
+                                    (.printStackTrace e)
+                                    [false nil]))]
+              (if success?
+                (after res)
+                (do
+                  (Thread/sleep interval-ms)
+                  (recur (inc i)))))
+              (println "[" name "] Giving up after" retries "retries")))
+        (catch Exception e
+          (println "[" name "] Something went wrong" (pr-str (ex-data e)))
+          (.printStackTrace e))))))
+        

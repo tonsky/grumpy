@@ -131,6 +131,12 @@
     draft'))
 
 
+(defn update-post! [post-id f]
+  (let [post  (grumpy/get-post post-id)
+        post' (f post)]
+    (spit (io/file (str "grumpy_data/posts/" post-id) "post.edn") (pr-str post'))))
+
+
 (defn publish! [post-id]
   (let [new?      (str/starts-with? post-id "@")
         draft-dir (io/file (str "grumpy_data/drafts/" post-id))]
@@ -159,21 +165,25 @@
               :when (some? pic)]
         (.renameTo (io/file draft-dir (:url pic)) (io/file post-dir (:url pic))))
 
-      (let [post' (try
-                    (if new?
-                      (-> post (telegram/post-picture!) (telegram/post-text!))
-                      (-> post (telegram/update-text!)))
-                    (catch Exception e
-                      (println "Telegram post error:" (pr-str (ex-data e)))
-                      (stacktrace/print-stack-trace (stacktrace/root-cause e))
-                      post))]
-        ;; write post.edn
-        (spit (io/file post-dir "post.edn") (pr-str post'))
-      
-        ;; cleanup
-        (.delete (io/file draft-dir "post.edn"))
-        (.delete draft-dir)
-        post'))))
+      ;; write post.edn
+      (spit (io/file post-dir "post.edn") (pr-str post))
+
+      ;; cleanup
+      (.delete (io/file draft-dir "post.edn"))
+      (.delete draft-dir)
+
+      (if new?
+        (grumpy/try-async
+          "telegram/post-picture!"
+          #(update-post! (:id post) identity #_telegram/post-picture!)
+          { :after (fn [_] (grumpy/try-async
+                             "telegram/post-text!"
+                             #(update-post! (:id post) telegram/post-text!))) })
+        (grumpy/try-async
+          "telegram/update-text!"
+          #(telegram/update-text! post)))
+
+      post)))
 
 
 (defn delete! [post-id]

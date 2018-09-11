@@ -51,7 +51,8 @@ var subtitles =
     'Remind me tomorrow',
     'Stop showing me this',
     'Why am I seeing this?',
-    'See fewer posts like this'],
+    'See fewer posts like this',
+    'This content is not available in your country'],
   subtitle_el = document.querySelector('.subtitle-text'),
   subtitle_idx = subtitles.length;
 

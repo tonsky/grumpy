@@ -9,7 +9,7 @@
     [ring.middleware.params]
     [compojure.core :as compojure]
 
-    [grumpy.db]
+    [grumpy.db :as db]
     [grumpy.core :as grumpy]
     [grumpy.auth :as auth]
     [grumpy.authors :as authors]
@@ -170,6 +170,8 @@
 
 
 (defn -main [& args]
+  (db/migrate! 2 db/update-1->2)
+  (db/migrate! 3 db/update-2->3)
   (let [args-map (apply array-map args)
         port-str (or (get args-map "-p")
                      (get args-map "--port")

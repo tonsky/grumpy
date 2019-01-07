@@ -54,6 +54,10 @@
   (map vector coll1 coll2))
 
 
+(defn conjv [v x]
+  (conj (vec v) x))
+
+
 (defn now ^Date []
   (Date.))
 

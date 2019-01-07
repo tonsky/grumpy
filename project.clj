@@ -1,12 +1,12 @@
 (defproject grumpy "0.1.0-SNAPSHOT"
   :dependencies [
-    [org.clojure/clojure        "1.9.0"]
+    [org.clojure/clojure        "1.10.0"]
     [org.clojure/data.xml       "0.0.8"]
     [ring/ring-core             "1.6.3"]
     [org.immutant/web           "2.1.10"]
     [compojure                  "1.6.0"]
     [rum                        "0.11.2"]
-    [org.clojure/clojurescript  "1.9.946" :scope "provided"]
+    [org.clojure/clojurescript  "1.10.439" :scope "provided"]
     [cljs-drag-n-drop           "0.1.0"]
     [com.cognitect/transit-clj  "0.8.303"]
     [com.cognitect/transit-cljs "0.8.256"]

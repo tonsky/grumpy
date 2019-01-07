@@ -4,7 +4,7 @@
     [grumpy.core :as grumpy]))
 
 
-(def expected-db-version 2)
+(def expected-db-version 3)
 
 
 (def db-version (Long/parseLong (grumpy/from-config "DB_VERSION" "1")))
@@ -23,12 +23,31 @@
           (.printStackTrace e))))))
 
 
-(migrate! 2
-  (fn [post]
-    (let [[pic] (:pictures post)]
-      (cond-> post
-        true (dissoc :pictures)
-        (some? pic) (assoc :picture { :url pic })))))
+(defn update-1->2 [post]
+  (let [[pic] (:pictures post)]
+    (cond-> post
+      true (dissoc :pictures)
+      (some? pic) (assoc :picture { :url pic }))))
+
+
+(defn update-2->3 [post]
+  (let [orig  (select-keys (:picture-original post) [:telegram/message_id :telegram/photo])
+        pic   (select-keys (:picture post)          [:telegram/message_id :telegram/photo])
+        tg-id (:telegram/message_id post)]
+    (cond-> post
+      (some? tg-id)
+      (-> (update :reposts grumpy/conjv {:type :telegram/text
+                                         :telegram/channel "whining"
+                                         :telegram/message_id tg-id})
+        (dissoc :telegram/message_id))
+
+      (not-empty orig)
+      (-> (update :reposts grumpy/conjv (assoc orig :type :telegram/photo, :telegram/channel "whining"))
+        (update :picture-original dissoc :telegram/message_id :telegram/photo))
+
+      (not-empty pic)
+      (-> (update :reposts grumpy/conjv (assoc pic :type :telegram/photo, :telegram/channel "whining"))
+        (update :picture dissoc :telegram/message_id :telegram/photo)))))
 
 
 (when (not= db-version expected-db-version)

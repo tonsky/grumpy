@@ -53,7 +53,9 @@ var subtitles =
     'Why am I seeing this?',
     'See fewer posts like this',
     'This content is not available in your country',
-    'This website wants to know your location'],
+    'This website wants to know your location',
+    'We’re sorry! You need to update your Flash Player.',
+    'You have one unread message'],
   subtitle_el = document.querySelector('.subtitle-text'),
   subtitle_idx = subtitles.length;
 

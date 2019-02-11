@@ -13,3 +13,4 @@ grumpy_data
 resources/static/editor*
 figwheel_server.log
 backup.sh
+*.sublime-workspace

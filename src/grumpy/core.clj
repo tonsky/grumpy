@@ -237,7 +237,7 @@
           (interpose ", "
             (for [author authors]
               [:a { :href (:url author) } (:name author)]))
-          ". 2018. All fights retarded."]
+          ". 2019. All fights retarded."]
 
         [:script {:dangerouslySetInnerHTML { :__html (resource "scripts.js") }}]
         (for [script scripts]

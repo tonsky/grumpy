@@ -5,7 +5,8 @@
     [clojure.edn :as edn]
     [clojure.string :as str]
     [clojure.java.io :as io]
-    [ring.util.mime-type :as mime-type])
+    [ring.util.mime-type :as mime-type]
+    [grumpy.transit :as transit])
   (:import
     [java.util Date]
     [java.net URLEncoder]
@@ -249,6 +250,10 @@
     :headers { "Content-Type" "text/html; charset=utf-8" }
     :body    (str "<!DOCTYPE html>\n" (rum/render-static-markup component)) })
 
+(defn transit-response [response]
+  (-> response
+    (update :body transit/write-transit-str)
+    (assoc-in [:headers "Content-Type"] "application/transit+json; charset=utf-8")))
 
 (defn try-async
   ([name f] (try-async name f {}))

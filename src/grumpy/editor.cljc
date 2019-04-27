@@ -1,4 +1,5 @@
-(ns grumpy.editor
+(ns ^:figwheel-hooks
+  grumpy.editor
   (:require
     [clojure.string :as str]
     #?(:clj  [clojure.edn :as edn]
@@ -141,7 +142,11 @@
         (dnd/subscribe! js/document.documentElement ::editor
           { :start (fn [_] (js/document.body.classList.add "dragover"))
             :drop  (fn [e files]
-                     (oset! (picture-input) "files" files))
+                     (let [{[{post-id :post-id}] :rum/args
+                            *post-local  ::post-local
+                            *post-saved  ::post-saved
+                            *upload      ::upload} state]
+                       (upload! post-id files *post-local *post-saved *upload)))
             :end   (fn [_] (js/document.body.classList.remove "dragover")) })
         state))
   
@@ -240,8 +245,8 @@
             (when (number? upload)
               [:.edit-post_picture_progress { :style { :height (str (- 100 upload) "%")}}])]])
       [:input.edit-post_file
-        { :type "file"
-          :name "picture"
+        { :type      "file"
+          :name      "picture"
           :on-change (js-fn [e]
                        (let [files (-> e (oget "target") (oget "files"))]
                          (upload! post-id files *post-local *post-saved *upload))) }]
@@ -298,7 +303,7 @@
 
 
 #?(:cljs
-(defn ^:export refresh []
+(defn ^:after-load refresh []
   (let [mount (js/document.querySelector ".mount")
         data  (-> (.getAttribute mount "data")
                   (edn/read-string))]

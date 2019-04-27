@@ -231,14 +231,14 @@
       (let [payload (-> (:body req)
                         (transit/read-transit))
             saved   (save-post! post-id (:post payload))]
-        { :body (transit/write-transit-str { :post saved }) })))
+        (grumpy/transit-response {:body {:post saved}}))))
 
   (compojure/POST "/post/:post-id/upload" [post-id :as req]
     (or
       (auth/check-session req)
       (let [payload (:body req)
             saved   (save-picture! post-id (get-in req [:headers "content-type"]) payload)]
-        { :body (transit/write-transit-str { :post saved }) })))
+        (grumpy/transit-response {:body {:post saved}}))))
 
   (compojure/POST "/post/:post-id/publish" [post-id :as req]
     (or
@@ -246,7 +246,7 @@
       (let [payload (transit/read-transit (:body req))
             _       (save-post! post-id (:post payload))
             post'   (publish! post-id)]
-      { :body (transit/write-transit-str { :post post' })})))
+      (grumpy/transit-response {:body {:post post'}}))))
 
   (compojure/POST "/draft/:post-id/delete" [post-id :as req]
     (or

@@ -303,7 +303,7 @@
 
 
 #?(:cljs
-(defn ^:after-load refresh []
+(defn ^:after-load ^:export refresh []
   (let [mount (js/document.querySelector ".mount")
         data  (-> (.getAttribute mount "data")
                   (edn/read-string))]

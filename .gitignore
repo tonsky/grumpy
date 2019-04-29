@@ -14,3 +14,6 @@ resources/static/editor*
 figwheel_server.log
 backup.sh
 *.sublime-workspace
+*.sublime-project
+.cpcache
+.DS_Store

@@ -2,32 +2,29 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/clojure:lein-2.7.1
+      - image: circleci/clojure:tools-deps-1.10.0.442
       
     working_directory: ~/repo
 
     environment:
-      LEIN_ROOT: "true"
       JVM_OPTS: -Xmx3200m
-
     
     steps:
       - checkout
 
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "project.clj" }}
+          - v2-dependencies-{{ checksum "deps.edn" }}
           # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
-      - run: lein deps
+          - v2-dependencies-
+        
+      - run: ./scripts/package.sh
 
       - save_cache:
           paths:
             - ~/.m2
-          key: v1-dependencies-{{ checksum "project.clj" }}
-        
-      - run: lein package
+            - .cpcache
+          key: v2-dependencies-{{ checksum "deps.edn" }}
 
       - add_ssh_keys:
           fingerprints:

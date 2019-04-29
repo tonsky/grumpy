@@ -1,0 +1,25 @@
+{:deps
+ {org.clojure/clojure         {:mvn/version "1.10.1-beta2"}
+  com.stuartsierra/component  {:mvn/version "0.4.0"}
+  org.clojure/data.xml        {:mvn/version "0.2.0-alpha6"}
+  ring/ring-core              {:mvn/version "1.6.3"}
+  org.immutant/web            {:mvn/version "2.1.10"}
+  compojure                   {:mvn/version "1.6.1"}
+  rum                         {:mvn/version "0.11.3"}
+  com.cognitect/transit-clj   {:mvn/version "0.8.313"}
+  clj-http                    {:mvn/version "3.9.1"}
+  cheshire                    {:mvn/version "5.8.1"} ; for clj-http :as :json
+  cljs-drag-n-drop            {:mvn/version "0.1.0"}
+  com.cognitect/transit-cljs  {:mvn/version "0.8.256"}}
+ :paths ["src" "resources"]
+ :aliases
+ {:dev {:jvm-opts    ["-ea" "--add-opens" "java.base/sun.nio.ch=ALL-UNNAMED"]
+        :extra-paths ["dev" "target/resources"]
+        :extra-deps  {org.clojure/tools.namespace {:mvn/version "0.2.11"}
+                      com.bhauman/figwheel-main   {:mvn/version "0.2.0"}
+                      org.clojure/clojurescript   {:mvn/version "1.10.520"}}}
+  :uberjar {:extra-paths ["target/uberjar"]}
+  :package {:extra-paths ["package"]
+            :extra-deps  {org.clojure/clojurescript {:mvn/version "1.10.520"}
+                          uberdeps {:mvn/version "0.1.0"}}}
+ }}

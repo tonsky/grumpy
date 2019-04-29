@@ -1,9 +1,8 @@
 (ns grumpy.telegram
   (:require
-    [clojure.string :as str]
-    [clj-http.client :as http]
-    [clojure.data.json :as json]
-    [grumpy.core :as grumpy]))
+   [clojure.string :as str]
+   [clj-http.client :as http]
+   [grumpy.core :as grumpy]))
 
 
 (def ^:dynamic token (grumpy/slurp "grumpy_data/TELEGRAM_TOKEN"))
@@ -18,9 +17,9 @@
     (try
       (:body
         (http/post url'
-          { :form-params  params'
-            :content-type :json
-            :as           :json-string-keys}))
+          {:form-params  params'
+           :content-type :json
+           :as           :json-string-keys}))
       (catch Exception e
         (println "Telegram request failed:" url' (pr-str params'))
         (throw e)))))

@@ -1,0 +1,3 @@
+#!/bin/bash -e
+
+java --add-opens java.base/sun.nio.ch=ALL-UNNAMED -cp target/grumpy.jar clojure.main -m grumpy.system

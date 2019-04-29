@@ -1,22 +1,21 @@
 (ns grumpy.server
   (:require
-    [compojure.route]
-    [rum.core :as rum]
-    [clojure.stacktrace]
-    [ring.util.response]
-    [immutant.web :as web]
-    [clojure.string :as str]
-    [ring.middleware.params]
-    [compojure.core :as compojure]
+   [compojure.route]
+   [rum.core :as rum]
+   [clojure.stacktrace]
+   [ring.util.response]
+   [immutant.web :as web]
+   [clojure.string :as str]
+   [ring.middleware.params]
+   [compojure.core :as compojure]
+   [com.stuartsierra.component :as component]
 
-    [grumpy.db :as db]
-    [grumpy.core :as grumpy]
-    [grumpy.auth :as auth]
-    [grumpy.authors :as authors]
-    [grumpy.feed :as feed])
+   [grumpy.auth :as auth]
+   [grumpy.feed :as feed]
+   [grumpy.core :as grumpy]
+   [grumpy.authors :as authors])
   (:import
-    [java.util Date])
-  (:gen-class))
+   [java.util Date]))
 
 
 (def page-size 5)
@@ -169,18 +168,19 @@
         :body "404 Not found" })))
 
 
-(defn -main [& args]
-  (db/migrate! 2 db/update-1->2)
-  (db/migrate! 3 db/update-2->3)
-  (let [args-map (apply array-map args)
-        port-str (or (get args-map "-p")
-                     (get args-map "--port")
-                     "8080")]
-    (println "Starting web server on port" port-str)
-    (web/run #'app { :port (Integer/parseInt port-str) })))
+(defrecord Server [opts server]
+  component/Lifecycle
+  (start [this]
+    (assert (nil? server) "[server] Server already started")
+    (println "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
+    (->> (web/run #'app opts)
+      (assoc this :server)))
+  (stop [this]
+    (assert (some? server) "[server] No server")
+    (println "[server] Stopping web server")
+    (web/stop server)
+    (assoc this :server nil)))
 
 
-(comment
-  (def server (-main "--port" "8080"))
-  (web/stop server)
-  (reset! auth/*tokens {}))
+(defn server [opts]
+  (map->Server {:opts (merge-with #(or %2 %1) {:host "localhost", :port 8080} opts)}))

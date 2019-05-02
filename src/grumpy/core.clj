@@ -75,10 +75,10 @@
 
 
 (defn format-iso-inst [^Date inst]
-  (.print iso-formatter (DateTime. inst DateTimeZone/UTC)))
+  (.print ^DateTimeFormatter iso-formatter (DateTime. inst DateTimeZone/UTC)))
 
 
-(defn encode-uri-component [s]
+(defn encode-uri-component [^String s]
   (-> s
       (URLEncoder/encode "UTF-8")
       (str/replace #"\+"   "%20")
@@ -135,6 +135,21 @@
       (fit (* x (/ maxy y)) maxy maxx maxy)
     :else
       [(int x) (int y)]))
+
+
+(def checksum-resource
+  (if dev?
+    identity
+    (memoize
+      (fn [res]
+        (let [contents (slurp (io/resource res))
+              digest   (.digest (java.security.MessageDigest/getInstance "SHA-1") (.getBytes ^String contents))
+              buffer   (StringBuilder. (* 2 (alength digest)))]
+          (areduce digest i s buffer
+            (doto s
+              (.append (Integer/toHexString (unsigned-bit-shift-right (bit-and (aget digest i) 0xF0) 4)))
+              (.append (Integer/toHexString (bit-and (aget digest i) 0x0F)))))
+          (str res "?checksum=" (str buffer)))))))
 
 
 (defn redirect

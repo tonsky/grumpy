@@ -2,6 +2,11 @@
 
 https://grumpy.website
 
+## Runtime dependencies
+
+- imagemagick
+- mailutils
+
 ## Development
 
 ```

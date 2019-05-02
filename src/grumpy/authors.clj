@@ -210,7 +210,7 @@
                    :styles ["authors.css"] }
       [:.mount { :data (pr-str data) }
         (editor/editor data)]
-      [:script { :src "/static/editor.js" }]
+      [:script { :src (str "/" (grumpy/checksum-resource "static/editor.js")) }]
       [:script { :dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();" }}])))
 
 

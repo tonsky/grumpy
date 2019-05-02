@@ -28,8 +28,8 @@
                                    #".*\.cljs"
                                    #"cljsjs/.*"
                                    #"META-INF/maven/cljsjs/.*"])
-            uberdeps/level :info]
-    (uberdeps/package (edn/read-string (slurp "deps.edn")) "target/grumpy.jar")))
+            uberdeps/level :debug]
+    (uberdeps/package (edn/read-string (slurp "deps.edn")) "target/grumpy.jar" {:aliases #{:uberjar}})))
 
 
 (defn -main [& args]

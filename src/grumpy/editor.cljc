@@ -197,12 +197,12 @@
 
   [state data]
 
-  (let [{ *post-local  ::post-local
-          *post-saved  ::post-saved
-          *upload      ::upload
-          *autosave    ::autosave
-          *publishing? ::publishing? } state
-        {:keys [new? post-id user]} data
+  (let [{*post-local  ::post-local
+         *post-saved  ::post-saved
+         *upload      ::upload
+         *autosave    ::autosave
+         *publishing? ::publishing?} state
+        {:keys [new? post-id user server?]} data
         post-local  @*post-local
         post-saved  @*post-saved
         upload      @*upload
@@ -253,6 +253,7 @@
       [:.form_row { :style { :position "relative" }}
         [:.autosave 
           { :class (cond
+                     server?                       "autosave-server"
                      (number? upload)              "autosave-saving"
                      (= :upload/error upload)      "autosave-error"
                      (= :autosave/dirty autosave)  "autosave-dirty"
@@ -272,13 +273,15 @@
             :placeholder "Be grumpy here..."
             :class       (when (not= (:body post-local) (:body post-saved))
                            "edit-post_body-dirty")
+            :disabled    server?
             :auto-focus  true }]]
-      [:.form_row
+      [:.form_row.form_row-author
         "Author: "
         [:input.edit-post_author
           { :type      "text"
             :name      "author"
             :value     (:author post-local)
+            :disabled  server?
             :on-change (js-fn [e]
                          (swap! *post-local assoc :author (.-value (.-target e)))
                          (reset! *autosave :autosave/dirty))

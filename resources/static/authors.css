@@ -5,9 +5,12 @@ textarea, input[type=text], button { font: inherit; outline: none; }
 textarea, input[type=text] {
   width: 100%;
   border: none;
-  background: transparent;
-  padding: 0;
+  background: #F9F9F9;
+  padding: 10px;
+  border-radius: 4px;
 }
+
+textarea[disabled], input[type=text][disabled] { background-color: #EEE; color: #CCC; }
 
 button {
   padding: 0.5em 1.75em;
@@ -27,10 +30,11 @@ body.dragover { background-color: #F0FCF0; }
 .edit-post { max-width: 550px; }
 .edit-post textarea { height: 350px; resize: vertical; }
 .autosave { position: absolute; right: -20px; top: 7px; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; transition: 0.2s background-color; }
-.autosave-clean  { border: 1px solid #ccc; background: #ccc; }
-.autosave-dirty  { border: 1px solid #aaa; background: #fff; }
-.autosave-saving { border: 1px solid #aaa; background: #eee; }
-.autosave-error  { border: 1px solid #c33; background: #c33; }
+.autosave-server { background-color: #ddd; }
+.autosave-clean  { background-color: #3c3; }
+.autosave-dirty  { background-color: #FBD230; }
+.autosave-saving { background-color: #ccc; }
+.autosave-error  { background-color: #c33; }
 
 .edit-post_picture { min-height: 60px; position: relative; }
 .edit-post_picture-empty { background-image: url("/static/upload.svg"); background-color: #999; background-repeat: no-repeat; background-position: center center; opacity: 0.2; }
@@ -46,7 +50,8 @@ body.dragover .edit-post_picture { opacity: 0.5; }
 .edit-post_picture_failed { background: #c33; position: absolute; width: 100%; height: 100%; left:0; top: 0; opacity: 0.9; }
 .edit-post_file { display: none; }
 
-input[type=text].edit-post_author { display: inline-block; width: calc(100% - 100px); margin: 0; padding: 0; }
+.form_row-author { display: flex; align-items: baseline; }
+input[type=text].edit-post_author { margin-left: 10px; }
 
 .edit-post_cancel,
 .edit-post_cancel:hover,

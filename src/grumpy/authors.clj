@@ -209,7 +209,7 @@
     (grumpy/page { :title (if new? "Edit draft" "Edit post")
                    :styles ["authors.css"] }
       [:.mount { :data (pr-str data) }
-        (editor/editor data)]
+        (editor/editor (assoc data :server? true))]
       [:script { :src (str "/" (grumpy/checksum-resource "static/editor.js")) }]
       [:script { :dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();" }}])))
 

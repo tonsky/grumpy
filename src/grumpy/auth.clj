@@ -2,12 +2,17 @@
   (:require
     [rum.core :as rum]
     [clojure.set :as set]
-    [grumpy.core :as grumpy]
+    [clojure.string :as str]
     [clojure.java.io :as io]
-    [compojure.core :as compojure]
     [clojure.java.shell :as shell]
+    [io.pedestal.http.route :as route]
     [ring.middleware.session :as session]
-    [ring.middleware.session.cookie :as session.cookie])
+    [io.pedestal.interceptor :as interceptor]
+    [io.pedestal.http.body-params :as body-params]
+    [ring.middleware.session.cookie :as session.cookie]
+    [io.pedestal.http.ring-middlewares :as middlewares]
+    [grumpy.core :as grumpy]
+    [grumpy.routes :as routes])
   (:import
     [java.security SecureRandom]))
 
@@ -67,45 +72,54 @@
         (:value token)))))
 
 
-(defn- expire-session [handler]
-  (fn [req]
-    (let [created (:created (:session req))]
-      (if (and (some? created)
-               (> (grumpy/age created) session-ttl-ms))
-        (handler (dissoc req :session))
-        (handler req)))))
+(def expire-session
+  {:name ::expire-session
+   :enter
+   (fn [ctx]
+     (let [created (-> ctx :request :session :created)]
+       (if (and (some? created)
+                (> (grumpy/age created) session-ttl-ms))
+         (update ctx :request dissoc :session)
+         ctx)))})
 
 
-(defn force-user [handler]
-  (fn [req]
-    (if-some [u grumpy/forced-user]
-      (some-> req
-        (assoc-in [:session :user] u)
-        (handler)
-        (assoc :cookies { "grumpy_user" { :value u }}
-               :session { :user    u
-                          :created (grumpy/now) }))
-      (handler req))))
+(def force-user
+  {:name ::force-user
+   :enter
+   (fn [ctx]
+     (if-some [u grumpy/forced-user]
+       (assoc-in ctx [:request :session :user] u)
+       ctx))
+   :leave
+   (fn [ctx]
+     (if-some [u grumpy/forced-user]
+       (update ctx :response assoc :cookies {"grumpy_user" {:value u}}
+                                   :session {:user    u
+                                             :created (grumpy/now)})
+       ctx))})
     
 
-(defn wrap-session [handler]
-  (-> handler
-    (expire-session)
-    (force-user)
-    (session/wrap-session
-      { :store        (session.cookie/cookie-store { :key cookie-secret })
-        :cookie-name  "grumpy_session"
-        :cookie-attrs { :http-only true
-                        :secure    (not grumpy/dev?) }})))
+(def session
+  (middlewares/session
+    {:store        (session.cookie/cookie-store {:key cookie-secret})
+     :cookie-name  "grumpy_session"
+     :cookie-attrs {:http-only true
+                    :secure    (not grumpy/dev?)}}))
+
+
+(def populate-session [session force-user expire-session])
 
 
 (defn user [req]
   (get-in req [:session :user]))
 
 
-(defn check-session [req]
-  (when (nil? (user req))
-    (grumpy/redirect "/forbidden" { :redirect-url (:uri req) })))
+(def require-user
+  {:name ::require-user
+   :enter (fn [{req :request :as ctx}]
+            (if (nil? (user req))
+              (assoc ctx :response (grumpy/redirect "/forbidden" {:redirect-url (:uri req)}))
+              ctx))})
 
 
 (rum/defc email-sent-page [message]
@@ -116,72 +130,78 @@
 
 
 (rum/defc forbidden-page [redirect-url email]
-  (grumpy/page { :title "Log in"
-                 :styles ["authors.css"] }
+  (grumpy/page {:title "Log in"
+                :styles ["authors.css"]}
     [:form.forbidden
-      { :action "/send-email"
-             :method "post" }
-      [:.form_row
-        [:input { :type "text"
-                  :name "email"
-                  :placeholder "E-mail"
-                  :autofocus true
-                  :value email }]
-        [:input { :type "hidden" :name "redirect-url" :value redirect-url }]]
-      [:.form_row
-        [:button "Send email"]]]))
+     {:action "/send-email"
+      :method "post" }
+     [:.form_row
+      [:input {:type "text"
+               :name "email"
+               :placeholder "E-mail"
+               :autofocus true
+               :value email}]
+      [:input {:type "hidden" :name "redirect-url" :value redirect-url}]]
+     [:.form_row
+      [:button "Send email"]]]))
 
 
-(compojure/defroutes routes
-  (compojure/GET "/forbidden" [:as req]
-    (let [redirect-url (get (:params req) "redirect-url")
-          user         (get-in (:cookies req) ["grumpy_user" :value])
-          email        (:email (grumpy/author-by :user user))]
-      (grumpy/html-response (forbidden-page redirect-url email))))
+(defn handle-forbidden [{:keys [query-params cookies]}]
+  (let [user  (get-in cookies ["grumpy_user" :value])
+        email (:email (grumpy/author-by :user user))]
+    (grumpy/html-response (forbidden-page (:redirect-url query-params) email))))
 
-  (compojure/GET "/authenticate" [:as req] ;; ?email=...&token=...&redirect-url=...
-    (let [email        (get (:params req) "email")
-          user         (:user (grumpy/author-by :email email))
-          token        (get (:params req) "token")
-          redirect-url (get (:params req) "redirect-url")]
-      (if (= token (get-token email))
-        (do
-          (swap! *tokens dissoc email)
-          (assoc
-            (grumpy/redirect redirect-url)
-            :cookies { "grumpy_user" { :value user }}
-            :session { :user    user
-                       :created (grumpy/now) }))
-        { :status 403
-          :body   "403 Bad token" })))
 
-  (compojure/GET "/logout" [:as req]
-    (assoc
-      (grumpy/redirect "/")
-      :session nil))
+(defn handle-send-email [{:keys [form-params] :as req}]
+  (let [email (:email form-params)
+        user  (:user (grumpy/author-by :email email))]
+    (cond
+      (nil? (grumpy/author-by :email email))
+      (grumpy/redirect "/email-sent" {:message (str "You aren't the author, " email)})
 
-  (compojure/POST "/send-email" [:as req]
-    (let [params (:params req)
-          email  (get params "email")
-          user   (:user (grumpy/author-by :email email))]
-      (cond
-        (nil? (grumpy/author-by :email email))
-          (grumpy/redirect "/email-sent" { :message (str "You aren't the author, " email) })
-        (some? (get-token email))
-          (grumpy/redirect "/email-sent" { :message (str "Emailed link is still valid, " user) })
-        :else
-          (let [token        (gen-token)
-                redirect-url (get params "redirect-url")
-                link         (grumpy/url (str grumpy/hostname "/authenticate")
-                               { :email email
-                                 :token token
-                                 :redirect-url redirect-url })]
-            (swap! *tokens assoc email { :value token :created (grumpy/now) })
-            (send-email!
-              { :to      email
-                :subject (str "Log into Grumpy " (grumpy/format-date (grumpy/now)))
-                :body    (str "<html><div style='text-align: center;'><a href=\"" link "\" style='display: inline-block; font-size: 16px; padding: 0.5em 1.75em; background: #c3c; color: white; text-decoration: none; border-radius: 4px;'>Login now!</a></div></html>") })
-            (grumpy/redirect "/email-sent" { :message (str "Check your email, " user) })))))
+      (some? (get-token email))
+      (grumpy/redirect "/email-sent" {:message (str "Emailed link is still valid, " user)})
+     
+      :else
+      (let [token        (gen-token)
+            redirect-url (:redirect-url form-params)
+            link         (grumpy/url (str grumpy/hostname "/authenticate")
+                           {:email email
+                            :token token
+                            :redirect-url redirect-url})]
+        (swap! *tokens assoc email { :value token :created (grumpy/now) })
+        (send-email!
+          {:to      email
+           :subject (str "Log into Grumpy " (grumpy/format-date (grumpy/now)))
+           :body    (str "<html><div style='text-align: center;'><a href=\"" link "\" style='display: inline-block; font-size: 16px; padding: 0.5em 1.75em; background: #c3c; color: white; text-decoration: none; border-radius: 4px;'>Login now!</a></div></html>")})
+        (grumpy/redirect "/email-sent" {:message (str "Check your email, " user)})))))
 
-  (compojure/GET "/email-sent" [:as req]
-    (grumpy/html-response (email-sent-page (get-in req [:params "message"])))))
+
+(defn handle-email-sent [{:keys [query-params]}]
+  (grumpy/html-response (email-sent-page (:message query-params))))
+
+
+(defn handle-authenticate [{:keys [query-params]}] ;; ?email=...&token=...&redirect-url=...
+  (let [email (:email query-params)
+        user  (:user (grumpy/author-by :email email))
+        redirect-url (if (str/blank? (:redirect-url query-params))
+                       "/"
+                       (:redirect-url query-params))]
+    (if (= (:token query-params) (get-token email))
+      (do
+        (swap! *tokens dissoc email)
+        (assoc (grumpy/redirect redirect-url)
+          :cookies {"grumpy_user" {:value user}}
+          :session {:user    user
+                    :created (grumpy/now)}))
+      {:status 403
+       :body   "403 Bad token"})))
+
+
+(def routes
+  (routes/expand
+    [:get  "/forbidden"    populate-session route/query-params        `handle-forbidden]
+    [:post "/send-email"   populate-session (body-params/body-params) `handle-send-email]
+    [:get  "/email-sent"   populate-session route/query-params        `handle-email-sent]
+    [:get  "/authenticate" populate-session route/query-params        `handle-authenticate]
+    [:get  "/logout"       populate-session (fn [_] (assoc (grumpy/redirect "/") :session nil))]))

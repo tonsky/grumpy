@@ -1,6 +1,0 @@
-^{:watch-dirs ["src"]
-  :css-dirs   ["resources/static"]}
-{:main       grumpy.editor
- :output-to  "target/resources/static/editor.js"
- :output-dir "target/resources/static/editor"
- :asset-path "/static/editor"}

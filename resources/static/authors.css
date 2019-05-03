@@ -30,7 +30,7 @@ body.dragover { background-color: #F0FCF0; }
 .autosave-clean  { border: 1px solid #ccc; background: #ccc; }
 .autosave-dirty  { border: 1px solid #aaa; background: #fff; }
 .autosave-saving { border: 1px solid #aaa; background: #eee; }
-.autosave-error  { border: 1px solid #aaa; background: #c33; }
+.autosave-error  { border: 1px solid #c33; background: #c33; }
 
 .edit-post_picture { min-height: 60px; position: relative; }
 .edit-post_picture-empty { background-image: url("/static/upload.svg"); background-color: #999; background-repeat: no-repeat; background-position: center center; opacity: 0.2; }

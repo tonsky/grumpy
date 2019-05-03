@@ -2,17 +2,17 @@
   (:require
     [rum.core :as rum]
     [clojure.edn :as edn]
-    [clojure.java.shell :as shell]
     [clojure.string :as str]
     [clojure.java.io :as io]
+    [clojure.java.shell :as shell]
+    [ring.util.response :as response]
     [clojure.stacktrace :as stacktrace]
-    [compojure.core :as compojure]
-    [ring.util.response]
-    [ring.middleware.multipart-params]
+    [io.pedestal.http.ring-middlewares :as middlewares]
     
-    [grumpy.core :as grumpy]
     [grumpy.auth :as auth]
+    [grumpy.core :as grumpy]
     [grumpy.editor :as editor]
+    [grumpy.routes :as routes]
     [grumpy.transit :as transit]
     [grumpy.telegram :as telegram]))
 
@@ -214,60 +214,70 @@
       [:script { :dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();" }}])))
 
 
-(compojure/defroutes routes
-  (compojure/GET "/new" [:as req]
-    (or
-      (auth/check-session req)
-      (grumpy/html-response (edit-post-page (str "@" (auth/user req)) (auth/user req)))))
+(def ^:private interceptors [auth/populate-session auth/require-user])
 
-  (compojure/GET "/post/:post-id/edit" [post-id :as req]
-    (or
-      (auth/check-session req)
-      (grumpy/html-response (edit-post-page post-id (auth/user req)))))
-  
-  (compojure/POST "/post/:post-id/save" [post-id :as req]
-    (or
-      (auth/check-session req)
-      (let [payload (-> (:body req)
-                        (transit/read-transit))
+
+(def routes
+  (routes/expand
+    [:get "/new"
+     interceptors
+     (fn [req]
+       (let [user (auth/user req)]
+         (grumpy/html-response (edit-post-page (str "@" user) user))))]
+
+    [:get "/post/:post-id/edit"
+     interceptors
+     (fn [{{:keys [post-id]} :path-params :as req}]
+       (grumpy/html-response (edit-post-page post-id (auth/user req))))]
+
+   [:post "/post/:post-id/save"
+    interceptors
+    (fn [{{:keys [post-id]} :path-params, body :body :as req}]
+      (let [payload (transit/read-transit body)
             saved   (save-post! post-id (:post payload))]
-        (grumpy/transit-response {:body {:post saved}}))))
+        (grumpy/transit-response {:post saved})))]
 
-  (compojure/POST "/post/:post-id/upload" [post-id :as req]
-    (or
-      (auth/check-session req)
-      (let [payload (:body req)
-            saved   (save-picture! post-id (get-in req [:headers "content-type"]) payload)]
-        (grumpy/transit-response {:body {:post saved}}))))
+   [:post "/post/:post-id/upload"
+    interceptors
+    (fn [{{:keys [post-id]} :path-params, body :body :as req}]
+      (let [saved (save-picture! post-id (get-in req [:headers "content-type"]) body)]
+        (grumpy/transit-response {:post saved})))]
 
-  (compojure/POST "/post/:post-id/publish" [post-id :as req]
-    (or
-      (auth/check-session req)
-      (let [payload (transit/read-transit (:body req))
+   [:post "/post/:post-id/publish"
+    interceptors
+    (fn [{{:keys [post-id]} :path-params, body :body :as req}]
+      (let [payload (transit/read-transit body)
             _       (save-post! post-id (:post payload))
             post'   (publish! post-id)]
-      (grumpy/transit-response {:body {:post post'}}))))
+        (grumpy/transit-response {:post post'})))]
 
-  (compojure/POST "/draft/:post-id/delete" [post-id :as req]
-    (or
-      (auth/check-session req)
-      (do 
-        (delete! post-id)
-        { :status 200 })))
+   [:post "/draft/:post-id/delete"
+    interceptors
+    (fn [{{:keys [post-id]} :path-params :as req}]
+      (delete! post-id)
+      {:status 200})]
 
-  (compojure/GET "/draft/:post-id/:img" [post-id img]
-    (ring.util.response/file-response (str "grumpy_data/drafts/" post-id "/" img)))
+   [:get "/post/:post-id/delete"
+    interceptors
+    (fn [{{:keys [post-id]} :path-params :as req}]
+      (doseq [file (reverse (file-seq (io/file (str "grumpy_data/posts/" post-id))))]
+        (.delete file))
+      (grumpy/redirect "/"))]
 
-  (ring.middleware.multipart-params/wrap-multipart-params
-    (compojure/POST "/post/:post-id/edit" [post-id :as req]
-      (or
-        (auth/check-session req)
-        (let [params  (:multipart-params req)
-              body    (get params "body")
-              picture (get params "picture")]
-          (save-post! { :id     post-id
-                        :body   body
-                        :author (get params "author") }
-                      (when (some-> picture :size pos?)
-                        picture))
-          (grumpy/redirect "/"))))))
+   [:get "/draft/:post-id/:img"
+    interceptors
+    (fn [{{:keys [post-id img]} :path-params}]
+      (response/file-response (str "grumpy_data/drafts/" post-id "/" img)))]
+
+   [:post "/post/:post-id/edit"
+    interceptors
+    middlewares/multipart-params
+    (fn [{{:keys [post-id]} :path-params
+          {:keys [body picture author]} :multipart-params
+          :as req}]
+      (save-post!
+        {:id     post-id
+         :body   body
+         :author author}
+        (when (some-> picture :size pos?) picture))
+      (grumpy/redirect "/"))]))

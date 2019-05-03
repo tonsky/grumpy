@@ -1,18 +1,19 @@
 (ns grumpy.server
   (:require
-   [compojure.route]
    [rum.core :as rum]
    [clojure.stacktrace]
-   [ring.util.response]
-   [immutant.web :as web]
+   [clojure.java.io :as io]
    [clojure.string :as str]
-   [ring.middleware.params]
-   [compojure.core :as compojure]
+   [io.pedestal.http :as http]
+   [ring.util.response :as response]
+   [io.pedestal.interceptor :as interceptor]
    [com.stuartsierra.component :as component]
+   [io.pedestal.http.ring-middlewares :as middlewares]
 
    [grumpy.auth :as auth]
    [grumpy.feed :as feed]
    [grumpy.core :as grumpy]
+   [grumpy.routes :as routes]
    [grumpy.authors :as authors])
   (:import
    [java.util Date]))
@@ -84,103 +85,91 @@
     (post (grumpy/get-post post-id))))
 
 
-(compojure/defroutes routes
-  (compojure/GET "/post/:post-id/:img" [post-id img]
-    (ring.util.response/file-response (str "grumpy_data/posts/" post-id "/" img)))
+(def no-cache
+  (interceptor/interceptor
+    {:name  ::no-cache
+     :leave (fn [ctx]
+              (let [h (:headers (:response ctx))]
+                (if (contains? h "Cache-Control")
+                  ctx
+                  (update ctx :response assoc :headers (assoc h "Cache-Control" "no-cache", "Expires" "-1")))))}))
 
-  (compojure/GET "/post/:post-id" [post-id]
-    (grumpy/html-response (post-page post-id)))
+(def routes
+  (routes/expand
+    [:get "/post/:post-id/:img"
+     (fn [{{:keys [post-id img]} :path-params}]
+       (response/file-response (str "grumpy_data/posts/" post-id "/" img)))]
 
-  (compojure/GET "/after/:post-id" [post-id]
-    (when grumpy/dev? (Thread/sleep 2000))
-    (if (and grumpy/dev? (< (rand) 0.5))
-      { :status 500 }
-      (let [post-ids (->> (grumpy/post-ids)
-                          (drop-while #(not= % post-id))
-                          (drop 1)
-                          (take page-size))]
-        { :status  200
-          :headers { "Content-Type" "text/html; charset=utf-8" }
-          :body    (rum/render-static-markup (posts-fragment post-ids)) })))
+    [:get "/post/:post-id"
+     (fn [{{:keys [post-id]} :path-params}]
+       (grumpy/html-response (post-page post-id)))]
 
-  (compojure/GET "/feed.xml" []
-    { :status 200
-      :headers { "Content-type" "application/atom+xml; charset=utf-8" }
-      :body (feed/feed (take 10 (grumpy/post-ids))) })
+    [:get "/after/:post-id"
+     (fn [{{:keys [post-id]} :path-params}]
+       (when grumpy/dev? (Thread/sleep 200))
+       (if (and grumpy/dev? (< (rand) 0.5))
+         { :status 500 }
+         (let [post-ids (->> (grumpy/post-ids)
+                             (drop-while #(not= % post-id))
+                             (drop 1)
+                             (take page-size))]
+           {:status  200
+            :headers { "Content-Type" "text/html; charset=utf-8" }
+            :body    (rum/render-static-markup (posts-fragment post-ids))})))]
 
-  (compojure/GET "/sitemap.xml" []
-    { :status 200
-      :headers { "Content-type" "text/xml; charset=utf-8" }
-      :body (feed/sitemap (grumpy/post-ids)) })
-
-  (compojure/GET "/robots.txt" []
-    { :status 200
-      :headers { "Content-type" "text/plain" }
-      :body (grumpy/resource "robots.txt") })
-
-  (auth/wrap-session
-    (compojure/routes
-      #'auth/routes
-      #'authors/routes))
-  
-  (cond->
-    (compojure/GET "/" []
+   [:get "/"
+    (when grumpy/dev? auth/populate-session)
+    (fn [_]
       (let [post-ids  (grumpy/post-ids)
             first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)]
-        (grumpy/html-response (index-page first-ids))))
-    grumpy/dev? (auth/wrap-session)))
+        (grumpy/html-response (index-page first-ids))))]
+
+   [:get "/static/*path" 
+    (when-not grumpy/dev?
+      {:leave #(update-in % [:response :headers] assoc "Cache-Control" "max-age=315360000")})
+    (fn [{{:keys [path]} :path-params}]
+      (response/resource-response (str "static/" path)))]
+
+   [:get "/feed.xml"
+    (fn [_]
+      {:status  200
+       :headers { "Content-Type" "application/atom+xml; charset=utf-8" }
+       :body    (feed/feed (take 10 (grumpy/post-ids))) })]
+
+   [:get "/sitemap.xml"
+    (fn [_]
+      {:status 200
+       :headers { "Content-Type" "text/xml; charset=utf-8" }
+       :body (feed/sitemap (grumpy/post-ids))})]
+
+   [:get "/robots.txt"
+    (fn [_]
+      {:status 200
+       :headers {"Content-Type" "text/plain"}
+       :body (grumpy/resource "robots.txt")})]))
 
 
-(defn with-headers [handler headers]
-  (fn [request]
-    (some-> (handler request)
-      (update :headers merge headers))))
-
-
-(defn print-errors [handler]
-  (fn [req]
-    (try
-      (handler req)
-      (catch Exception e
-        (.printStackTrace e)
-        { :status 500
-          :headers { "Content-type" "text/plain; charset=utf-8" }
-          :body (with-out-str
-                  (clojure.stacktrace/print-stack-trace (clojure.stacktrace/root-cause e))) }))))
-
-
-(def app
-  (compojure/routes
-    (->
-      routes
-      (ring.middleware.params/wrap-params)
-      (with-headers { "Cache-Control" "no-cache"
-                      "Expires"       "-1" })
-      (print-errors))
-    (->
-      (compojure.route/resources "/static" {:root "static"})
-      (with-headers (if grumpy/dev?
-                      { "Cache-Control" "no-cache"
-                        "Expires"       "-1" }
-                      { "Cache-Control" "max-age=315360000" })))
-    (fn [req]
-      { :status 404
-        :body "404 Not found" })))
-
-
-(defrecord Server [opts server]
+(defrecord Server [server]
   component/Lifecycle
   (start [this]
-    (assert (nil? server) "[server] Server already started")
-    (println "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
-    (->> (web/run #'app opts)
-      (assoc this :server)))
+    (println "[server] Starting web server at" (str (::http/host server) ":" (::http/port server)))
+    (http/start server)
+    this)
   (stop [this]
-    (assert (some? server) "[server] No server")
     (println "[server] Stopping web server")
-    (web/stop server)
-    (assoc this :server nil)))
+    (http/stop server)
+    this))
 
 
 (defn server [opts]
-  (map->Server {:opts (merge-with #(or %2 %1) {:host "localhost", :port 8080} opts)}))
+  (let [opts'  (merge-with #(or %2 %1) {:host "localhost", :port 8080} opts)
+        server (-> {::http/routes (routes/sort (concat routes auth/routes authors/routes))
+                    ::http/router :linear-search
+                    ::http/type   :immutant
+                    ::http/host   (:host opts')
+                    ::http/port   (:port opts')
+                    ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
+                 (http/default-interceptors)
+                 (update ::http/interceptors conj no-cache)
+                 (http/create-server))]
+  (Server. server)))

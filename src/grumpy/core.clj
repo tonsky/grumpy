@@ -206,8 +206,7 @@
 (def resource
   (cond-> (fn [name]
             (clojure.core/slurp (io/resource (str "static/" name))))
-    (not dev?)
-      (memoize)))
+    (not dev?) (memoize)))
 
 
 (def style
@@ -261,14 +260,16 @@
 
 
 (defn html-response [component]
-  { :status 200
-    :headers { "Content-Type" "text/html; charset=utf-8" }
-    :body    (str "<!DOCTYPE html>\n" (rum/render-static-markup component)) })
+  {:status  200
+   :headers { "Content-Type" "text/html; charset=utf-8" }
+   :body    (str "<!DOCTYPE html>\n" (rum/render-static-markup component))})
 
-(defn transit-response [response]
-  (-> response
-    (update :body transit/write-transit-str)
-    (assoc-in [:headers "Content-Type"] "application/transit+json; charset=utf-8")))
+
+(defn transit-response [payload]
+  {:status  200
+   :headers {"Content-Type" "application/transit+json; charset=utf-8"}
+   :body    (transit/write-transit-str payload)})
+
 
 (defn try-async
   ([name f] (try-async name f {}))

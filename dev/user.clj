@@ -47,7 +47,7 @@
 
 
 (reset! *figwheel
-  (component/start (figwheel/map->Figwheel {:opts {:build "dev"}})))
+  (component/start (figwheel/->Figwheel)))
 
 
 (reset)

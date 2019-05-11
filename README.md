@@ -1,6 +1,6 @@
 # Minimalistic blog engine
 
-https://grumpy.website
+[Grumpy.website](https://grumpy.website/)
 
 ## Runtime dependencies
 
@@ -11,8 +11,7 @@ https://grumpy.website
 
 ```
 mkdir grumpy_data
-echo "nikitonsky" >> grumpy_data/FORCED_USER
-echo "http://localhost:8080" >> grumpy_data/HOSTNAME
-./scripts/repl.sh
+./script/setup
+./script/console
 open http://localhost:8080
 ```

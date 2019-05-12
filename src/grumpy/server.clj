@@ -149,27 +149,34 @@
        :body (grumpy/resource "robots.txt")})]))
 
 
-(defrecord Server [server]
+(defrecord Server [opts crux server]
   component/Lifecycle
   (start [this]
-    (println "[server] Starting web server at" (str (::http/host server) ":" (::http/port server)))
-    (http/start server)
-    this)
+    (println "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
+    (let [server (-> {::http/routes (routes/sort (concat routes auth/routes authors/routes))
+                      ::http/router :linear-search
+                      ::http/type   :immutant
+                      ::http/host   (:host opts)
+                      ::http/port   (:port opts)
+                      ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
+                   (http/default-interceptors)
+                   (update ::http/interceptors conj no-cache)
+                   (http/create-server)
+                   (http/start))]
+      (assoc this :server server)))
   (stop [this]
     (println "[server] Stopping web server")
     (http/stop server)
-    this))
+    (dissoc this :server)))
 
 
-(defn server [opts]
-  (let [opts'  (merge-with #(or %2 %1) {:host "localhost", :port 8080} opts)
-        server (-> {::http/routes (routes/sort (concat routes auth/routes authors/routes))
-                    ::http/router :linear-search
-                    ::http/type   :immutant
-                    ::http/host   (:host opts')
-                    ::http/port   (:port opts')
-                    ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
-                 (http/default-interceptors)
-                 (update ::http/interceptors conj no-cache)
-                 (http/create-server))]
-  (Server. server)))
+(def default-opts
+  {:host "localhost"
+   :port 8080})
+
+
+(defn server
+  ([] (server {}))
+  ([opts]
+   (let [opts' (merge-with #(or %2 %1) default-opts opts)]
+     (map->Server {:opts opts'}))))

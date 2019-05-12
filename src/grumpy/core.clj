@@ -8,7 +8,7 @@
     [ring.util.mime-type :as mime-type]
     [grumpy.transit :as transit])
   (:import
-    [java.util Date]
+    [java.util Date UUID Random]
     [java.net URLEncoder]
     [org.joda.time DateTime DateTimeZone]
     [org.joda.time.format DateTimeFormat DateTimeFormatter ISODateTimeFormat]))
@@ -59,6 +59,23 @@
   (conj (vec v) x))
 
 
+(defn make-uuid
+  ([hi]
+   (UUID. hi (.nextLong (Random.))))
+  ([hi low]
+   (UUID. hi low)))
+
+
+(defn update-some [m key f & args]
+  (if-some [value (get m key)]
+    (assoc m key (apply f value args))
+    m))
+
+
+(defn filtermv [pred m]
+  (reduce-kv (fn [m k v] (if (pred v) (assoc m k v) m)) {} m))
+
+
 (defn now ^Date []
   (Date.))
 
@@ -69,6 +86,7 @@
 
 (def ^:private date-formatter (DateTimeFormat/forPattern "MMMMM d, YYYY"))
 (def ^:private iso-formatter (DateTimeFormat/forPattern "yyyy-MM-dd'T'HH:mm:ss'Z'"))
+
 
 (defn format-date [^Date inst]
   (.print ^DateTimeFormatter date-formatter (DateTime. inst)))
@@ -150,6 +168,11 @@
               (.append (Integer/toHexString (unsigned-bit-shift-right (bit-and (aget digest i) 0xF0) 4)))
               (.append (Integer/toHexString (bit-and (aget digest i) 0x0F)))))
           (str res "?checksum=" (str buffer)))))))
+
+
+(defn delete-dir [dir]
+  (doseq [file (reverse (file-seq (io/file dir)))]
+    (.delete file)))
 
 
 (defn redirect

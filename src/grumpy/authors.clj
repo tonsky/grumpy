@@ -260,8 +260,7 @@
    [:get "/post/:post-id/delete"
     interceptors
     (fn [{{:keys [post-id]} :path-params :as req}]
-      (doseq [file (reverse (file-seq (io/file (str "grumpy_data/posts/" post-id))))]
-        (.delete file))
+      (grumpy/delete-dir (str "grumpy_data/posts/" post-id))
       (grumpy/redirect "/"))]
 
    [:get "/draft/:post-id/:img"

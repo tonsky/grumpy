@@ -1,55 +1,76 @@
 (ns grumpy.db
   (:require
-    [clojure.edn :as edn]
-    [grumpy.core :as grumpy]))
+   [crux.api :as crux]
+   [grumpy.core :as grumpy]
+   [compact-uuids.core :as uuid]
+   [com.stuartsierra.component :as component]))
 
 
-(def expected-db-version 3)
+(defrecord Crux [opts system]
+  component/Lifecycle
+  (start [this]
+    (println "[db] Starting Crux with" opts)
+    (assoc this :system (crux/start-standalone-system opts)))
+  (stop [this]
+    (println "[db] Stopping Crux")
+    (.close system)
+    (dissoc this :system)))
 
 
-(def db-version (Long/parseLong (grumpy/from-config "DB_VERSION" "1")))
+(def default-opts
+  {:kv-backend    "crux.kv.rocksdb.RocksKv"
+   :db-dir        "grumpy_data/crux_db"
+   :event-log-dir "grumpy_data/crux_events"
+   :backup-dir    "grumpy_data/crux_backup"})
 
 
-(defn migrate! [version f]
-  (when (< db-version version)
-    (println "Migrating DB to version" version)
-    (doseq [post-id (grumpy/post-ids)
-            :let [file (str "grumpy_data/posts/" post-id "/post.edn")
-                  post (edn/read-string (slurp file))]]
-      (try
-        (spit file (pr-str (f post)))
-        (catch Exception e
-          (println "Can’t convert" file)
-          (.printStackTrace e))))))
+(defn crux
+  ([] (crux {}))
+  ([opts]
+   (let [opts' (merge-with #(or %2 %1) default-opts opts)]
+     (map->Crux {:opts opts'}))))
 
 
-(defn update-1->2 [post]
-  (let [[pic] (:pictures post)]
-    (cond-> post
-      true (dissoc :pictures)
-      (some? pic) (assoc :picture { :url pic }))))
+(def post-id-high   (#'uuid/parse-long "000grvmpyp0st" 0))
+(def pict-id-high   (#'uuid/parse-long "000grvmpyp1ct" 0))
+(def repost-id-high (#'uuid/parse-long "0grvmpyrep0st" 0))
 
 
-(defn update-2->3 [post]
-  (let [orig  (select-keys (:picture-original post) [:telegram/message_id :telegram/photo])
-        pic   (select-keys (:picture post)          [:telegram/message_id :telegram/photo])
-        tg-id (:telegram/message_id post)]
-    (cond-> post
-      (some? tg-id)
-      (-> (update :reposts grumpy/conjv {:type :telegram/text
-                                         :telegram/channel "whining"
-                                         :telegram/message_id tg-id})
-        (dissoc :telegram/message_id))
-
-      (not-empty orig)
-      (-> (update :reposts grumpy/conjv (assoc orig :type :telegram/photo, :telegram/channel "whining"))
-        (update :picture-original dissoc :telegram/message_id :telegram/photo))
-
-      (not-empty pic)
-      (-> (update :reposts grumpy/conjv (assoc pic :type :telegram/photo, :telegram/channel "whining"))
-        (update :picture dissoc :telegram/message_id :telegram/photo)))))
+(defn put
+  ([entity]
+   [:crux.tx/put (:crux.db/id entity) (grumpy/filtermv some? entity)])
+  ([entity valid-time]
+   [:crux.tx/put (:crux.db/id entity) (grumpy/filtermv some? entity) valid-time]))
 
 
-(when (not= db-version expected-db-version)
-  (spit "grumpy_data/DB_VERSION" (str expected-db-version))
-  (alter-var-root #'db-version (constantly expected-db-version)))
+(defn upsert [system attr document]
+  (let [value (get document attr)
+        id    (-> (crux/q (crux/db system)
+                    {:find '[id] :where [['id attr 'value]] :args [{:value value}]})
+                (ffirst)
+                (or (java.util.UUID/randomUUID)))]
+    (crux/submit-tx system [[:crux.tx/put id (assoc document :crux.db/id id)]])
+    id))
+
+
+(defn get-post [system id]
+  (let [db      (crux/db system)
+        entity  #(some->> % (crux/entity db))
+        history (crux/history system id)]
+    (-> (crux/entity db id)
+      (assoc
+        :post/created (:crux.db/valid-time (last history))
+        :post/updated (:crux.db/valid-time (first history)))
+      (grumpy/update-some :post/picture entity)
+      (grumpy/update-some :post/picture-original entity)
+      (grumpy/update-some :post/reposts #(mapv entity %)))))
+
+
+(defn post-by-idx [system idx]
+  (get-post system (grumpy/make-uuid post-id-high idx)))
+
+
+(defn post-by-url [system url]
+  (let [db (crux/db system)]
+    (when-some [crux-id (ffirst (crux/q db {:find ['e] :where '[[e :post/url url]] :args [{:url url}]}))]
+      (get-post system crux-id))))

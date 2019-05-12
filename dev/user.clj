@@ -1,13 +1,21 @@
 (ns user
   (:require
-   [clojure.tools.namespace.repl :as namespace]
-   [com.stuartsierra.component :as component]
    [figwheel.main.api]
-   [grumpy.figwheel :as figwheel]))
+   [compact-uuids.core :as uuid]
+   [grumpy.figwheel :as figwheel]
+   [grumpy.migrations :as migrations]
+   [com.stuartsierra.component :as component]
+   [clojure.tools.namespace.repl :as namespace]))
 
 
 (namespace/disable-reload!)
 (namespace/set-refresh-dirs "src" "dev")
+
+
+(defmethod print-method java.util.UUID [uuid ^java.io.Writer w]
+  (.write w (str "#c/uuid \"" (uuid/str uuid) "\"")))
+
+(set! *data-readers* (assoc *data-readers* 'c/uuid #'uuid/read))
 
 
 (defonce *system (atom nil))
@@ -50,6 +58,7 @@
   (component/start (figwheel/->Figwheel)))
 
 
+(migrations/migrate!)
 (reset)
 
 

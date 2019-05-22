@@ -5,6 +5,7 @@
     [clojure.edn :as edn]
     [clojure.string :as str]
     [clojure.java.io :as io]
+    [clojure.java.shell :as shell]
     [ring.util.mime-type :as mime-type]
     [grumpy.transit :as transit])
   (:import
@@ -86,6 +87,7 @@
 
 (def ^:private date-formatter (DateTimeFormat/forPattern "MMMMM d, YYYY"))
 (def ^:private iso-formatter (DateTimeFormat/forPattern "yyyy-MM-dd'T'HH:mm:ss'Z'"))
+(def ^:private log-formatter (DateTimeFormat/forPattern "yyyy-MM-dd HH:mm:ss.SSS"))
 
 
 (defn format-date [^Date inst]
@@ -319,4 +321,18 @@
         (catch Exception e
           (println "[" name "] Something went wrong" (pr-str (ex-data e)))
           (.printStackTrace e))))))
-        
+
+
+(defn log [& args]
+  (let [now (DateTime. DateTimeZone/UTC)]
+    (apply println (.print ^DateTimeFormatter log-formatter now) args)))
+
+
+(defn sh [& args]
+  (apply log "sh:" (mapv pr-str args))
+  (let [{:keys [exit out err] :as res} (apply shell/sh args)]
+    (log "exit:" exit "out:" (pr-str out) "err:" (pr-str err))
+    (if (= 0 exit)
+      res
+      (throw (ex-info (str "External process failed: " (str/join " " args) " returned " exit)
+               (assoc res :args args))))))

@@ -21,8 +21,14 @@
            :content-type :json
            :as           :json-string-keys}))
       (catch Exception e
-        (println "Telegram request failed:" url' (pr-str params'))
-        (throw e)))))
+        (cond
+          (re-find #"Bad Request: message is not modified" (:body (ex-data e)))
+          (println "Telegram request failed:" url' (pr-str params'))
+
+          :else
+          (do
+            (println "Telegram request failed:" url' (pr-str params'))
+            (throw e)))))))
 
 
 (defn post-picture!

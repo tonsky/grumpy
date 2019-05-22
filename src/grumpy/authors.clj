@@ -4,7 +4,6 @@
     [clojure.edn :as edn]
     [clojure.string :as str]
     [clojure.java.io :as io]
-    [clojure.java.shell :as shell]
     [ring.util.response :as response]
     [clojure.stacktrace :as stacktrace]
     [io.pedestal.http.ring-middlewares :as middlewares]
@@ -47,12 +46,12 @@
 
 
 (defn image-dimensions [file]
-  (let [out (:out (shell/sh "convert" (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
+  (let [out (:out (grumpy/sh "convert" (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
         [w h] (edn/read-string out)]
     [w h]))
 
 (defn convert! [from to opts]
-  (apply shell/sh "convert"
+  (apply grumpy/sh "convert"
     (.getPath from)
     (concat
       (flatten

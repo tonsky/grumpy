@@ -260,7 +260,10 @@
         [:title title]
         (style "styles.css")
         (for [css styles]
-          (style css))]
+          (style css))
+        [:script {:dangerouslySetInnerHTML { :__html (resource "scripts.js") }}]
+        (for [script scripts]
+          [:script {:dangerouslySetInnerHTML { :__html (resource script) }}])]
       [:body.anonymous
         [:header
           (case page
@@ -277,11 +280,7 @@
           (interpose ", "
             (for [author authors]
               [:a { :href (:url author) } (:name author)]))
-          ". 2019. All fights retarded."]
-
-        [:script {:dangerouslySetInnerHTML { :__html (resource "scripts.js") }}]
-        (for [script scripts]
-          [:script {:dangerouslySetInnerHTML { :__html (resource script) }}])]]))
+          ". 2019. All fights retarded."]]]))
 
 
 (defn html-response [component]

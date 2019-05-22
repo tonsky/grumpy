@@ -56,7 +56,7 @@ var subtitles =
     'This website wants to know your location',
     'We’re sorry! You need to update your Flash Player.',
     'You have one unread message'],
-  subtitle_el = document.querySelector('.subtitle-text'),
+  subtitle_el,
   subtitle_idx = subtitles.length;
 
 function shuffle(array) {
@@ -77,7 +77,8 @@ function reload_subtitle() {
   subtitle_el.innerHTML = subtitles[subtitle_idx];
 }
 
-window.addEventListener("load", function() {
+window.addEventListener("DOMContentLoaded", function() {
+  subtitle_el = document.querySelector('.subtitle-text');
   subtitle_el.onclick = reload_subtitle;
   reload_subtitle();
   if (document.cookie.indexOf("grumpy_user=") >= 0) {

@@ -1,4 +1,4 @@
 #!/bin/bash -e
 
-echo "nikitonsky" > grumpy_data/FORCED_USER
-echo "http://localhost:8080" > grumpy_data/HOSTNAME
+echo -n "nikitonsky" > grumpy_data/FORCED_USER
+echo -n "http://localhost:8080" > grumpy_data/HOSTNAME

@@ -1,5 +1,5 @@
 var loader_status = "IDLE",
-    loader = document.querySelector(".loader");
+    loader;
 
 
 function load_posts() {
@@ -49,7 +49,8 @@ function on_scroll(e) {
 }
 
 
-window.addEventListener("load", function() {
+window.addEventListener("DOMContentLoaded", function() {
+  loader = document.querySelector(".loader");
   on_scroll();
   window.addEventListener("scroll", on_scroll);
 });

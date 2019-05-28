@@ -33,17 +33,38 @@
 
 
 (def authors
-  [ { :email "niki@tonsky.me"       :user "nikitonsky" :telegram/user "nikitonsky"  :name "Nikita Prokopov"      :url "https://twitter.com/nikitonsky" }
-    { :email "freetonik@gmail.com"  :user "freetonik"  :telegram/user "freetonik"   :name "Rakhim Davletkaliyev" :url "https://twitter.com/freetonik" }
-    { :email "ivan@grishaev.me"     :user "igrishaev"  :telegram/user "igrishaev"   :name "Ivan Grishaev"        :url "http://grishaev.me/" }
-    { :email "dmitrii@dmitriid.com" :user "dmitriid"   :telegram/user "mamutnespit" :name "Dmitrii Dimandt"      :url "https://twitter.com/dmitriid" } ])
+  [{:email "niki@tonsky.me"
+    :user  "nikitonsky"
+    :telegram/user "nikitonsky" 
+    :name  "Nikita Prokopov"
+    :url   "https://twitter.com/nikitonsky"}
+   {:email "freetonik@gmail.com"
+    :user  "freetonik"
+    :telegram/user "freetonik"
+    :name  "Rakhim Davletkaliyev"
+    :url   "https://twitter.com/freetonik"}
+   {:email "ivan@grishaev.me"
+    :user  "igrishaev"
+    :telegram/user "igrishaev"
+    :name  "Ivan Grishaev"
+    :url   "https://grishaev.me/"}
+   {:email "dmitrii@dmitriid.com"
+    :user  "dmitriid"
+    :telegram/user "mamutnespit"
+    :name  "Dmitrii Dimandt"
+    :url   "https://twitter.com/dmitriid"}
+   {:email "ulyanovskui@gmail.com"
+    :user  "andreivoronin"
+    :telegram/user "andreuvoronin"
+    :name  "Andrei Voronin"
+    :url   "https://twitter.com/UlyanovskUI"}])
 
 
 (defn author-by [attr value]
   (first (filter #(= (get % attr) value) authors)))
 
 
-(def ^:dynamic hostname (from-config "HOSTNAME" "http://grumpy.website"))
+(def ^:dynamic hostname (from-config "HOSTNAME" "https://grumpy.website"))
 
 
 (def forced-user (slurp "grumpy_data/FORCED_USER"))

@@ -29,7 +29,7 @@
  `(let [file# (io/file "grumpy_data" ~name)]
     (when-not (.exists file#)
       (spit file# ~default-value))
-    (clojure.core/slurp file#)))
+    (str/trim (clojure.core/slurp file#))))
 
 
 (def authors

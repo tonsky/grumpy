@@ -1,14 +1,11 @@
 (ns grumpy.feed
   (:require
    [clojure.string :as str]
-   [clojure.data.xml :as xml]
+   [grumpy.xml :as xml]
    [rum.core :as rum]
    [ring.util.mime-type :as mime-type]
    [grumpy.core :as grumpy]
    [grumpy.authors :as authors]))
-
-
-(def emit (comp xml/indent-str xml/sexp-as-element))
 
 
 (defn max-date [posts]
@@ -22,10 +19,12 @@
   (let [posts (map grumpy/get-post post-ids)
         updated (or (max-date posts)
                     (java.util.Date.))]
-    (emit
-     [:feed {:xmlns "http://www.w3.org/2005/Atom" :xml:lang "ru"}
+    (xml/emit
+     [:feed {:xmlns    "http://www.w3.org/2005/Atom"
+             :xml:lang "ru"
+             :xml:base (str grumpy/hostname "/")}
       [:title {} "Grumpy Website"]
-      [:subtitle {} "Are you sure you want to exist? — YES / NO"]
+      [:subtitle {} "Do you want to cancel? – YES / CANCEL"]
       [:icon {} (str grumpy/hostname "/static/favicons/favicon-32x32.png")]
       [:link {:type "application/atom+xml"
               :href (str grumpy/hostname "/feed.xml")
@@ -33,7 +32,7 @@
       [:link {:type "text/html"
               :href (str grumpy/hostname "/")
               :rel  "alternate"}]
-      [:id {} grumpy/hostname]
+      [:id {} (str grumpy/hostname "/")]
       [:updated {} (grumpy/format-iso-inst updated)]
       (for [author grumpy/authors]
         [:author {} [:name {} (:user author)]])
@@ -53,7 +52,7 @@
          [:published {} (grumpy/format-iso-inst (:created post))]
          [:updated {} (grumpy/format-iso-inst (:updated post))]
          [:author {} [:name {} (:author post)]]
-         [:content {:type "text/html" :href url}
+         [:content {:type "text/html"}
            (rum/render-static-markup
              (when-some [pic (:picture post)]
                (let [src (str url "/" (:url pic))]
@@ -88,7 +87,7 @@
 
 
 (defn sitemap [post-ids]
-  (emit
+  (xml/emit
    [:urlset {:xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"}
      [:url {} [:loc {} grumpy/hostname]]
      (for [id post-ids]

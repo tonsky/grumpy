@@ -8,7 +8,6 @@
   io.pedestal/pedestal.immutant {:mvn/version "0.5.5" :exclusions [javax.servlet/javax.servlet-api]}
   rum                           {:mvn/version "0.11.3"}
   com.cognitect/transit-clj     {:mvn/version "0.8.313"}
-  org.clojure/data.xml          {:mvn/version "0.2.0-alpha6"}
   clj-http                      {:mvn/version "3.9.1"}
   cheshire                      {:mvn/version "5.8.1"} ; for clj-http :as :json
   cljs-drag-n-drop              {:mvn/version "0.1.0"}

@@ -32,7 +32,7 @@
 
         (every? string? children)
         (doseq [child children]
-          (emit-impl sb indent children))
+          (emit-impl sb indent child))
 
         :else
         (do

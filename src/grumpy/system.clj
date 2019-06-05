@@ -8,10 +8,10 @@
 
 (defn system [opts]
   (component/system-map
-    ; :crux   (db/crux (:crux opts))
+    :crux   (db/crux (:crux opts))
     :server (component/using
               (server/server (:server opts))
-              [#_:crux])))
+              [:crux])))
 
 
 (defn -main [& {:as args}]

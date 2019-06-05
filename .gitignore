@@ -1,4 +1,4 @@
-/target
+/target*
 /classes
 /checkouts
 pom.xml
@@ -15,5 +15,5 @@ figwheel_server.log
 backup.sh
 *.sublime-workspace
 *.sublime-project
-.cpcache
+/.cpcache*
 .DS_Store

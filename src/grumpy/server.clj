@@ -151,36 +151,43 @@
        :body (grumpy/resource "robots.txt")})]))
 
 
-(defn suppress-error [name class message-re]
-  (interceptor/interceptor
-    {:name name
-     :error
-     (fn [ctx ^Throwable e]
-       (let [cause (stacktrace/root-cause e)
-             message (.getMessage cause)]
-         (if (and (instance? class cause) (re-matches message-re message))
-           (do
-             (println "Ignoring" (type cause) "-" message)
-             ctx)
-           (assoc ctx :io.pedestal.interceptor.chain/error e))))}))
+; Filtering out Broken pipe reporting
+; io.pedestal.http.impl.servlet-interceptor/error-stylobate
+(defn error-stylobate [{:keys [servlet-response] :as context} exception]
+  (let [cause (stacktrace/root-cause exception)]
+    (if (and (instance? IOException cause) (= "Broken pipe" (.getMessage cause)))
+      (println "Ignoring java.io.IOException: Broken pipe")
+      (io.pedestal.log/error
+        :msg "error-stylobate triggered"
+        :exception exception
+        :context context))
+    (@#'io.pedestal.http.impl.servlet-interceptor/leave-stylobate context)))
+
+
+; io.pedestal.http.impl.servlet-interceptor/stylobate
+(def stylobate
+  (io.pedestal.interceptor/interceptor {:name ::stylobate
+                                        :enter @#'io.pedestal.http.impl.servlet-interceptor/enter-stylobate
+                                        :leave @#'io.pedestal.http.impl.servlet-interceptor/leave-stylobate
+                                        :error error-stylobate}))
 
 
 (defrecord Server [opts crux server]
   component/Lifecycle
   (start [this]
     (println "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
-    (let [server (-> {::http/routes (routes/sort (concat routes auth/routes authors/routes))
-                      ::http/router :linear-search
-                      ::http/type   :immutant
-                      ::http/host   (:host opts)
-                      ::http/port   (:port opts)
-                      ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
-                   (http/default-interceptors)
-                   (update ::http/interceptors conj no-cache)
-                   (update ::http/interceptors #(cons (suppress-error ::suppress-broken-pipe java.io.IOException #"Broken pipe") %))
-                   (http/create-server)
-                   (http/start))]
-      (assoc this :server server)))
+    (with-redefs [io.pedestal.http.impl.servlet-interceptor/stylobate stylobate]
+      (let [server (-> {::http/routes (routes/sort (concat routes auth/routes authors/routes))
+                        ::http/router :linear-search
+                        ::http/type   :immutant
+                        ::http/host   (:host opts)
+                        ::http/port   (:port opts)
+                        ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
+                     (http/default-interceptors)
+                     (update ::http/interceptors conj no-cache)
+                     (http/create-server)
+                     (http/start))]
+        (assoc this :server server))))
   (stop [this]
     (println "[server] Stopping web server")
     (http/stop server)

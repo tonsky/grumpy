@@ -6,6 +6,7 @@
    [clojure.string :as str]
    [io.pedestal.http :as http]
    [ring.util.response :as response]
+   [clojure.stacktrace :as stacktrace]
    [io.pedestal.interceptor :as interceptor]
    [com.stuartsierra.component :as component]
    [io.pedestal.http.ring-middlewares :as middlewares]
@@ -16,7 +17,8 @@
    [grumpy.routes :as routes]
    [grumpy.authors :as authors])
   (:import
-   [java.util Date]))
+   [java.util Date]
+   [java.io IOException]))
 
 
 (def page-size 5)
@@ -149,6 +151,20 @@
        :body (grumpy/resource "robots.txt")})]))
 
 
+(defn suppress-error [name class message-re]
+  (interceptor/interceptor
+    {:name name
+     :error
+     (fn [ctx ^Throwable e]
+       (let [cause (stacktrace/root-cause e)
+             message (.getMessage cause)]
+         (if (and (instance? class cause) (re-matches message-re message))
+           (do
+             (println "Ignoring" (type cause) "-" message)
+             ctx)
+           (assoc ctx :io.pedestal.interceptor.chain/error e))))}))
+
+
 (defrecord Server [opts crux server]
   component/Lifecycle
   (start [this]
@@ -161,6 +177,7 @@
                       ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
                    (http/default-interceptors)
                    (update ::http/interceptors conj no-cache)
+                   (update ::http/interceptors #(cons (suppress-error ::suppress-broken-pipe java.io.IOException #"Broken pipe") %))
                    (http/create-server)
                    (http/start))]
       (assoc this :server server)))

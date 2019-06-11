@@ -22,6 +22,20 @@
 (def token-ttl-ms (* 1000 60 15)) ;; 15 min
 
 
+(def user-cookie-attrs
+  {:path "/"
+   :same-site :lax
+   :max-age   2147483647})
+
+
+(def session-cookie-attrs
+  {:path      "/"
+   :http-only true
+   :secure    (not grumpy/dev?)
+   :max-age   (quot session-ttl-ms 1000)
+   :same-site :lax})
+
+
 (defn random-bytes [size]
   (let [seed (byte-array size)]
     (.nextBytes (SecureRandom.) seed)
@@ -92,18 +106,16 @@
    :leave
    (fn [ctx]
      (if-some [u grumpy/forced-user]
-       (update ctx :response assoc :cookies {"grumpy_user" {:value u}}
+       (update ctx :response assoc :cookies {"grumpy_user" (assoc user-cookie-attrs :value u)}
                                    :session {:user    u
                                              :created (grumpy/now)})
        ctx))})
-    
 
 (def session
   (middlewares/session
     {:store        (session.cookie/cookie-store {:key cookie-secret})
      :cookie-name  "grumpy_session"
-     :cookie-attrs {:http-only true
-                    :secure    (not grumpy/dev?)}}))
+     :cookie-attrs session-cookie-attrs}))
 
 
 (def populate-session [session force-user expire-session])
@@ -190,7 +202,7 @@
       (do
         (swap! *tokens dissoc email)
         (assoc (grumpy/redirect redirect-url)
-          :cookies {"grumpy_user" {:value user}}
+          :cookies {"grumpy_user" (assoc user-cookie-attrs :value user)}
           :session {:user    user
                     :created (grumpy/now)}))
       {:status 403

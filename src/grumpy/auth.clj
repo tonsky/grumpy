@@ -24,8 +24,9 @@
 
 (def user-cookie-attrs
   {:path "/"
-   :same-site :lax
-   :max-age   2147483647})
+   :secure    (not grumpy/dev?)
+   :max-age   2147483647
+   :same-site :lax})
 
 
 (def session-cookie-attrs

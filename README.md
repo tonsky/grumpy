@@ -6,6 +6,7 @@
 
 - imagemagick
 - mailutils
+- ffmpeg
 
 ## Development
 

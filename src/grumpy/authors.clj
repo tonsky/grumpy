@@ -11,6 +11,7 @@
     [grumpy.auth :as auth]
     [grumpy.core :as grumpy]
     [grumpy.editor :as editor]
+    [grumpy.macros :refer [cond+]]
     [grumpy.routes :as routes]
     [grumpy.transit :as transit]
     [grumpy.telegram :as telegram]))
@@ -50,7 +51,8 @@
         [w h] (edn/read-string out)]
     [w h]))
 
-(defn convert! [from to opts]
+
+(defn convert-image! [from to opts]
   (apply grumpy/sh "convert"
     (.getPath from)
     (concat
@@ -61,6 +63,35 @@
             (str "-" (name k))
             [(str "-" (name k)) (str v)])))
       [(.getPath to)])))
+
+
+(defn video-dimensions [file]
+  (let [out (:out (grumpy/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height" "-of" "csv=p=0:s=x" (.getPath file)))
+        [_ w h] (re-matches #"(\d+)x(\d+)" (str/trim out))]
+    [(Long/parseLong w) (Long/parseLong h)]))
+
+
+(defn convert-video! [original converted]
+  (let [[w h]   (video-dimensions original)
+        aspect  (/ w h)
+        [w1 h1] (if (> w 1000) [1000 (/ 1000 aspect)] [w h])
+        [w2 h2] (if (> h1 1100) [(/ aspect 1100) 1100] [w1 h1])
+        round   (fn [x] (-> x (/ 2) long (* 2)))
+        [w3 h3] [(round w2) (round h2)]]
+    (grumpy/sh "ffmpeg"
+      "-i"           (.getPath original)
+      "-c:v"         "libx264"
+      "-crf"         "18"
+      "-movflags"    "+faststart"
+      "-vf"          (str "scale=" w3 ":" h3)
+      "-profile:v"   "main"
+      "-level:v"     "3.1"
+      "-y"           ; override existing
+      "-loglevel"    "warning"
+      "-hide_banner"
+      "-an"
+      (.getPath converted))))
+
 
 (defn save-picture! [post-id content-type input-stream]
   (let [draft (get-draft post-id)
@@ -76,24 +107,36 @@
                           (pos? (.available input-stream)))
                    (let [[_ ext]  (str/split content-type #"/")
                          prefix   (grumpy/encode (System/currentTimeMillis) 7)
-                         original (io/file dir (str prefix "." ext))
-                         _        (io/copy input-stream original)
-                         image?   (str/starts-with? content-type "image/")
-                         [w h]    (when image? (image-dimensions original))
-                         resize?  (and image? (or (> w 1100) (> h 1000)))]
-                     (cond
+                         original (io/file dir (str prefix ".orig." ext))]
+                     (io/copy input-stream original)
+                     (cond+
                        ;; video
-                       (not image?)
-                       (assoc draft
-                         :picture { :url (.getName original)
-                                    :content-type content-type })
-                       
+                       (str/starts-with? content-type "video/")
+                       (let [converted (io/file dir (str prefix ".mp4"))]
+                         (convert-video! original converted)
+                         (assoc draft
+                           :picture
+                           { :url          (.getName converted)
+                             :content-type "video/mp4"
+                             :dimensions   (video-dimensions converted) }
+                           :picture-original
+                           { :url          (.getName original)
+                             :content-type content-type
+                             :dimensions   (video-dimensions original)}))
+
+                       (not (str/starts-with? content-type "image/"))
+                       (throw (ex-info (str "Unknown content-type: " content-type) {:content-type content-type}))
+
+                       :let [[w h] (image-dimensions original)]
+
                        ;; gif
                        (= "image/gif" content-type)
                        (assoc draft
                          :picture { :url (.getName original)
                                     :content-type content-type
                                     :dimensions [w h] })
+
+                      :let [resize? (or (> w 1100) (> h 1000))]
 
                        ;; small jpeg
                        (and (= "image/jpeg" content-type) (not resize?))
@@ -104,9 +147,10 @@
 
                        :else
                        (let [converted (io/file dir (str prefix ".fit.jpeg"))]
-                         (convert! original converted { :quality 85
-                                                        :flatten true
-                                                        :resize  (when resize? "1100x1000") })
+                         (convert-image! original converted
+                           {:quality 85
+                            :flatten true
+                            :resize  (when resize? "1100x1000") })
                          (assoc draft
                            :picture
                            { :url          (.getName converted)

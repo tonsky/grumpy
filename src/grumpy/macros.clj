@@ -13,3 +13,10 @@
   (if (:ns &env) ;; cljs
     `(fn ~@body)
     `nil))
+
+
+(defmacro cond+ [& clauses]
+  (when-some [[test expr & rest] clauses]
+    (case test
+      :let `(let ~expr (cond+ ~@rest))
+      `(if ~test ~expr (cond+ ~@rest)))))

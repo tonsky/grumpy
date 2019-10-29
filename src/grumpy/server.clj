@@ -155,8 +155,14 @@
 ; io.pedestal.http.impl.servlet-interceptor/error-stylobate
 (defn error-stylobate [{:keys [servlet-response] :as context} exception]
   (let [cause (stacktrace/root-cause exception)]
-    (if (and (instance? IOException cause) (= "Broken pipe" (.getMessage cause)))
-      (println "Ignoring java.io.IOException: Broken pipe")
+    (cond
+      (and (instance? IOException cause) (= "Broken pipe" (.getMessage cause)))
+      :ignore ; (println "Ignoring java.io.IOException: Broken pipe")
+
+      (and (instance? IOException cause) (= "Connection reset by peer" (.getMessage cause)))
+      :ignore ; (println "Ignoring java.io.IOException: Connection reset by peer")
+
+      :else
       (io.pedestal.log/error
         :msg "error-stylobate triggered"
         :exception exception

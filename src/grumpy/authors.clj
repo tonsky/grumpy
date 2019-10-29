@@ -57,7 +57,9 @@
       (flatten
         (for [[k v] opts
               :when (some? v)]
-          [(str "-" (name k)) (str v)]))
+          (if (true? v)
+            (str "-" (name k))
+            [(str "-" (name k)) (str v)])))
       [(.getPath to)])))
 
 (defn save-picture! [post-id content-type input-stream]
@@ -103,8 +105,7 @@
                        :else
                        (let [converted (io/file dir (str prefix ".fit.jpeg"))]
                          (convert! original converted { :quality 85
-                                                        :fill    "white"
-                                                        :opaque  "none"
+                                                        :flatten true
                                                         :resize  (when resize? "1100x1000") })
                          (assoc draft
                            :picture

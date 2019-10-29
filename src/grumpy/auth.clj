@@ -165,10 +165,10 @@
 
 
 (defn handle-send-email [{:keys [form-params] :as req}]
-  (let [email (:email form-params)
+  (let [email (-> (:email form-params) str/trim str/lower-case)
         user  (:user (grumpy/author-by :email email))]
     (cond
-      (nil? (grumpy/author-by :email email))
+      (nil? user)
       (grumpy/redirect "/email-sent" {:message (str "You aren't the author, " email)})
 
       (some? (get-token email))

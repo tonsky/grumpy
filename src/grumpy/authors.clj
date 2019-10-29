@@ -75,7 +75,7 @@
   (let [[w h]   (video-dimensions original)
         aspect  (/ w h)
         [w1 h1] (if (> w 1000) [1000 (/ 1000 aspect)] [w h])
-        [w2 h2] (if (> h1 1100) [(/ aspect 1100) 1100] [w1 h1])
+        [w2 h2] (if (> h1 1100) [(* aspect 1100) 1100] [w1 h1])
         round   (fn [x] (-> x (/ 2) long (* 2)))
         [w3 h3] [(round w2) (round h2)]]
     (grumpy/sh "ffmpeg"

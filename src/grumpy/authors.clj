@@ -84,6 +84,7 @@
       "-crf"         "18"
       "-movflags"    "+faststart"
       "-vf"          (str "scale=" w3 ":" h3)
+      "-r"           "30" ; fps
       "-profile:v"   "main"
       "-level:v"     "3.1"
       "-y"           ; override existing

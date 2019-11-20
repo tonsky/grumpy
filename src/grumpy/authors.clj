@@ -113,7 +113,12 @@
                      (cond+
                        ;; video
                        (str/starts-with? content-type "video/")
-                       (let [converted (io/file dir (str prefix ".mp4"))]
+                       (assoc draft
+                         :picture
+                         { :url          (.getName original)
+                           :content-type content-type
+                           :dimensions   (video-dimensions original) })
+                       #_(let [converted (io/file dir (str prefix ".mp4"))]
                          (convert-video! original converted)
                          (assoc draft
                            :picture

@@ -55,7 +55,8 @@ var subtitles =
     'This content is not available in your country',
     'This website wants to know your location',
     'We’re sorry! You need to update your Flash Player.',
-    'You have one unread message'],
+    'You have one unread message',
+    'We are updating our privacy policy'],
   subtitle_el,
   subtitle_idx = subtitles.length;
 

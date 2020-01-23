@@ -36,6 +36,7 @@
   [{:email "niki@tonsky.me"
     :user  "nikitonsky"
     :telegram/user "nikitonsky" 
+    :telegram/user-chat "232806939"
     :name  "Nikita Prokopov"
     :url   "https://twitter.com/nikitonsky"}
    {:email "freetonik@gmail.com"
@@ -265,9 +266,10 @@
 
 
 (rum/defc page [opts & children]
-  (let [{:keys [title page styles scripts]
-         :or {title "Grumpy Website"
-              page  :other}} opts]
+  (let [{:keys [title page subtitle? styles scripts]
+         :or {title     "Grumpy Website"
+              page      :other
+              subtitle? true}} opts]
     [:html
       [:head
         [:meta { :http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
@@ -291,9 +293,10 @@
             :index [:h1.title title [:a.title_new { :href "/new" } "+"]]
             :post  [:h1.title [:a {:href "/"} title ]]
                    [:h1.title [:a.title_back {:href "/"} "◄"] title])
-          [:p.subtitle
-            [:span.icon_rotate {:on-click "body_rotate()"}]
-            [:span.subtitle-text " "]]]
+          (when subtitle?
+            [:p.subtitle
+              [:span.icon_rotate {:on-click "body_rotate()"}]
+              [:span.subtitle-text " "]])]
         children
         (when (= page :index)
           [:.loader [:img { :src "/static/favicons/apple-touch-icon-152x152.png" }]])

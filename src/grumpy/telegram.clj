@@ -13,7 +13,7 @@
 
 (defn post! [channel url params]
   (let [url'    (str "https://api.telegram.org/bot" token url)
-        params' (assoc params :chat_id (str "@" channel))]
+        params' (assoc params :chat_id channel)]
     (try
       (:body
         (http/post url'
@@ -47,8 +47,8 @@
        (let [picture (get post key)
              url     (str grumpy/hostname "/post/" (:id post) "/" (:url picture))
              resp    (case (grumpy/content-type picture)
-                       :content.type/video (post! channel "/sendVideo" {:video url})
-                       :content.type/image (post! channel "/sendPhoto" {:photo url}))]
+                       :content.type/video (post! (str "@" channel) "/sendVideo" {:video url})
+                       :content.type/image (post! (str "@" channel) "/sendPhoto" {:photo url}))]
          (update post :reposts grumpy/conjv
            { :type                :telegram/photo
              :telegram/channel    channel
@@ -70,7 +70,7 @@
      (nil? token) post
      (str/blank? (:body post)) post
      :else
-     (let [resp (post! channel "/sendMessage"
+     (let [resp (post! (str "@" channel) "/sendMessage"
                   {:text (str (format-user (:author post)) ": " (:body post))
                    ; :parse_mode "Markdown"
                    :disable_web_page_preview "true"})]
@@ -84,7 +84,7 @@
   (when (some? token)
     (doseq [repost (:reposts post)
             :when  (= :telegram/text (:type repost))]
-      (post! (:telegram/channel repost)
+      (post! (str "@" (:telegram/channel repost))
         "/editMessageText"
         { :message_id (:telegram/message_id repost)
           :text       (str (format-user (:author post)) ": " (:body post))
@@ -94,6 +94,8 @@
 
 
 (comment
+  (http/post (str "https://api.telegram.org/bot" token "/getUpdates") {:form-params {} :content-type :json :as :json-string-keys})
+
   (binding [grumpy/hostname "https://grumpy.website"
             grumpy/dev? false
             channel "whining"]

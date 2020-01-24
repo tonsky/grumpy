@@ -52,6 +52,7 @@
    {:email "dmitrii@dmitriid.com"
     :user  "dmitriid"
     :telegram/user "mamutnespit"
+    :telegram/user-chat "303519462"
     :name  "Dmitrii Dimandt"
     :url   "https://twitter.com/dmitriid"}
    {:email "ulyanovskui@gmail.com"

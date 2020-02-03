@@ -3,7 +3,8 @@
    [clojure.string :as str]
    [clojure.java.io :as io]
    [grumpy.core :as grumpy]
-   [grumpy.authors :as authors]))
+   [grumpy.authors :as authors]
+   [grumpy.video :as video]))
 
 
 (defn -main [& args]
@@ -23,16 +24,16 @@
                        (str "grumpy_data/posts/" id "/" (:url pic))
                        (.getPath original))
           converted  (io/file dir (str name ".mp4"))
-          _          (authors/convert-video! original converted)
+          _          (video/local-convert! original converted)
           post'      (assoc post
                        :picture
                        {:url          (.getName converted)
                         :content-type "video/mp4"
-                        :dimensions   (authors/video-dimensions converted) }
+                        :dimensions   (video/dimensions converted) }
                        :picture-original
                        (assoc pic
                          :url        (.getName original)
-                         :dimensions (authors/video-dimensions original)))]
+                         :dimensions (video/dimensions original)))]
       (spit (io/file dir "post.edn") (pr-str post'))))
   (println "Done converting videos")
   (shutdown-agents))

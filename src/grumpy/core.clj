@@ -108,6 +108,10 @@
   (- (.getTime (now)) (.getTime inst)))
 
 
+(defn seek [pred coll]
+  (reduce #(when (pred %2) (reduced %2)) nil coll))
+
+
 (def ^:private date-formatter (DateTimeFormat/forPattern "MMMMM d, YYYY"))
 (def ^:private iso-formatter (DateTimeFormat/forPattern "yyyy-MM-dd'T'HH:mm:ss'Z'"))
 (def ^:private log-formatter (DateTimeFormat/forPattern "yyyy-MM-dd HH:mm:ss.SSS"))
@@ -350,6 +354,13 @@
 (defn log [& args]
   (let [now (DateTime. DateTimeZone/UTC)]
     (apply println (.print ^DateTimeFormatter log-formatter now) args)))
+
+
+(Thread/setDefaultUncaughtExceptionHandler
+  (reify Thread$UncaughtExceptionHandler
+    (uncaughtException [_ thread ex]
+      (log "Uncaught exception on" (.getName ^Thread thread))
+      (.printStackTrace ^Throwable ex))))
 
 
 (defn sh [& args]

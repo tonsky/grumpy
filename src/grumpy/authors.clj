@@ -14,7 +14,8 @@
     [grumpy.macros :refer [cond+]]
     [grumpy.routes :as routes]
     [grumpy.transit :as transit]
-    [grumpy.telegram :as telegram]))
+    [grumpy.telegram :as telegram]
+    [grumpy.video :as video]))
 
 
 (defn next-post-id [^java.util.Date inst]
@@ -65,35 +66,6 @@
       [(.getPath to)])))
 
 
-(defn video-dimensions [file]
-  (let [out (:out (grumpy/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height" "-of" "csv=p=0:s=x" (.getPath file)))
-        [_ w h] (re-matches #"(\d+)x(\d+)" (str/trim out))]
-    [(Long/parseLong w) (Long/parseLong h)]))
-
-
-(defn convert-video! [original converted]
-  (let [[w h]   (video-dimensions original)
-        aspect  (/ w h)
-        [w1 h1] (if (> w 1000) [1000 (/ 1000 aspect)] [w h])
-        [w2 h2] (if (> h1 1100) [(* aspect 1100) 1100] [w1 h1])
-        round   (fn [x] (-> x (/ 2) long (* 2)))
-        [w3 h3] [(round w2) (round h2)]]
-    (grumpy/sh "ffmpeg"
-      "-i"           (.getPath original)
-      "-c:v"         "libx264"
-      "-crf"         "18"
-      "-movflags"    "+faststart"
-      "-vf"          (str "scale=" w3 ":" h3)
-      "-r"           "30" ; fps
-      "-profile:v"   "main"
-      "-level:v"     "3.1"
-      "-y"           ; override existing
-      "-loglevel"    "warning"
-      "-hide_banner"
-      "-an"
-      (.getPath converted))))
-
-
 (defn save-picture! [post-id content-type input-stream]
   (let [draft (get-draft post-id)
         dir   (io/file (str "grumpy_data/drafts/" post-id))]
@@ -117,7 +89,7 @@
                          :picture
                          { :url          (.getName original)
                            :content-type content-type
-                           :dimensions   (video-dimensions original) })
+                           :dimensions   (video/dimensions original) })
                        #_(let [converted (io/file dir (str prefix ".mp4"))]
                          (convert-video! original converted)
                          (assoc draft
@@ -314,7 +286,7 @@
       (grumpy/redirect "/"))]
 
    [:get "/draft/:post-id/:img"
-    interceptors
+    [auth/populate-session]
     (fn [{{:keys [post-id img]} :path-params}]
       (response/file-response (str "grumpy_data/drafts/" post-id "/" img)))]
 

@@ -1,6 +1,6 @@
 (ns grumpy.system
   (:require
-   [grumpy.db :as db]
+   ; [grumpy.db :as db]
    [grumpy.server :as server]
    [grumpy.migrations :as migrations]
    [com.stuartsierra.component :as component]))
@@ -8,10 +8,10 @@
 
 (defn system [opts]
   (component/system-map
-    :crux   (db/crux (:crux opts))
+    ; :crux   (db/crux (:crux opts))
     :server (component/using
               (server/server (:server opts))
-              [:crux])))
+              [#_:crux])))
 
 
 (defn -main [& {:as args}]

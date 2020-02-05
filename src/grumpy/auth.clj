@@ -11,6 +11,7 @@
     [io.pedestal.http.body-params :as body-params]
     [ring.middleware.session.cookie :as session.cookie]
     [io.pedestal.http.ring-middlewares :as middlewares]
+    [grumpy.time :as time]
     [grumpy.core :as grumpy]
     [grumpy.routes :as routes]
     [grumpy.macros :refer [cond+]]
@@ -78,7 +79,7 @@
 (defn send-link! [email link]
   (send-email!
     {:to      email
-     :subject (str "Log into Grumpy " (grumpy/format-date (grumpy/now)))
+     :subject (str "Log into Grumpy " (time/format-date (time/now)))
      :body    (str "<html><div style='text-align: center;'><a href=\"" link "\" style='display: inline-block; font-size: 16px; padding: 0.5em 1.75em; background: #c3c; color: white; text-decoration: none; border-radius: 4px;'>Login now!</a></div></html>")}))
 
 
@@ -91,7 +92,7 @@
 (defn get-token [handle]
   (when-some [token (get @*tokens handle)]
     (let [created (:created token)]
-      (when (<= (grumpy/age created) token-ttl-ms)
+      (when (<= (time/age created) token-ttl-ms)
         (:value token)))))
 
 
@@ -101,7 +102,7 @@
    (fn [ctx]
      (let [created (-> ctx :request :session :created)]
        (if (and (some? created)
-                (> (grumpy/age created) session-ttl-ms))
+                (> (time/age created) session-ttl-ms))
          (update ctx :request dissoc :session)
          ctx)))})
 
@@ -118,12 +119,14 @@
      (if-some [u grumpy/forced-user]
        (update ctx :response assoc :cookies {"grumpy_user" (assoc user-cookie-attrs :value u)}
                                    :session {:user    u
-                                             :created (grumpy/now)})
+                                             :created (time/now)})
        ctx))})
 
 (def session
   (middlewares/session
-    {:store        (session.cookie/cookie-store {:key cookie-secret})
+    {:store        (session.cookie/cookie-store
+                     {:key cookie-secret
+                      :readers grumpy/readers})
      :cookie-name  "grumpy_session"
      :cookie-attrs session-cookie-attrs}))
 
@@ -188,7 +191,7 @@
                            {:handle       handle
                             :token        token
                             :redirect-url redirect-url})]
-        (swap! *tokens assoc handle {:value token :created (grumpy/now)})
+        (swap! *tokens assoc handle {:value token :created (time/now)})
         (if email-author
           (send-link! handle link)
           (telegram/post! (:telegram/user-chat tg-author) "/sendMessage" {:text link :disable_web_page_preview true}))
@@ -227,7 +230,7 @@
         (assoc (grumpy/redirect redirect-url)
           :cookies {"grumpy_user" (assoc user-cookie-attrs :value user)}
           :session {:user    user
-                    :created (grumpy/now)}))
+                    :created (time/now)}))
       {:status 403
        :body   "403 Bad token"})))
 

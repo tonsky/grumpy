@@ -1,9 +1,10 @@
 (ns grumpy.feed
   (:require
    [clojure.string :as str]
-   [grumpy.xml :as xml]
    [rum.core :as rum]
    [ring.util.mime-type :as mime-type]
+   [grumpy.xml :as xml]
+   [grumpy.time :as time]
    [grumpy.core :as grumpy]
    [grumpy.authors :as authors]))
 
@@ -17,8 +18,7 @@
 
 (defn feed [post-ids]
   (let [posts (map grumpy/get-post post-ids)
-        updated (or (max-date posts)
-                    (java.util.Date.))]
+        updated (or (max-date posts) (time/now))]
     (xml/emit
      [:feed {:xmlns    "http://www.w3.org/2005/Atom"
              :xml:lang "ru"
@@ -33,7 +33,7 @@
               :href (str grumpy/hostname "/")
               :rel  "alternate"}]
       [:id {} (str grumpy/hostname "/")]
-      [:updated {} (grumpy/format-iso-inst updated)]
+      [:updated {} (time/format-iso-inst updated)]
       (for [author grumpy/authors]
         [:author {} [:name {} (:user author)]])
       (for [post posts
@@ -49,8 +49,8 @@
                    :type (grumpy/mime-type (:url pic))
                    :href (str url "/" (:url pic))}])
          [:id {} url]
-         [:published {} (grumpy/format-iso-inst (:created post))]
-         [:updated {} (grumpy/format-iso-inst (:updated post))]
+         [:published {} (time/format-iso-inst (:created post))]
+         [:updated {} (time/format-iso-inst (:updated post))]
          [:author {} [:name {} (:author post)]]
          [:content {:type "text/html"}
            (rum/render-static-markup

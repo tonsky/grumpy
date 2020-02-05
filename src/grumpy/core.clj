@@ -7,12 +7,11 @@
     [clojure.java.io :as io]
     [clojure.java.shell :as shell]
     [ring.util.mime-type :as mime-type]
+    [grumpy.time :as time]
     [grumpy.transit :as transit])
   (:import
-    [java.util Date UUID Random]
-    [java.net URLEncoder]
-    [org.joda.time DateTime DateTimeZone]
-    [org.joda.time.format DateTimeFormat DateTimeFormatter ISODateTimeFormat]))
+    [java.util UUID Random]
+    [java.net URLEncoder]))
 
 
 (defn slurp [source]
@@ -100,29 +99,15 @@
   (reduce-kv (fn [m k v] (if (pred v) (assoc m k v) m)) {} m))
 
 
-(defn now ^Date []
-  (Date.))
-
-
-(defn age [^Date inst]
-  (- (.getTime (now)) (.getTime inst)))
-
-
 (defn seek [pred coll]
   (reduce #(when (pred %2) (reduced %2)) nil coll))
 
 
-(def ^:private date-formatter (DateTimeFormat/forPattern "MMMMM d, YYYY"))
-(def ^:private iso-formatter (DateTimeFormat/forPattern "yyyy-MM-dd'T'HH:mm:ss'Z'"))
-(def ^:private log-formatter (DateTimeFormat/forPattern "yyyy-MM-dd HH:mm:ss.SSS"))
+(def readers {'inst time/parse-iso-inst})
 
 
-(defn format-date [^Date inst]
-  (.print ^DateTimeFormatter date-formatter (DateTime. inst)))
-
-
-(defn format-iso-inst [^Date inst]
-  (.print ^DateTimeFormatter iso-formatter (DateTime. inst DateTimeZone/UTC)))
+(defn read-edn-string [s]
+  (edn/read-string {:readers readers} s))
 
 
 (defn encode-uri-component [^String s]
@@ -200,7 +185,7 @@
 
 
 (defn delete-dir [dir]
-  (doseq [file (reverse (file-seq (io/file dir)))]
+  (doseq [^java.io.File file (reverse (file-seq (io/file dir)))]
     (.delete file)))
 
 
@@ -216,8 +201,8 @@
 (defn get-post [post-id]
   (let [path (str "grumpy_data/posts/" post-id "/post.edn")]
     (some-> (io/file path)
-            (slurp)
-            (edn/read-string))))
+      (slurp)
+      (read-edn-string))))
 
 
 (defn list-files
@@ -352,8 +337,7 @@
 
 
 (defn log [& args]
-  (let [now (DateTime. DateTimeZone/UTC)]
-    (apply println (.print ^DateTimeFormatter log-formatter now) args)))
+  (apply println (time/format-log-inst) args))
 
 
 (Thread/setDefaultUncaughtExceptionHandler

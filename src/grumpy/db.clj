@@ -10,7 +10,7 @@
   component/Lifecycle
   (start [this]
     (println "[db] Starting Crux with" opts)
-    (assoc this :system (crux/start-standalone-system opts)))
+    (assoc this :system (crux/start-node opts)))
   (stop [this]
     (println "[db] Stopping Crux")
     (.close system)
@@ -18,10 +18,10 @@
 
 
 (def default-opts
-  {:kv-backend    "crux.kv.rocksdb.RocksKv"
-   :db-dir        "grumpy_data/crux_db"
-   :event-log-dir "grumpy_data/crux_events"
-   :backup-dir    "grumpy_data/crux_backup"})
+  {:crux.node/topology 'crux.standalone/topology
+   :crux.node/kv-store 'crux.kv.rocksdb/kv
+   :crux.kv/db-dir     "grumpy_data/crux_db"
+   :crux.standalone/event-log-dir "grumpy_data/crux_events"})
 
 
 (defn crux

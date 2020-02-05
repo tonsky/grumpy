@@ -3,7 +3,9 @@
    [clojure.string :as str]
    [clojure.java.io :as io]
    [clj-http.client :as http]
-   [grumpy.core :as grumpy]))
+   [grumpy.core :as grumpy])
+  (:import
+   [java.io File InputStream]))
 
 
 (def ^:dynamic CIRCLECI_TOKEN (grumpy/slurp "grumpy_data/CIRCLECI_TOKEN"))
@@ -17,7 +19,7 @@
     (Long/parseLong s)))
 
 
-(defn stats [file]
+(defn stats [^File file]
   (let [out (:out (grumpy/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))
         [_ w h frames] (re-matches #"(\d+|N/A)x(\d+|N/A)x(\d+|N/A)" (str/trim out))]
     {:width  (parse-long w)
@@ -25,11 +27,11 @@
      :frames (parse-long frames)}))
 
 
-(defn dimensions [file]
+(defn dimensions [^File file]
   (let [stats (stats file)]
     [(:width stats) (:height stats)]))
 
-(defn local-convert! [original converted]
+(defn local-convert! [^File original ^File converted]
   (let [[w h]   (dimensions original)
         aspect  (/ w h)
         [w1 h1] (if (> w 1000) [1000 (/ 1000 aspect)] [w h])
@@ -86,7 +88,7 @@
           (Long/parseLong frame))))))
 
 
-(defn convert! [original url converted]
+(defn convert! [^File original url ^File converted]
   (let [{w :width h :height frames :frames} (stats original)
         aspect  (/ w h)
         [w1 h1] (if (> w 1000) [1000 (/ 1000 aspect)] [w h])
@@ -127,7 +129,7 @@
                           (= "success" outcome)
                           (let [artifacts-resp (request-circleci :get (str "/" build-num "/artifacts"))
                                 artifact-url   (-> artifacts-resp (first) (get "url"))]
-                            (with-open [artifact-input (request :get artifact-url {:as :stream})]
+                            (with-open [^InputStream artifact-input (request :get artifact-url {:as :stream})]
                               (io/copy artifact-input converted))
                             (swap! *result merge updated
                               {:finished  (System/currentTimeMillis)

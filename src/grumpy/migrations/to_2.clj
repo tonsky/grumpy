@@ -14,7 +14,7 @@
 (defn update-every-post! [f]
   (doseq [post-id (grumpy/post-ids)
           :let [file (str "grumpy_data/posts/" post-id "/post.edn")
-                post (edn/read-string (slurp file))]]
+                post (grumpy/read-edn-string (slurp file))]]
     (try
       (spit file (pr-str (f post)))
       (catch Exception e

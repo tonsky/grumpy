@@ -13,11 +13,11 @@
 
    [grumpy.auth :as auth]
    [grumpy.feed :as feed]
+   [grumpy.time :as time]
    [grumpy.core :as grumpy]
    [grumpy.routes :as routes]
    [grumpy.authors :as authors])
   (:import
-   [java.util Date]
    [java.io IOException]))
 
 
@@ -66,7 +66,7 @@
           { :__html (grumpy/format-text
                       (str "<span class=\"post_author\">" (:author post) ": </span>" (:body post))) }}]
       [:p.post_meta
-        (grumpy/format-date (:created post))
+        (time/format-date (:created post))
         " // " [:a {:href (str "/post/" (:id post))} "Hyperlink"]
         [:a.post_meta_edit {:href (str "/post/" (:id post) "/edit")} "Edit"]]]])
 
@@ -154,7 +154,7 @@
 ; Filtering out Broken pipe reporting
 ; io.pedestal.http.impl.servlet-interceptor/error-stylobate
 (defn error-stylobate [{:keys [servlet-response] :as context} exception]
-  (let [cause (stacktrace/root-cause exception)]
+  (let [^Throwable cause (stacktrace/root-cause exception)]
     (cond
       (and (instance? IOException cause) (= "Broken pipe" (.getMessage cause)))
       :ignore ; (println "Ignoring java.io.IOException: Broken pipe")

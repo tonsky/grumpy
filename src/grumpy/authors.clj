@@ -9,22 +9,25 @@
     [io.pedestal.http.ring-middlewares :as middlewares]
     
     [grumpy.auth :as auth]
+    [grumpy.time :as time]
     [grumpy.core :as grumpy]
     [grumpy.editor :as editor]
     [grumpy.macros :refer [cond+]]
     [grumpy.routes :as routes]
     [grumpy.transit :as transit]
     [grumpy.telegram :as telegram]
-    [grumpy.video :as video]))
+    [grumpy.video :as video])
+  (:import
+   [java.io File InputStream]))
 
 
-(defn next-post-id [^java.util.Date inst]
+(defn next-post-id [^java.time.Instant inst]
   (str
-    (grumpy/encode (quot (.getTime inst) 1000) 6)
+    (grumpy/encode (quot (.toEpochMilli inst) 1000) 6)
     (grumpy/encode (rand-int (* 64 64 64)) 3)))
 
 
-(defn copy-dir [from to]
+(defn copy-dir [^File from ^File to]
   (.mkdirs to)
   (doseq [name (grumpy/list-files from)
           :let [file (io/file from name)]]
@@ -36,24 +39,24 @@
         original (io/file (str "grumpy_data/posts/" post-id "/post.edn"))]
     (cond
       (.exists draft)
-        (edn/read-string (slurp draft))
+        (grumpy/read-edn-string (slurp draft))
       (.exists original)
         (do
           (copy-dir (io/file (str "grumpy_data/posts/" post-id)) (io/file (str "grumpy_data/drafts/" post-id)))
-          (edn/read-string (slurp draft)))
+          (grumpy/read-edn-string (slurp draft)))
       :else
         (do
           (.mkdirs (io/file (str "grumpy_data/drafts/" post-id "/")))
           nil))))
 
 
-(defn image-dimensions [file]
+(defn image-dimensions [^File file]
   (let [out (:out (grumpy/sh "convert" (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
-        [w h] (edn/read-string out)]
+        [w h] (grumpy/read-edn-string out)]
     [w h]))
 
 
-(defn convert-image! [from to opts]
+(defn convert-image! [^File from ^File to opts]
   (apply grumpy/sh "convert"
     (.getPath from)
     (concat
@@ -66,7 +69,7 @@
       [(.getPath to)])))
 
 
-(defn save-picture! [post-id content-type input-stream]
+(defn save-picture! [post-id content-type ^InputStream input-stream]
   (let [draft (get-draft post-id)
         dir   (io/file (str "grumpy_data/drafts/" post-id))]
     (doseq [key   [:picture :picture-original]
@@ -171,7 +174,7 @@
                 :when (some? pic)]
           (.delete (io/file (str "grumpy_data/posts/" post-id "/" (:url pic)))))))
     ;; create/update new post
-    (let [now  (grumpy/now)
+    (let [now  (time/now)
           post (cond-> (get-draft post-id)
                  true (assoc :updated now)
                  new? (assoc :created now

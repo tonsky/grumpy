@@ -1,7 +1,7 @@
 (ns grumpy.migrations.to-2
   (:require
    [clojure.edn :as edn]
-   [grumpy.core :as grumpy]))
+   [grumpy.core :as core]))
 
 
 (defn update-1->2 [post]
@@ -12,13 +12,13 @@
 
 
 (defn update-every-post! [f]
-  (doseq [post-id (grumpy/post-ids)
+  (doseq [post-id (core/post-ids)
           :let [file (str "grumpy_data/posts/" post-id "/post.edn")
-                post (grumpy/read-edn-string (slurp file))]]
+                post (core/read-edn-string (slurp file))]]
     (try
       (spit file (pr-str (f post)))
       (catch Exception e
-        (println "Can’t convert" file)
+        (core/log "Can’t convert" file)
         (.printStackTrace e)))))
 
 

@@ -3,12 +3,12 @@
    [clojure.string :as str]
    [clojure.java.io :as io]
    [clj-http.client :as http]
-   [grumpy.core :as grumpy])
+   [grumpy.core :as core])
   (:import
    [java.io File InputStream]))
 
 
-(def ^:dynamic CIRCLECI_TOKEN (grumpy/slurp "grumpy_data/CIRCLECI_TOKEN"))
+(def ^:dynamic CIRCLECI_TOKEN (core/slurp "grumpy_data/CIRCLECI_TOKEN"))
 (def CIRCLECI_URL "https://circleci.com/api/v1.1/project/gh/tonsky/grumpy_video")
 (def MAX_JOB_TIME_MS 60000) ;; 1 min
 
@@ -20,7 +20,7 @@
 
 
 (defn stats [^File file]
-  (let [out (:out (grumpy/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))
+  (let [out (:out (core/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))
         [_ w h frames] (re-matches #"(\d+|N/A)x(\d+|N/A)x(\d+|N/A)" (str/trim out))]
     {:width  (parse-long w)
      :height (parse-long h)
@@ -38,7 +38,7 @@
         [w2 h2] (if (> h1 1100) [(* aspect 1100) 1100] [w1 h1])
         round   (fn [x] (-> x (/ 2) long (* 2)))
         [w3 h3] [(round w2) (round h2)]]
-    (grumpy/sh "ffmpeg"
+    (core/sh "ffmpeg"
       "-i"           (.getPath original)
       "-c:v"         "libx264"
       "-crf"         "18"
@@ -57,7 +57,7 @@
 (defn request
   ([method url] (request method url {}))
   ([method url opts]
-   (grumpy/log method url)
+   (core/log method url)
    (:body
     ((case method :get http/get :post http/post)
      url
@@ -79,9 +79,9 @@
 
 #_(defn estimate-progress [build-resp]
   (when-some [step (some-> (get build-resp "steps")
-                     (->> (grumpy/seek #(= "$REMOTE_COMMAND" (get % "name"))))
+                     (->> (core/seek #(= "$REMOTE_COMMAND" (get % "name"))))
                      (get "actions")
-                     (->> (grumpy/seek #(= "$REMOTE_COMMAND" (get % "name")))))]
+                     (->> (core/seek #(= "$REMOTE_COMMAND" (get % "name")))))]
     (when-some [output (request-circleci :get "/" (get build-resp "build_num") "/output/" (get step "step") "/" (get step "index"))]
       (when-some [last-message (-> (last output) (get "message"))]
         (when-some [[_ frame] (last (re-seq #"frame=\s*(\d+)" last-message))]

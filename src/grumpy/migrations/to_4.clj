@@ -3,7 +3,7 @@
    [grumpy.db :as db]
    [crux.api :as crux]
    [clojure.set :as set]
-   [grumpy.core :as grumpy]
+   [grumpy.core :as core]
    [com.stuartsierra.component :as component]))
 
 
@@ -17,10 +17,10 @@
 
 (defn convert-post [idx post]
   (let [{:keys [body author updated created id picture picture-original reposts]} post
-        picture-id (when (some? picture) (grumpy/make-uuid db/pict-id-high))
-        orig-id    (when (some? picture-original) (grumpy/make-uuid db/pict-id-high))
-        repost-ids (repeatedly (count reposts) #(grumpy/make-uuid db/repost-id-high))
-        post       {:crux.db/id   (grumpy/make-uuid db/post-id-high idx)
+        picture-id (when (some? picture) (core/make-uuid db/pict-id-high))
+        orig-id    (when (some? picture-original) (core/make-uuid db/pict-id-high))
+        repost-ids (repeatedly (count reposts) #(core/make-uuid db/repost-id-high))
+        post       {:crux.db/id   (core/make-uuid db/post-id-high idx)
                     :post/url     id
                     :post/author  author
                     :post/body    body
@@ -52,15 +52,15 @@
 
 
 (defn migrate! []
-  (grumpy/delete-dir "grumpy_data/crux_db")
-  (grumpy/delete-dir "grumpy_data/crux_events")
-  (grumpy/delete-dir "grumpy_data/crux_backup")
+  (core/delete-dir "grumpy_data/crux_db")
+  (core/delete-dir "grumpy_data/crux_events")
+  (core/delete-dir "grumpy_data/crux_backup")
   (let [{system :system :as crux} (-> (db/crux) (component/start))]
     (try
-      (doseq [[idx id] (grumpy/zip
+      (doseq [[idx id] (core/zip
                          (range 1 Integer/MAX_VALUE)
-                         (sort (grumpy/post-ids)))]
-        (println "Converting" id "->" idx)
-        (crux/submit-tx system (convert-post idx (grumpy/get-post id))))
+                         (sort (core/post-ids)))]
+        (core/log "Converting" id "->" idx)
+        (crux/submit-tx system (convert-post idx (core/get-post id))))
       (finally
         (component/stop crux)))))

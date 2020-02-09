@@ -309,6 +309,10 @@
    :body    (transit/write-transit-str payload)})
 
 
+(defn log [& args]
+  (apply println (time/format-log-inst) args))
+
+
 (defn try-async
   ([name f] (try-async name f {}))
   ([name f {:keys [after retries interval-ms]
@@ -322,7 +326,7 @@
             (let [[success? res] (try
                                   [true (f)]
                                   (catch Exception e
-                                    (println "[" name "] Try #" i" failed" (pr-str (ex-data e)))
+                                    (log "[" name "] Try #" i" failed" (pr-str (ex-data e)))
                                     (.printStackTrace e)
                                     [false nil]))]
               (if success?
@@ -330,14 +334,10 @@
                 (do
                   (Thread/sleep interval-ms)
                   (recur (inc i)))))
-              (println "[" name "] Giving up after" retries "retries")))
+              (log "[" name "] Giving up after" retries "retries")))
         (catch Exception e
-          (println "[" name "] Something went wrong" (pr-str (ex-data e)))
+          (log "[" name "] Something went wrong" (pr-str (ex-data e)))
           (.printStackTrace e))))))
-
-
-(defn log [& args]
-  (apply println (time/format-log-inst) args))
 
 
 (Thread/setDefaultUncaughtExceptionHandler

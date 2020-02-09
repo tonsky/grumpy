@@ -12,7 +12,7 @@
     [ring.middleware.session.cookie :as session.cookie]
     [io.pedestal.http.ring-middlewares :as middlewares]
     [grumpy.time :as time]
-    [grumpy.core :as grumpy]
+    [grumpy.core :as core]
     [grumpy.routes :as routes]
     [grumpy.macros :refer [cond+]]
     [grumpy.telegram :as telegram])
@@ -27,7 +27,7 @@
 
 (def user-cookie-attrs
   {:path "/"
-   :secure    (not grumpy/dev?)
+   :secure    (not core/dev?)
    :max-age   2147483647
    :same-site :lax})
 
@@ -35,7 +35,7 @@
 (def session-cookie-attrs
   {:path      "/"
    :http-only true
-   :secure    (not grumpy/dev?)
+   :secure    (not core/dev?)
    :max-age   (quot session-ttl-ms 1000)
    :same-site :lax})
 
@@ -66,7 +66,7 @@
 
 
 (defn send-email! [{:keys [to subject body]}]
-  (grumpy/sh
+  (core/sh
     "mail"
     "-s"
     subject
@@ -85,8 +85,8 @@
 
 (defn gen-token []
   (str
-    (grumpy/encode (rand-int Integer/MAX_VALUE) 5)
-    (grumpy/encode (rand-int Integer/MAX_VALUE) 5)))
+    (core/encode (rand-int Integer/MAX_VALUE) 5)
+    (core/encode (rand-int Integer/MAX_VALUE) 5)))
 
 
 (defn get-token [handle]
@@ -111,12 +111,12 @@
   {:name ::force-user
    :enter
    (fn [ctx]
-     (if-some [u grumpy/forced-user]
+     (if-some [u core/forced-user]
        (assoc-in ctx [:request :session :user] u)
        ctx))
    :leave
    (fn [ctx]
-     (if-some [u grumpy/forced-user]
+     (if-some [u core/forced-user]
        (update ctx :response assoc :cookies {"grumpy_user" (assoc user-cookie-attrs :value u)}
                                    :session {:user    u
                                              :created (time/now)})
@@ -126,7 +126,7 @@
   (middlewares/session
     {:store        (session.cookie/cookie-store
                      {:key cookie-secret
-                      :readers grumpy/readers})
+                      :readers core/readers})
      :cookie-name  "grumpy_session"
      :cookie-attrs session-cookie-attrs}))
 
@@ -142,14 +142,14 @@
   {:name ::require-user
    :enter (fn [{req :request :as ctx}]
             (if (nil? (user req))
-              (assoc ctx :response (grumpy/redirect "/forbidden" {:redirect-url (:uri req)}))
+              (assoc ctx :response (core/redirect "/forbidden" {:redirect-url (:uri req)}))
               ctx))})
 
 
 (rum/defc forbidden-page [redirect-url handle]
-  (grumpy/page {:title "Log in"
-                :styles ["authors.css"]
-                :subtitle? false}
+  (core/page {:title "Log in"
+              :styles ["authors.css"]
+              :subtitle? false}
     [:form.forbidden
      {:action "/send-link"
       :method "post" }
@@ -166,28 +166,28 @@
 
 (defn handle-forbidden [{:keys [query-params cookies]}]
   (let [user   (get-in cookies ["grumpy_user" :value])
-        author (grumpy/author-by :user user)
+        author (core/author-by :user user)
         handle (or (and (:telegram/user-chat author) (:telegram/user author))
                  (:email author))]
-    (grumpy/html-response (forbidden-page (:redirect-url query-params) handle))))
+    (core/html-response (forbidden-page (:redirect-url query-params) handle))))
 
 
 (defn handle-send-link [{:keys [form-params] :as req}]
   (let [handle       (-> (:handle form-params) str/trim str/lower-case)
-        email-author (grumpy/author-by :email handle)
-        tg-author    (grumpy/author-by :telegram/user handle)
+        email-author (core/author-by :email handle)
+        tg-author    (core/author-by :telegram/user handle)
         user         (:user (or email-author tg-author))]
     (cond
       (nil? user)
-      (grumpy/redirect "/link-sent" {:message (str "You are not the author, " handle)})
+      (core/redirect "/link-sent" {:message (str "You are not the author, " handle)})
 
       (and (some? tg-author) (nil? (:telegram/user-chat tg-author)))
-      (grumpy/redirect "/link-sent" {:message (str "Please contact @nikitonsky to enable Telegram login, " handle)})
+      (core/redirect "/link-sent" {:message (str "Please contact @nikitonsky to enable Telegram login, " handle)})
 
       (nil? (get-token handle))
       (let [token        (gen-token)
             redirect-url (:redirect-url form-params)
-            link         (grumpy/url (str grumpy/hostname "/authenticate")
+            link         (core/url (str core/hostname "/authenticate")
                            {:handle       handle
                             :token        token
                             :redirect-url redirect-url})]
@@ -195,17 +195,17 @@
         (if email-author
           (send-link! handle link)
           (telegram/post! (:telegram/user-chat tg-author) "/sendMessage" {:text link :disable_web_page_preview true}))
-        (grumpy/redirect "/link-sent" {:message (str "Check your " (if email-author "email" "Telegram") ", " user)}))
+        (core/redirect "/link-sent" {:message (str "Check your " (if email-author "email" "Telegram") ", " user)}))
 
       (some? email-author)
-      (grumpy/redirect "/link-sent" {:message (str "Emailed link is still valid, " user)})
+      (core/redirect "/link-sent" {:message (str "Emailed link is still valid, " user)})
 
       (some? tg-author)
-      (grumpy/redirect "/link-sent" {:message (str "Link in Telegram is still valid, " user)}))))
+      (core/redirect "/link-sent" {:message (str "Link in Telegram is still valid, " user)}))))
 
 
 (rum/defc link-sent-page [message]
-  (grumpy/page {:title "Machine says"
+  (core/page {:title "Machine says"
                 :styles ["authors.css"]
                 :subtitle? false}
     [:.link-sent
@@ -213,13 +213,13 @@
 
 
 (defn handle-link-sent [{:keys [query-params]}]
-  (grumpy/html-response (link-sent-page (:message query-params))))
+  (core/html-response (link-sent-page (:message query-params))))
 
 
 (defn handle-authenticate [{:keys [query-params]}] ;; ?handle=...&token=...&redirect-url=...
   (let [handle (:handle query-params)
-        author (or (grumpy/author-by :email handle)
-                 (grumpy/author-by :telegram/user handle))
+        author (or (core/author-by :email handle)
+                 (core/author-by :telegram/user handle))
         user   (:user author)
         redirect-url (if (str/blank? (:redirect-url query-params))
                        "/"
@@ -227,7 +227,7 @@
     (if (= (:token query-params) (get-token handle))
       (do
         (swap! *tokens dissoc handle)
-        (assoc (grumpy/redirect redirect-url)
+        (assoc (core/redirect redirect-url)
           :cookies {"grumpy_user" (assoc user-cookie-attrs :value user)}
           :session {:user    user
                     :created (time/now)}))
@@ -241,4 +241,4 @@
     [:post "/send-link"    populate-session (body-params/body-params) `handle-send-link]
     [:get  "/link-sent"    populate-session route/query-params        `handle-link-sent]
     [:get  "/authenticate" populate-session route/query-params        `handle-authenticate]
-    [:get  "/logout"       populate-session (fn [_] (assoc (grumpy/redirect "/") :session nil))]))
+    [:get  "/logout"       populate-session (fn [_] (assoc (core/redirect "/") :session nil))]))

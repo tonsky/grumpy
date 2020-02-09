@@ -1,7 +1,7 @@
 (ns grumpy.db
   (:require
    [crux.api :as crux]
-   [grumpy.core :as grumpy]
+   [grumpy.core :as core]
    [compact-uuids.core :as uuid]
    [com.stuartsierra.component :as component]))
 
@@ -9,10 +9,10 @@
 (defrecord Crux [opts system]
   component/Lifecycle
   (start [this]
-    (println "[db] Starting Crux with" opts)
+    (core/log "[db] Starting Crux with" opts)
     (assoc this :system (crux/start-node opts)))
   (stop [this]
-    (println "[db] Stopping Crux")
+    (core/log "[db] Stopping Crux")
     (.close system)
     (dissoc this :system)))
 
@@ -38,9 +38,9 @@
 
 (defn put
   ([entity]
-   [:crux.tx/put (:crux.db/id entity) (grumpy/filtermv some? entity)])
+   [:crux.tx/put (:crux.db/id entity) (core/filtermv some? entity)])
   ([entity valid-time]
-   [:crux.tx/put (:crux.db/id entity) (grumpy/filtermv some? entity) valid-time]))
+   [:crux.tx/put (:crux.db/id entity) (core/filtermv some? entity) valid-time]))
 
 
 (defn upsert [system attr document]
@@ -61,13 +61,13 @@
       (assoc
         :post/created (:crux.db/valid-time (last history))
         :post/updated (:crux.db/valid-time (first history)))
-      (grumpy/update-some :post/picture entity)
-      (grumpy/update-some :post/picture-original entity)
-      (grumpy/update-some :post/reposts #(mapv entity %)))))
+      (core/update-some :post/picture entity)
+      (core/update-some :post/picture-original entity)
+      (core/update-some :post/reposts #(mapv entity %)))))
 
 
 (defn post-by-idx [system idx]
-  (get-post system (grumpy/make-uuid post-id-high idx)))
+  (get-post system (core/make-uuid post-id-high idx)))
 
 
 (defn post-by-url [system url]

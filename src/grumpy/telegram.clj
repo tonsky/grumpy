@@ -2,12 +2,12 @@
   (:require
    [clojure.string :as str]
    [clj-http.client :as http]
-   [grumpy.core :as grumpy]))
+   [grumpy.core :as core]))
 
 
-(def ^:dynamic token (grumpy/slurp "grumpy_data/TELEGRAM_TOKEN"))
+(def ^:dynamic token (core/slurp "grumpy_data/TELEGRAM_TOKEN"))
 (def ^:dynamic channels 
-  (-> (or (grumpy/slurp "grumpy_data/TELEGRAM_CHANNEL") "grumpy_chat\nwhining_test")
+  (-> (or (core/slurp "grumpy_data/TELEGRAM_CHANNEL") "grumpy_chat\nwhining_test")
       (str/split #"\s+")))
 
 
@@ -23,11 +23,11 @@
       (catch Exception e
         (cond
           (re-find #"Bad Request: message is not modified" (:body (ex-data e)))
-          (println "Telegram request failed:" url' (pr-str params'))
+          (core/log "Telegram request failed:" url' (pr-str params'))
 
           :else
           (do
-            (println "Telegram request failed:" url' (pr-str params'))
+            (core/log "Telegram request failed:" url' (pr-str params'))
             (throw e)))))))
 
 
@@ -40,16 +40,16 @@
                (contains? post :picture) :picture
                :else nil)]
      (cond
-       grumpy/dev?  post
+       core/dev?  post
        (nil? token) post
        (nil? key)   post
        :else
        (let [picture (get post key)
-             url     (str grumpy/hostname "/post/" (:id post) "/" (:url picture))
-             resp    (case (grumpy/content-type picture)
+             url     (str core/hostname "/post/" (:id post) "/" (:url picture))
+             resp    (case (core/content-type picture)
                        :content.type/video (post! (str "@" channel) "/sendVideo" {:video url})
                        :content.type/image (post! (str "@" channel) "/sendPhoto" {:photo url}))]
-         (update post :reposts grumpy/conjv
+         (update post :reposts core/conjv
            { :type                :telegram/photo
              :telegram/channel    channel
              :telegram/message_id (get-in resp ["result" "message_id"])
@@ -57,7 +57,7 @@
 
 
 (defn format-user [user]
-  (if-some [telegram-user (:telegram/user (grumpy/author-by :user user))]
+  (if-some [telegram-user (:telegram/user (core/author-by :user user))]
     (str "@" telegram-user)
     (str "@" user)))
 
@@ -74,7 +74,7 @@
                   {:text (str (format-user (:author post)) ": " (:body post))
                    ; :parse_mode "Markdown"
                    :disable_web_page_preview "true"})]
-       (update post :reposts grumpy/conjv
+       (update post :reposts core/conjv
          {:type                :telegram/text
           :telegram/channel    channel
           :telegram/message_id (get-in resp ["result" "message_id"]) })))))
@@ -96,8 +96,8 @@
 (comment
   (http/post (str "https://api.telegram.org/bot" token "/getUpdates") {:form-params {} :content-type :json :as :json-string-keys})
 
-  (binding [grumpy/hostname "https://grumpy.website"
-            grumpy/dev? false
+  (binding [core/hostname "https://grumpy.website"
+            core/dev? false
             channel "whining"]
     (-> (clojure.edn/read-string (slurp "grumpy_data/posts/0PZy7WhCE/post.edn"))
       #_(post-picture!)

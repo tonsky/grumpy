@@ -14,7 +14,7 @@
    [grumpy.auth :as auth]
    [grumpy.feed :as feed]
    [grumpy.time :as time]
-   [grumpy.core :as grumpy]
+   [grumpy.core :as core]
    [grumpy.routes :as routes]
    [grumpy.authors :as authors])
   (:import
@@ -29,7 +29,7 @@
     { :data-id (:id post) }
     [:.post_side
       [:img.post_avatar
-        { :src (if (some? (grumpy/author-by :user (:author post)))
+        { :src (if (some? (core/author-by :user (:author post)))
                  (str "/static/" (:author post) ".jpg")
                  "/static/guest.jpg")}]]
     [:.post_content
@@ -38,7 +38,7 @@
               href (if-some [orig (:picture-original post)]
                      (str "/post/" (:id post) "/" (:url orig))
                      src)]
-          (case (grumpy/content-type pic)
+          (case (core/content-type pic)
             :content.type/video
               [:.post_video_outer
                 [:video.post_video
@@ -48,11 +48,11 @@
                     :preload "auto"
                     :playsinline true
                     :onplay "toggle_video(this.parentNode, true);" }
-                  [:source { :type (grumpy/mime-type (:url pic)) :src src }]]
+                  [:source { :type (core/mime-type (:url pic)) :src src }]]
                 [:.post_video_overlay.post_video_overlay-paused { :onclick "toggle_video(this.parentNode);"}]]
             :content.type/image
               (if-some [[w h] (:dimensions pic)]
-                (let [[w' h'] (grumpy/fit w h 550 500)]
+                (let [[w' h'] (core/fit w h 550 500)]
                   [:div { :style { :max-width w' }}
                     [:a.post_img.post_img-fix
                       { :href href
@@ -63,7 +63,7 @@
                   [:img { :src src }]]))))
       [:.post_body
         { :dangerouslySetInnerHTML
-          { :__html (grumpy/format-text
+          { :__html (core/format-text
                       (str "<span class=\"post_author\">" (:author post) ": </span>" (:body post))) }}]
       [:p.post_meta
         (time/format-date (:created post))
@@ -72,19 +72,19 @@
 
 
 (rum/defc index-page [post-ids]
-  (grumpy/page {:page :index :scripts ["loader.js"]}
+  (core/page {:page :index :scripts ["loader.js"]}
     (for [post-id post-ids]
-      (post (grumpy/get-post post-id)))))
+      (post (core/get-post post-id)))))
 
 
 (rum/defc posts-fragment [post-ids]
   (for [post-id post-ids]
-    (post (grumpy/get-post post-id))))
+    (post (core/get-post post-id))))
 
 
 (rum/defc post-page [post-id]
-  (grumpy/page {:page :post}
-    (post (grumpy/get-post post-id))))
+  (core/page {:page :post}
+    (post (core/get-post post-id))))
 
 
 (def no-cache
@@ -104,14 +104,14 @@
 
     [:get "/post/:post-id"
      (fn [{{:keys [post-id]} :path-params}]
-       (grumpy/html-response (post-page post-id)))]
+       (core/html-response (post-page post-id)))]
 
     [:get "/after/:post-id"
      (fn [{{:keys [post-id]} :path-params}]
-       (when grumpy/dev? (Thread/sleep 200))
-       (if (and grumpy/dev? (< (rand) 0.5))
+       (when core/dev? (Thread/sleep 200))
+       (if (and core/dev? (< (rand) 0.5))
          { :status 500 }
-         (let [post-ids (->> (grumpy/post-ids)
+         (let [post-ids (->> (core/post-ids)
                              (drop-while #(not= % post-id))
                              (drop 1)
                              (take page-size))]
@@ -120,14 +120,14 @@
             :body    (rum/render-static-markup (posts-fragment post-ids))})))]
 
    [:get "/"
-    (when grumpy/dev? auth/populate-session)
+    (when core/dev? auth/populate-session)
     (fn [_]
-      (let [post-ids  (grumpy/post-ids)
+      (let [post-ids  (core/post-ids)
             first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)]
-        (grumpy/html-response (index-page first-ids))))]
+        (core/html-response (index-page first-ids))))]
 
    [:get "/static/*path" 
-    (when-not grumpy/dev?
+    (when-not core/dev?
       {:leave #(update-in % [:response :headers] assoc "Cache-Control" "max-age=315360000")})
     (fn [{{:keys [path]} :path-params}]
       (response/resource-response (str "static/" path)))]
@@ -136,19 +136,19 @@
     (fn [_]
       {:status  200
        :headers { "Content-Type" "application/atom+xml; charset=utf-8" }
-       :body    (feed/feed (take 10 (grumpy/post-ids))) })]
+       :body    (feed/feed (take 10 (core/post-ids))) })]
 
    [:get "/sitemap.xml"
     (fn [_]
       {:status 200
        :headers { "Content-Type" "text/xml; charset=utf-8" }
-       :body (feed/sitemap (grumpy/post-ids))})]
+       :body (feed/sitemap (core/post-ids))})]
 
    [:get "/robots.txt"
     (fn [_]
       {:status 200
        :headers {"Content-Type" "text/plain"}
-       :body (grumpy/resource "robots.txt")})]))
+       :body (core/resource "robots.txt")})]))
 
 
 ; Filtering out Broken pipe reporting
@@ -181,7 +181,7 @@
 (defrecord Server [opts crux server]
   component/Lifecycle
   (start [this]
-    (println "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
+    (core/log "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
     (with-redefs [io.pedestal.http.impl.servlet-interceptor/stylobate stylobate]
       (let [server (-> {::http/routes (routes/sort (concat routes auth/routes authors/routes))
                         ::http/router :linear-search
@@ -195,7 +195,7 @@
                      (http/start))]
         (assoc this :server server))))
   (stop [this]
-    (println "[server] Stopping web server")
+    (core/log "[server] Stopping web server")
     (http/stop server)
     (dissoc this :server)))
 

@@ -28,7 +28,7 @@ jobs:
 
       - add_ssh_keys:
           fingerprints:
-            - "f5:56:00:dd:2e:a6:6d:14:d8:8a:89:83:9f:c0:49:6a"
+            - "2f:a6:6e:c0:6c:52:4c:44:cf:aa:b1:91:b9:ab:3b:0a"
 
       - deploy:
           name: deploy to hosting

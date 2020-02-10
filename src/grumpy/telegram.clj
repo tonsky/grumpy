@@ -2,13 +2,12 @@
   (:require
    [clojure.string :as str]
    [clj-http.client :as http]
-   [grumpy.core :as core]))
+   [grumpy.core :as core]
+   [grumpy.config :as config]))
 
 
-(def ^:dynamic token (core/slurp "grumpy_data/TELEGRAM_TOKEN"))
-(def ^:dynamic channels 
-  (-> (or (core/slurp "grumpy_data/TELEGRAM_CHANNEL") "grumpy_chat\nwhining_test")
-      (str/split #"\s+")))
+(def ^:dynamic token (config/get-optional ::token))
+(def ^:dynamic channels (config/get-optional ::channels))
 
 
 (defn post! [channel url params]
@@ -40,12 +39,12 @@
                (contains? post :picture) :picture
                :else nil)]
      (cond
-       core/dev?  post
+       config/dev?  post
        (nil? token) post
        (nil? key)   post
        :else
        (let [picture (get post key)
-             url     (str core/hostname "/post/" (:id post) "/" (:url picture))
+             url     (str (config/get ::core/hostname) "/post/" (:id post) "/" (:url picture))
              resp    (case (core/content-type picture)
                        :content.type/video (post! (str "@" channel) "/sendVideo" {:video url})
                        :content.type/image (post! (str "@" channel) "/sendPhoto" {:photo url}))]
@@ -95,11 +94,4 @@
 
 (comment
   (http/post (str "https://api.telegram.org/bot" token "/getUpdates") {:form-params {} :content-type :json :as :json-string-keys})
-
-  (binding [core/hostname "https://grumpy.website"
-            core/dev? false
-            channel "whining"]
-    (-> (clojure.edn/read-string (slurp "grumpy_data/posts/0PZy7WhCE/post.edn"))
-      #_(post-picture!)
-      (post-text!)))
 )

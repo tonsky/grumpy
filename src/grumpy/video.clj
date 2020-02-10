@@ -3,12 +3,12 @@
    [clojure.string :as str]
    [clojure.java.io :as io]
    [clj-http.client :as http]
-   [grumpy.core :as core])
+   [grumpy.core :as core]
+   [grumpy.config :as config])
   (:import
    [java.io File InputStream]))
 
 
-(def ^:dynamic CIRCLECI_TOKEN (core/slurp "grumpy_data/CIRCLECI_TOKEN"))
 (def CIRCLECI_URL "https://circleci.com/api/v1.1/project/gh/tonsky/grumpy_video")
 (def MAX_JOB_TIME_MS 60000) ;; 1 min
 
@@ -72,7 +72,7 @@
   ([method url opts]
    (request method (str CIRCLECI_URL url) 
      (merge
-       {:basic-auth [CIRCLECI_TOKEN ""]
+       {:basic-auth [(config/get ::circleci-token) ""]
         :accept     :json}
        opts))))
 
@@ -158,7 +158,7 @@
   (estimate-progress build-resp)
 
   (http/get "https://circleci.com/api/v1.1/me"
-    {:basic-auth [CIRCLECI_TOKEN ""]
+    {:basic-auth [(config/get ::circleci-token) ""]
      :accept :json
      :as :json-string-keys})
 )

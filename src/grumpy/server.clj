@@ -15,6 +15,7 @@
    [grumpy.feed :as feed]
    [grumpy.time :as time]
    [grumpy.core :as core]
+   [grumpy.config :as config]
    [grumpy.routes :as routes]
    [grumpy.authors :as authors])
   (:import
@@ -108,8 +109,8 @@
 
     [:get "/after/:post-id"
      (fn [{{:keys [post-id]} :path-params}]
-       (when core/dev? (Thread/sleep 200))
-       (if (and core/dev? (< (rand) 0.5))
+       (when config/dev? (Thread/sleep 200))
+       (if (and config/dev? (< (rand) 0.5))
          { :status 500 }
          (let [post-ids (->> (core/post-ids)
                              (drop-while #(not= % post-id))
@@ -120,14 +121,14 @@
             :body    (rum/render-static-markup (posts-fragment post-ids))})))]
 
    [:get "/"
-    (when core/dev? auth/populate-session)
+    (when config/dev? auth/populate-session)
     (fn [_]
       (let [post-ids  (core/post-ids)
             first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)]
         (core/html-response (index-page first-ids))))]
 
    [:get "/static/*path" 
-    (when-not core/dev?
+    (when-not config/dev?
       {:leave #(update-in % [:response :headers] assoc "Cache-Control" "max-age=315360000")})
     (fn [{{:keys [path]} :path-params}]
       (response/resource-response (str "static/" path)))]

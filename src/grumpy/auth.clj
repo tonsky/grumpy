@@ -13,6 +13,7 @@
     [io.pedestal.http.ring-middlewares :as middlewares]
     [grumpy.time :as time]
     [grumpy.core :as core]
+    [grumpy.config :as config]
     [grumpy.routes :as routes]
     [grumpy.macros :refer [cond+]]
     [grumpy.telegram :as telegram])
@@ -27,7 +28,7 @@
 
 (def user-cookie-attrs
   {:path "/"
-   :secure    (not core/dev?)
+   :secure    (not config/dev?)
    :max-age   2147483647
    :same-site :lax})
 
@@ -35,34 +36,19 @@
 (def session-cookie-attrs
   {:path      "/"
    :http-only true
-   :secure    (not core/dev?)
+   :secure    (not config/dev?)
    :max-age   (quot session-ttl-ms 1000)
    :same-site :lax})
 
 
-(defn random-bytes [size]
+(defn- random-bytes [size]
   (let [seed (byte-array size)]
     (.nextBytes (SecureRandom.) seed)
     seed))
 
 
-(defn save-bytes! [file ^bytes bytes]
-  (with-open [os (io/output-stream (io/file file))]
-    (.write os bytes)))
-
-
-(defn read-bytes [file len]
-  (with-open [is (io/input-stream (io/file file))]
-    (let [res (make-array Byte/TYPE len)]
-      (.read is res 0 len)
-      res)))
-
-
-(when-not (.exists (io/file "grumpy_data/COOKIE_SECRET"))
-  (save-bytes! "grumpy_data/COOKIE_SECRET" (random-bytes 16)))
-
-
-(def cookie-secret (read-bytes "grumpy_data/COOKIE_SECRET" 16))
+(def cookie-secret (config/get ::cookie-secret #(random-bytes 16)))
+(def forced-user (config/get-optional ::forced-user))
 
 
 (defn send-email! [{:keys [to subject body]}]
@@ -111,12 +97,12 @@
   {:name ::force-user
    :enter
    (fn [ctx]
-     (if-some [u core/forced-user]
+     (if-some [u forced-user]
        (assoc-in ctx [:request :session :user] u)
        ctx))
    :leave
    (fn [ctx]
-     (if-some [u core/forced-user]
+     (if-some [u forced-user]
        (update ctx :response assoc :cookies {"grumpy_user" (assoc user-cookie-attrs :value u)}
                                    :session {:user    u
                                              :created (time/now)})
@@ -187,7 +173,7 @@
       (nil? (get-token handle))
       (let [token        (gen-token)
             redirect-url (:redirect-url form-params)
-            link         (core/url (str core/hostname "/authenticate")
+            link         (core/url (str (config/get ::core/hostname) "/authenticate")
                            {:handle       handle
                             :token        token
                             :redirect-url redirect-url})]

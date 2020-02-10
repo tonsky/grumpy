@@ -6,6 +6,7 @@
    [grumpy.xml :as xml]
    [grumpy.time :as time]
    [grumpy.core :as core]
+   [grumpy.config :as config]
    [grumpy.authors :as authors]))
 
 
@@ -17,28 +18,29 @@
 
 
 (defn feed [post-ids]
-  (let [posts (map core/get-post post-ids)
-        updated (or (max-date posts) (time/now))]
+  (let [posts    (map core/get-post post-ids)
+        updated  (or (max-date posts) (time/now))
+        hostname (config/get ::core/hostname)]
     (xml/emit
      [:feed {:xmlns    "http://www.w3.org/2005/Atom"
              :xml:lang "ru"
-             :xml:base (str core/hostname "/")}
+             :xml:base (str hostname "/")}
       [:title {} "Grumpy Website"]
       [:subtitle {} "Do you want to cancel? – YES / CANCEL"]
-      [:icon {} (str core/hostname "/static/favicons/favicon-32x32.png")]
+      [:icon {} (str hostname "/static/favicons/favicon-32x32.png")]
       [:link {:type "application/atom+xml"
-              :href (str core/hostname "/feed.xml")
+              :href (str hostname "/feed.xml")
               :rel  "self"}]
       [:link {:type "text/html"
-              :href (str core/hostname "/")
+              :href (str hostname "/")
               :rel  "alternate"}]
-      [:id {} (str core/hostname "/")]
+      [:id {} (str hostname "/")]
       [:updated {} (time/format-iso-inst updated)]
       (for [author core/authors]
         [:author {} [:name {} (:user author)]])
       (for [post posts
             :let [author (core/author-by :user (:author post))
-                  url    (str core/hostname "/post/" (:id post))]]
+                  url    (str hostname "/post/" (:id post))]]
         [:entry {}
          [:title {} (format "%s is being grumpy" (:author post))]
          [:link {:rel  "alternate"
@@ -87,8 +89,9 @@
 
 
 (defn sitemap [post-ids]
-  (xml/emit
-   [:urlset {:xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"}
-     [:url {} [:loc {} core/hostname]]
-     (for [id post-ids]
-       [:url {} [:loc {} (format "%s/post/%s" core/hostname id)]])]))
+  (let [hostname (config/get ::core/hostname)]
+    (xml/emit
+      [:urlset {:xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"}
+       [:url {} [:loc {} hostname]]
+       (for [id post-ids]
+         [:url {} [:loc {} (format "%s/post/%s" hostname id)]])])))

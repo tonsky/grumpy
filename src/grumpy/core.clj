@@ -8,6 +8,7 @@
     [clojure.java.shell :as shell]
     [ring.util.mime-type :as mime-type]
     [grumpy.time :as time]
+    [grumpy.config :as config]
     [grumpy.transit :as transit])
   (:import
     [java.util UUID Random]
@@ -22,13 +23,6 @@
 
 
 (.mkdirs (io/file "grumpy_data"))
-
-
-(defmacro from-config [name default-value]
- `(let [file# (io/file "grumpy_data" ~name)]
-    (when-not (.exists file#)
-      (spit file# ~default-value))
-    (str/trim (clojure.core/slurp file#))))
 
 
 (def authors
@@ -63,15 +57,6 @@
 
 (defn author-by [attr value]
   (first (filter #(= (get % attr) value) authors)))
-
-
-(def ^:dynamic hostname (from-config "HOSTNAME" "https://grumpy.website"))
-
-
-(def forced-user (slurp "grumpy_data/FORCED_USER"))
-
-
-(def ^:dynamic dev? (= "http://localhost:8080" hostname))
 
 
 (defn zip [coll1 coll2]
@@ -170,7 +155,7 @@
 
 
 (def checksum-resource
-  (if dev?
+  (if config/dev?
     identity
     (memoize
       (fn [res]
@@ -243,13 +228,13 @@
 (def resource
   (cond-> (fn [name]
             (clojure.core/slurp (io/resource (str "static/" name))))
-    (not dev?) (memoize)))
+    (not config/dev?) (memoize)))
 
 
 (def style
   (memoize
     (fn [name]
-      (if dev?
+      (if config/dev?
         [:link { :rel "stylesheet" :type "text/css" :href (str "/static/" name) }]
         (let [content (clojure.core/slurp (io/resource (str "static/" name)))]
           [:style { :type "text/css" :dangerouslySetInnerHTML { :__html content }}])))))

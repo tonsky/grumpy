@@ -6,8 +6,13 @@
    [grumpy.config :as config]))
 
 
-(def ^:dynamic token (config/get-optional ::token))
-(def ^:dynamic channels (config/get-optional ::channels))
+(def ^:dynamic token
+  (config/get-optional ::token))
+
+
+(def ^:dynamic channels
+  (or (config/get-optional ::channels)
+    #{"grumpy_chat" "whining_test"}))
 
 
 (defn post! [channel url params]
@@ -44,7 +49,7 @@
        (nil? key)   post
        :else
        (let [picture (get post key)
-             url     (str (config/get ::core/hostname) "/post/" (:id post) "/" (:url picture))
+             url     (str (config/get ::config/hostname) "/post/" (:id post) "/" (:url picture))
              resp    (case (core/content-type picture)
                        :content.type/video (post! (str "@" channel) "/sendVideo" {:video url})
                        :content.type/image (post! (str "@" channel) "/sendPhoto" {:photo url}))]

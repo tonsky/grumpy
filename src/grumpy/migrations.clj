@@ -9,7 +9,7 @@
 
 
 (defn maybe-migrate-to [version f]
-  (when (< (config/get :grumpy.db/version) version)
+  (when (< (config/get :grumpy.db/version (constantly 1)) version)
     (core/log "Migrating DB to version" version)
     (f)
     (config/set :grumpy.db/version version)))

@@ -9,16 +9,6 @@
    [java.io File Writer]))
 
 
-(def ^:private default
-  {; :grumpy.auth/cookie-secret
-   ; :grumpy.auth/forced-user
-   :grumpy.db/version 1
-   ; :grumpy.video/circleci-token
-   ; :grumpy.telegram/token
-   :grumpy.telegram/channels #{"grumpy_chat" "whining_test"}
-   :grumpy.core/hostname "https://grumpy.website"})
-
-
 (defn- write-bytes [^bytes bytes]
   (.encodeToString (java.util.Base64/getEncoder) bytes))
 
@@ -46,11 +36,11 @@
 (defn- store! [config]
   (let [file ^File (io/file "grumpy_data/config.edn")]
     (with-open [wrt (io/writer file)]
-      (pprint/pprint config wrt)))
+      (pprint/pprint (into (sorted-map) config) wrt)))
   config)
 
 
-(def *config (agent (merge default (load))))
+(def *config (agent (load)))
 
 
 (defn set [key value]
@@ -72,4 +62,9 @@
       (set key (value-fn)))))
 
 
-(def ^:dynamic dev? (= "http://localhost:8080" (get :grumpy.core/hostname)))
+;; force default value
+(get ::hostname (constantly "https://grumpy.website"))
+
+
+(def ^:dynamic dev?
+  (= "http://localhost:8080" (get ::hostname)))

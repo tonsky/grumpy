@@ -173,7 +173,7 @@
       (nil? (get-token handle))
       (let [token        (gen-token)
             redirect-url (:redirect-url form-params)
-            link         (core/url (str (config/get ::core/hostname) "/authenticate")
+            link         (core/url (str (config/get ::config/hostname) "/authenticate")
                            {:handle       handle
                             :token        token
                             :redirect-url redirect-url})]

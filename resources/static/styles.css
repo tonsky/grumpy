@@ -80,3 +80,18 @@ footer {
   margin-top: 2em;
   border-top: 1px solid #000;
 }
+
+
+/* Editor 2 */
+
+.e2_post { font-size: 36px; font-weight: bold; border: 5px solid currentColor; color: #C64A42; background: #fff; display: flex; padding: 0; align-items: center; cursor: pointer; }
+.e2_post:hover, .e2_post:active { background: none; }
+.e2_post_label { margin: 17px 24px;  }
+.e2_post_icon { margin: 4px 0 0 0; display: flex; flex-direction: column; }
+.e2_post_icon_hand { position: relative; top: -2px; z-index: 1; }
+.e2_post_icon_button { margin-left: 29px; }
+.e2_post:hover > .e2_post_icon > .e2_post_icon_hand { position: relative; top: -14px; }
+.e2_post:active > .e2_post_icon > .e2_post_icon_hand { position: relative; top: 8px; }
+
+.e2_post:hover { position: relative; top: -1px; }
+.e2_post:active { position: relative; top: 1px; }

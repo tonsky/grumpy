@@ -5,6 +5,7 @@
     #?(:clj  [clojure.edn :as edn]
        :cljs [cljs.reader :as edn])
     #?(:cljs [cljs-drag-n-drop.core :as dnd])
+    #?(:cljs [grumpy.edit])
     [rum.core :as rum]
     [grumpy.transit :as transit]
     [grumpy.macros :refer [oget oset! js-fn]]))
@@ -306,7 +307,7 @@
 
 
 #?(:cljs
-(defn ^:after-load ^:export refresh []
+(defn ^:export refresh []
   (let [mount (js/document.querySelector ".mount")
         data  (-> (.getAttribute mount "data")
                   (edn/read-string))]

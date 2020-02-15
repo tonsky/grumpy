@@ -82,16 +82,43 @@ footer {
 }
 
 
-/* Editor 2 */
+/* CSS Framework */
 
-.e2_post { font-size: 36px; font-weight: bold; border: 5px solid currentColor; color: #C64A42; background: #fff; display: flex; padding: 0; align-items: center; cursor: pointer; }
-.e2_post:hover, .e2_post:active { background: none; }
-.e2_post_label { margin: 17px 24px;  }
-.e2_post_icon { margin: 4px 0 0 0; display: flex; flex-direction: column; }
-.e2_post_icon_hand { position: relative; top: -2px; z-index: 1; }
-.e2_post_icon_button { margin-left: 29px; }
-.e2_post:hover > .e2_post_icon > .e2_post_icon_hand { position: relative; top: -14px; }
-.e2_post:active > .e2_post_icon > .e2_post_icon_hand { position: relative; top: 8px; }
+.row { display: flex; }
+.row > * { margin-right: 20px; }
+.row > *:last-child { margin-right: 0; }
+.row.left   { justify-content: flex-start; }
+.row.center { justify-content: center; }
+.row.right  { justify-content: flex-end; }
+.row.top    { align-items: flex-start; }
+.row.middle { align-items: center; }
+.row.bottom { align-items: flex-end; }
 
-.e2_post:hover { position: relative; top: -1px; }
-.e2_post:active { position: relative; top: 1px; }
+.column { display: flex; flex-direction: column; }
+.column > * { margin-bottom: 20px; }
+.column > *:last-child { margin-bottom: 0; }
+.column.top    { justify-content: flex-start; }
+.column.middle { justify-content: center; }
+.column.bottom { justify-content: flex-end; }
+.column.left   { align-items: flex-start; }
+.column.center { align-items: center; }
+.column.right  { align-items: flex-end; }
+
+.grow { flex: 1; }
+.space-between { justify-content: space-between; }
+button, .no-select { user-select: none; -webkit-user-select: none; }
+.cursor-pointer { cursor: pointer; }
+.cursor-default { cursor: default; }
+
+.grid { display: grid; gap: 20px 20px; justify-items: start; align-items: start; }
+.grid.middle { align-items: center; }
+.col1 { grid-column: 1; }
+.col2 { grid-column: 2; }
+.col3 { grid-column: 3; }
+.col2-4 { grid-column: 2 / span 3; }
+.grid > .self-top { align-self: start; }
+.grid > .self-middle { align-self: center; }
+.grid > .self-bottom { align-self: end; }
+.grid > .self-left { justify-self: start; }
+.grid > .self-center { justify-self: center; }
+.grid > .self-right { justify-self: right; }

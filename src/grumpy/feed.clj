@@ -6,8 +6,7 @@
    [grumpy.xml :as xml]
    [grumpy.time :as time]
    [grumpy.core :as core]
-   [grumpy.config :as config]
-   [grumpy.authors :as authors]))
+   [grumpy.config :as config]))
 
 
 (defn max-date [posts]

@@ -3,7 +3,6 @@
    [clojure.string :as str]
    [clojure.java.io :as io]
    [grumpy.core :as core]
-   [grumpy.authors :as authors]
    [grumpy.video :as video]))
 
 

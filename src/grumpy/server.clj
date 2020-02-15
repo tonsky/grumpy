@@ -17,7 +17,7 @@
    [grumpy.core :as core]
    [grumpy.config :as config]
    [grumpy.routes :as routes]
-   [grumpy.authors :as authors])
+   [grumpy.editor :as editor])
   (:import
    [java.io IOException]))
 
@@ -184,7 +184,7 @@
   (start [this]
     (core/log "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
     (with-redefs [io.pedestal.http.impl.servlet-interceptor/stylobate stylobate]
-      (let [server (-> {::http/routes (routes/sort (concat routes auth/routes authors/routes))
+      (let [server (-> {::http/routes (routes/sort (concat routes auth/routes editor/routes))
                         ::http/router :linear-search
                         ::http/type   :immutant
                         ::http/host   (:host opts)

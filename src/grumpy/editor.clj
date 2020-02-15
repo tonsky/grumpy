@@ -1,22 +1,21 @@
-(ns grumpy.authors
+(ns grumpy.editor
   (:require
-    [rum.core :as rum]
-    [clojure.edn :as edn]
-    [clojure.string :as str]
-    [clojure.java.io :as io]
-    [ring.util.response :as response]
-    [clojure.stacktrace :as stacktrace]
-    [io.pedestal.http.ring-middlewares :as middlewares]
+   [rum.core :as rum]
+   [clojure.edn :as edn]
+   [clojure.string :as str]
+   [clojure.java.io :as io]
+   [ring.util.response :as response]
+   [clojure.stacktrace :as stacktrace]
+   [io.pedestal.http.ring-middlewares :as middlewares]
     
-    [grumpy.auth :as auth]
-    [grumpy.time :as time]
-    [grumpy.core :as core]
-    [grumpy.editor :as editor]
-    [grumpy.macros :refer [cond+]]
-    [grumpy.routes :as routes]
-    [grumpy.transit :as transit]
-    [grumpy.telegram :as telegram]
-    [grumpy.video :as video])
+   [grumpy.auth :as auth]
+   [grumpy.time :as time]
+   [grumpy.core :as core]
+   [grumpy.macros :refer [cond+]]
+   [grumpy.routes :as routes]
+   [grumpy.transit :as transit]
+   [grumpy.telegram :as telegram]
+   [grumpy.video :as video])
   (:import
    [java.io File InputStream]))
 
@@ -232,27 +231,12 @@
                :post    post
                :user    user }]
     (core/page { :title (if new? "Edit draft" "Edit post")
-                   :styles ["authors.css"] }
+                 :styles ["editor.css"]
+                 :subtitle? false }
       [:.mount { :data (pr-str data) }
-        (editor/editor (assoc data :server? true))]
+        #_(editor/editor (assoc data :server? true))] ;; TODO
       [:script { :src (str "/" (core/checksum-resource "static/editor.js")) }]
       [:script { :dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();" }}])))
-
-
-(rum/defc edit2-post-page [post-id user]
-  (let [post (or (get-draft (or post-id user))
-                 { :body ""
-                   :author user })
-        new? (str/starts-with? post-id "@")
-        data { :new?    new?
-               :post-id post-id
-               :post    post
-               :user    user }]
-    (core/page { :title (if new? "Edit draft" "Edit post")
-                 :styles ["authors.css"] }
-      [:.mount { :data (pr-str data) }]
-      [:script { :src (str "/" (core/checksum-resource "static/editor.js")) }]
-      [:script { :dangerouslySetInnerHTML { :__html "grumpy.edit.refresh();" }}])))
 
 
 (def ^:private interceptors [auth/populate-session auth/require-user])
@@ -265,12 +249,6 @@
      (fn [req]
        (let [user (auth/user req)]
          (core/html-response (edit-post-page (str "@" user) user))))]
-
-    [:get "/new2"
-     interceptors
-     (fn [req]
-       (let [user (auth/user req)]
-         (core/html-response (edit2-post-page (str "@" user) user))))]
 
     [:get "/post/:post-id/edit"
      interceptors

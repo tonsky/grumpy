@@ -134,20 +134,20 @@
 
 (rum/defc forbidden-page [redirect-url handle]
   (core/page {:title "Log in"
-              :styles ["authors.css"]
+              :styles ["editor.css"]
               :subtitle? false}
-    [:form.forbidden
+    [:form.column
      {:action "/send-link"
       :method "post" }
-     [:.form_row "E-mail or Telegram user:"]
-     [:.form-row
+     [:div "E-mail or Telegram user:"]
+     [:div
       [:input {:type "text"
                :name "handle"
                :autofocus true
                :value handle}]
       [:input {:type "hidden" :name "redirect-url" :value redirect-url}]]
-     [:.form_row
-      [:button "Send authenticate link"]]]))
+     [:div
+      [:button.btn "Send authenticate link"]]]))
 
 
 (defn handle-forbidden [{:keys [query-params cookies]}]
@@ -192,7 +192,7 @@
 
 (rum/defc link-sent-page [message]
   (core/page {:title "Machine says"
-                :styles ["authors.css"]
+                :styles ["editor.css"]
                 :subtitle? false}
     [:.link-sent
       [:.link-sent_message message]]))

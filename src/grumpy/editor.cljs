@@ -30,7 +30,8 @@
      [:.corner.top-right]
      [:.corner.bottom-left]
      [:.corner.bottom-right]
-     [:.label "Drag media here"]]
+     [:.label "Drag media here"]
+     [:.media-delete]]
 
     [:.textarea
      [:textarea {:placeholder "Be grumpy here..."}]

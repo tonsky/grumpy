@@ -80,10 +80,12 @@ function reload_subtitle() {
 
 window.addEventListener("DOMContentLoaded", function() {
   subtitle_el = document.querySelector('.subtitle-text');
-  subtitle_el.onclick = reload_subtitle;
-  reload_subtitle();
-  if (document.cookie.indexOf("grumpy_user=") >= 0) {
-    document.body.classList.remove("anonymous");
+  if (subtitle_el) {
+    subtitle_el.onclick = reload_subtitle;
+    reload_subtitle();
+    if (document.cookie.indexOf("grumpy_user=") >= 0) {
+      document.body.classList.remove("anonymous");
+    }
   }
 });
 

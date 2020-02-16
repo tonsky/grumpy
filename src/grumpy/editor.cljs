@@ -7,7 +7,9 @@
    [grumpy.transit :as transit]
    [grumpy.macros :refer [oget oset! js-fn]]))
 
+
 (enable-console-print!)
+
 
 (def states
   {"New" {:post {:body "" :author "nikitonsky"}}
@@ -17,37 +19,44 @@
    "Dragged" {}
    "Sending" {}})
 
+
 (rum/defc editor [{:keys []}]
-  [:.row
+  [:.editor.grid
    [:img.post_avatar {:src "/static/nikitonsky.jpg"}]
-   [:.column.grow
+
+   [:.editing-col.self-hstretch.column
     [:.upload.no-select.cursor-pointer
      [:.corner.top-left]
      [:.corner.top-right]
      [:.corner.bottom-left]
      [:.corner.bottom-right]
      [:.label "Drag media here"]]
-    [:textarea.post_body {:placeholder "Be grumpy here..."}]
 
-    [:.grid.middle {:style {:grid-template-columns "auto auto 10px calc(50% - 25px)"}}
-     [:.col1.cursor-default "Author"]
-     [:input.col2 {:type "text" :value "nikitonsky"}]
-     [:.col3.self-top.column.center
-      [:.ta-handle_rope]
-      [:.ta-handle_ring.cursor-pointer]]
-     [:.label.col1 "Tags"]
-     [:input.col2-4 {:type "text" :value "Windows Desktop HiDPI"}]
-     [:.label.col1 "Status"]
-     [:.status.col2-4.row.cursor-default
-      [:.icon]
-      [:.label "Saved"]]]
+    [:.textarea
+     [:textarea {:placeholder "Be grumpy here..."}]
+     [:.handle.column.center
+      [:.rope]
+      [:.ring.cursor-pointer]]]]
 
-    [:.row.middle
-     [:button.btn-post-post.row
-      [:img.button {:src "/static/editor/post_button.svg"}]
-      [:img.hand {:src "/static/editor/post_hand.svg"}]
-      [:.label "POST"]]
-     [:button.btn.tertiary "Delete draft"]]]])
+   [:.extra-col.self-hstretch.grid.middle
+    [:.author-label.cursor-default "Author"]
+    [:input.author-input {:type "text" :value "nikitonsky"}]
+
+    [:.tags-label.cursor-default "Tags"]
+    [:input.tags-input {:type "text" :value "#Windows #Desktop #HiDPI"}]
+
+    [:.status-label "Status"]
+    [:.status.row.cursor-default
+     [:.icon]
+     [:.label "Saved"]]]
+
+   [:button.post-post.row
+    [:img.button {:src "/static/editor/post_button.svg"}]
+    [:img.hand {:src "/static/editor/post_hand.svg"}]
+    [:.label "POST"]]
+
+   [:button.post-delete.self-middle.btn.secondary "Delete draft"]])
+
 
 (defn ^:after-load ^:export refresh []
   (let [mount (js/document.querySelector ".mount")]

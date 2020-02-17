@@ -3,8 +3,10 @@
    [grumpy.db :as db]
    [crux.api :as crux]
    [clojure.set :as set]
-   [grumpy.base :as base]
-   [grumpy.core :as core]
+   [grumpy.core.coll :as coll]
+   [grumpy.core.files :as files]
+   [grumpy.core.log :as log]
+   [grumpy.core.posts :as posts]
    [com.stuartsierra.component :as component]))
 
 
@@ -18,10 +20,10 @@
 
 (defn convert-post [idx post]
   (let [{:keys [body author updated created id picture picture-original reposts]} post
-        picture-id (when (some? picture) (core/make-uuid db/pict-id-high))
-        orig-id    (when (some? picture-original) (core/make-uuid db/pict-id-high))
-        repost-ids (repeatedly (count reposts) #(core/make-uuid db/repost-id-high))
-        post       {:crux.db/id   (core/make-uuid db/post-id-high idx)
+        picture-id (when (some? picture) (db/make-uuid db/pict-id-high))
+        orig-id    (when (some? picture-original) (db/make-uuid db/pict-id-high))
+        repost-ids (repeatedly (count reposts) #(db/make-uuid db/repost-id-high))
+        post       {:crux.db/id   (db/make-uuid db/post-id-high idx)
                     :post/url     id
                     :post/author  author
                     :post/body    body
@@ -53,15 +55,15 @@
 
 
 (defn migrate! []
-  (core/delete-dir "grumpy_data/crux_db")
-  (core/delete-dir "grumpy_data/crux_events")
-  (core/delete-dir "grumpy_data/crux_backup")
+  (files/delete-dir "grumpy_data/crux_db")
+  (files/delete-dir "grumpy_data/crux_events")
+  (files/delete-dir "grumpy_data/crux_backup")
   (let [{system :system :as crux} (-> (db/crux) (component/start))]
     (try
-      (doseq [[idx id] (base/zip
+      (doseq [[idx id] (coll/zip
                          (range 1 Integer/MAX_VALUE)
-                         (sort (core/post-ids)))]
-        (core/log "Converting" id "->" idx)
-        (crux/submit-tx system (convert-post idx (core/get-post id))))
+                         (sort (posts/post-ids)))]
+        (log/log "Converting" id "->" idx)
+        (crux/submit-tx system (convert-post idx (posts/get-post id))))
       (finally
         (component/stop crux)))))

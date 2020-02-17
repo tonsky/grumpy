@@ -1,9 +1,10 @@
 (ns grumpy.system
   (:require
+   [com.stuartsierra.component :as component]
    ; [grumpy.db :as db]
-   [grumpy.server :as server]
+   [grumpy.core.log :as log]
    [grumpy.migrations :as migrations]
-   [com.stuartsierra.component :as component]))
+   [grumpy.server :as server]))
 
 
 (defn system [opts]
@@ -12,6 +13,13 @@
     :server (component/using
               (server/server (:server opts))
               [#_:crux])))
+
+
+(Thread/setDefaultUncaughtExceptionHandler
+  (reify Thread$UncaughtExceptionHandler
+    (uncaughtException [_ thread ex]
+      (log/log "Uncaught exception on" (.getName ^Thread thread))
+      (.printStackTrace ^Throwable ex))))
 
 
 (defn -main [& {:as args}]

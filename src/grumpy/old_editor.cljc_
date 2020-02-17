@@ -7,8 +7,8 @@
     #?(:cljs [cljs-drag-n-drop.core :as dnd])
     #?(:cljs [grumpy.edit])
     [rum.core :as rum]
-    [grumpy.transit :as transit]
-    [grumpy.macros :refer [oget oset! js-fn]]))
+    [grumpy.core.transit :as transit]
+    [grumpy.core.macros :refer [oget oset! js-fn]]))
 
 
 #?(:cljs (enable-console-print!))

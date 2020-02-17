@@ -1,4 +1,4 @@
-(ns grumpy.xml
+(ns grumpy.core.xml
   (:require
    [clojure.string :as str]))
 

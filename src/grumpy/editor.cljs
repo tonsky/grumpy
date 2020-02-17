@@ -1,12 +1,10 @@
 (ns ^:figwheel-hooks grumpy.editor
   (:require
    [clojure.string :as str]
-   [cljs.reader :as edn]
-   [cljs-drag-n-drop.core :as dnd]
-   [rum.core :as rum]
-   [grumpy.base :as base]
-   [grumpy.transit :as transit]
-   [grumpy.macros :refer [oget oset! js-fn]]))
+   [grumpy.core.coll :as coll]
+   [grumpy.core.fragments :as fragments]
+   [grumpy.core.macros :refer [oget oset! js-fn]]
+   [rum.core :as rum]))
 
 
 (enable-console-print!)
@@ -16,7 +14,7 @@
   (let [{:keys [post]} state
         {:keys [id body author picture]} post]
     [:.editor.grid
-     [:img.post_avatar {:src (base/avatar-url author)}]
+     [:img.post_avatar {:src (fragments/avatar-url author)}]
      
      [:.editing-col.self-hstretch.column
       (if (some? picture)
@@ -89,7 +87,7 @@
        [:option {:value k} k])]
     [:button.btn.secondary.small {:on-click (fn [_] (switch-debug-state -1))} "<"]
     [:button.btn.secondary.small {:on-click (fn [_] (switch-debug-state 1))} ">"]]
-   (let [[_ state] (base/seek (fn [[k v]] (= k (rum/react *debug-state-key))) debug-states)
+   (let [[_ state] (coll/seek (fn [[k v]] (= k (rum/react *debug-state-key))) debug-states)
          state' (merge-with merge
                   {:post {:body "" :author "nikitonsky"}}
                   state)]

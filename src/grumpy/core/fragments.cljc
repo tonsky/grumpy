@@ -1,4 +1,7 @@
-(ns grumpy.base)
+(ns grumpy.core.fragments
+  (:require
+   [clojure.string :as str]))
+
 
 (def authors
   [{:email "niki@tonsky.me"
@@ -34,30 +37,32 @@
   (first (filter #(= (get % attr) value) authors)))
 
 
-(defn zip [coll1 coll2]
-  (map vector coll1 coll2))
-
-
-(defn conjv [v x]
-  (conj (vec v) x))
-
-
-(defn update-some [m key f & args]
-  (if-some [value (get m key)]
-    (assoc m key (apply f value args))
-    m))
-
-
-(defn filtermv [pred m]
-  (reduce-kv (fn [m k v] (if (pred v) (assoc m k v) m)) {} m))
-
-
-(defn seek [pred coll]
-  (reduce #(when (pred %2) (reduced %2)) nil coll))
-
-
 (defn avatar-url [author]
   (if (some? (author-by :user author))
     (str "/static/" author ".jpg")
     "/static/guest.jpg"))
 
+
+(defn fit [x y maxx maxy]
+  (cond
+    (> x maxx)
+      (fit maxx (* y (/ maxx x)) maxx maxy)
+    (> y maxy)
+      (fit (* x (/ maxy y)) maxy maxx maxy)
+    :else
+      [(int x) (int y)]))
+
+
+(defn format-text [text]
+  (->> (str/split text #"[\r\n]+")
+    (map
+      (fn [paragraph]
+        (as-> paragraph paragraph
+          ;; highlight links
+          (str/replace paragraph #"https?://([^\s<>]+[^\s.,!?:;'\"<>()\[\]{}*])"
+            (fn [[href path]]
+              (let [norm-path     (re-find #"[^?#]+" path)
+                    without-slash (str/replace norm-path #"/$" "")]
+                (str "<a href=\"" href "\" target=\"_blank\">" without-slash "</a>"))))
+          (str "<p>" paragraph "</p>"))))
+    (str/join)))

@@ -1,6 +1,6 @@
-(ns grumpy.transit
+(ns grumpy.core.transit
   (:require
-    [cognitect.transit :as t]))
+   [cognitect.transit :as t]))
 
 
 (defn read-transit-str [s]

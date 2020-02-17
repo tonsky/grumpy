@@ -1,11 +1,12 @@
 (ns grumpy.video
   (:require
+   [clj-http.client :as http]
    [clojure.string :as str]
    [clojure.java.io :as io]
-   [clj-http.client :as http]
-   [grumpy.base :as base]
-   [grumpy.core :as core]
-   [grumpy.config :as config])
+   [grumpy.core.coll :as coll]
+   [grumpy.core.config :as config]
+   [grumpy.core.jobs :as jobs]
+   [grumpy.core.log :as log])
   (:import
    [java.io File InputStream]))
 
@@ -21,7 +22,7 @@
 
 
 (defn stats [^File file]
-  (let [out (:out (core/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))
+  (let [out (:out (jobs/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))
         [_ w h frames] (re-matches #"(\d+|N/A)x(\d+|N/A)x(\d+|N/A)" (str/trim out))]
     {:width  (parse-long w)
      :height (parse-long h)
@@ -39,7 +40,7 @@
         [w2 h2] (if (> h1 1100) [(* aspect 1100) 1100] [w1 h1])
         round   (fn [x] (-> x (/ 2) long (* 2)))
         [w3 h3] [(round w2) (round h2)]]
-    (core/sh "ffmpeg"
+    (jobs/sh "ffmpeg"
       "-i"           (.getPath original)
       "-c:v"         "libx264"
       "-crf"         "18"
@@ -58,7 +59,7 @@
 (defn request
   ([method url] (request method url {}))
   ([method url opts]
-   (core/log method url)
+   (log/log method url)
    (:body
     ((case method :get http/get :post http/post)
      url
@@ -80,9 +81,9 @@
 
 #_(defn estimate-progress [build-resp]
   (when-some [step (some-> (get build-resp "steps")
-                     (->> (base/seek #(= "$REMOTE_COMMAND" (get % "name"))))
+                     (->> (coll/seek #(= "$REMOTE_COMMAND" (get % "name"))))
                      (get "actions")
-                     (->> (base/seek #(= "$REMOTE_COMMAND" (get % "name")))))]
+                     (->> (coll/seek #(= "$REMOTE_COMMAND" (get % "name")))))]
     (when-some [output (request-circleci :get "/" (get build-resp "build_num") "/output/" (get step "step") "/" (get step "index"))]
       (when-some [last-message (-> (last output) (get "message"))]
         (when-some [[_ frame] (last (re-seq #"frame=\s*(\d+)" last-message))]

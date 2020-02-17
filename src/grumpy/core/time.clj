@@ -1,4 +1,4 @@
-(ns grumpy.time
+(ns grumpy.core.time
   (:import
    [java.time Instant Duration LocalDate LocalDateTime ZoneId]
    [java.time.format DateTimeFormatter]

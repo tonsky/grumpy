@@ -1,4 +1,4 @@
-(ns grumpy.routes
+(ns grumpy.core.routes
   (:refer-clojure :exclude [sort])
   (:require
    [io.pedestal.http.route :as route]))

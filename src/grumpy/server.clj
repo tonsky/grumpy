@@ -1,24 +1,23 @@
 (ns grumpy.server
   (:require
-   [rum.core :as rum]
-   [clojure.stacktrace]
-   [clojure.java.io :as io]
-   [clojure.string :as str]
-   [io.pedestal.http :as http]
-   [ring.util.response :as response]
    [clojure.stacktrace :as stacktrace]
-   [io.pedestal.interceptor :as interceptor]
    [com.stuartsierra.component :as component]
-   [io.pedestal.http.ring-middlewares :as middlewares]
+   [io.pedestal.interceptor :as interceptor]
+   [io.pedestal.http :as http]
 
    [grumpy.auth :as auth]
-   [grumpy.base :as base]
+   [grumpy.core.config :as config]
+   [grumpy.core.fragments :as fragments]
+   [grumpy.core.log :as log]
+   [grumpy.core.mime :as mime]
+   [grumpy.core.posts :as posts]
+   [grumpy.core.routes :as routes]
+   [grumpy.core.time :as time]
+   [grumpy.core.web :as web]
    [grumpy.feed :as feed]
-   [grumpy.time :as time]
-   [grumpy.core :as core]
-   [grumpy.config :as config]
-   [grumpy.routes :as routes]
-   [grumpy.editor :as editor])
+   [grumpy.editor :as editor]
+   [ring.util.response :as response]
+   [rum.core :as rum])
   (:import
    [java.io IOException]))
 
@@ -30,15 +29,15 @@
   [:.post
     { :data-id (:id post) }
     [:.post_side
-     [:img.post_avatar { :src (base/avatar-url (:author post))}]]
+     [:img.post_avatar {:src (fragments/avatar-url (:author post))}]]
     [:.post_content
       (when-some [pic (:picture post)]
         (let [src (str "/post/" (:id post) "/" (:url pic))
               href (if-some [orig (:picture-original post)]
                      (str "/post/" (:id post) "/" (:url orig))
                      src)]
-          (case (core/content-type pic)
-            :content.type/video
+          (case (mime/type pic)
+            :mime.type/video
               [:.post_video_outer
                 [:video.post_video
                   { :autoplay true
@@ -47,11 +46,11 @@
                     :preload "auto"
                     :playsinline true
                     :onplay "toggle_video(this.parentNode, true);" }
-                  [:source { :type (core/mime-type (:url pic)) :src src }]]
+                  [:source { :type (mime/mime-type (:url pic)) :src src }]]
                 [:.post_video_overlay.post_video_overlay-paused { :onclick "toggle_video(this.parentNode);"}]]
-            :content.type/image
+            :mime.type/image
               (if-some [[w h] (:dimensions pic)]
-                (let [[w' h'] (core/fit w h 550 500)]
+                (let [[w' h'] (fragments/fit w h 550 500)]
                   [:div { :style { :max-width w' }}
                     [:a.post_img.post_img-fix
                       { :href href
@@ -62,7 +61,7 @@
                   [:img { :src src }]]))))
       [:.post_body
         { :dangerouslySetInnerHTML
-          { :__html (core/format-text
+          { :__html (fragments/format-text
                       (str "<span class=\"post_author\">" (:author post) ": </span>" (:body post))) }}]
       [:p.post_meta
         (time/format-date (:created post))
@@ -71,19 +70,19 @@
 
 
 (rum/defc index-page [post-ids]
-  (core/page {:page :index :scripts ["loader.js"]}
+  (web/page {:page :index :scripts ["loader.js"]}
     (for [post-id post-ids]
-      (post (core/get-post post-id)))))
+      (post (posts/get-post post-id)))))
 
 
 (rum/defc posts-fragment [post-ids]
   (for [post-id post-ids]
-    (post (core/get-post post-id))))
+    (post (posts/get-post post-id))))
 
 
 (rum/defc post-page [post-id]
-  (core/page {:page :post}
-    (post (core/get-post post-id))))
+  (web/page {:page :post}
+    (post (posts/get-post post-id))))
 
 
 (def no-cache
@@ -103,14 +102,14 @@
 
     [:get "/post/:post-id"
      (fn [{{:keys [post-id]} :path-params}]
-       (core/html-response (post-page post-id)))]
+       (web/html-response (post-page post-id)))]
 
     [:get "/after/:post-id"
      (fn [{{:keys [post-id]} :path-params}]
        (when config/dev? (Thread/sleep 200))
        (if (and config/dev? (< (rand) 0.5))
          { :status 500 }
-         (let [post-ids (->> (core/post-ids)
+         (let [post-ids (->> (posts/post-ids)
                              (drop-while #(not= % post-id))
                              (drop 1)
                              (take page-size))]
@@ -121,9 +120,9 @@
    [:get "/"
     (when config/dev? auth/populate-session)
     (fn [_]
-      (let [post-ids  (core/post-ids)
+      (let [post-ids  (posts/post-ids)
             first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)]
-        (core/html-response (index-page first-ids))))]
+        (web/html-response (index-page first-ids))))]
 
    [:get "/static/*path" 
     (when-not config/dev?
@@ -135,19 +134,19 @@
     (fn [_]
       {:status  200
        :headers { "Content-Type" "application/atom+xml; charset=utf-8" }
-       :body    (feed/feed (take 10 (core/post-ids))) })]
+       :body    (feed/feed (take 10 (posts/post-ids))) })]
 
    [:get "/sitemap.xml"
     (fn [_]
       {:status 200
        :headers { "Content-Type" "text/xml; charset=utf-8" }
-       :body (feed/sitemap (core/post-ids))})]
+       :body (feed/sitemap (posts/post-ids))})]
 
    [:get "/robots.txt"
     (fn [_]
       {:status 200
        :headers {"Content-Type" "text/plain"}
-       :body (core/resource "robots.txt")})]))
+       :body (web/resource "robots.txt")})]))
 
 
 ; Filtering out Broken pipe reporting
@@ -180,7 +179,7 @@
 (defrecord Server [opts crux server]
   component/Lifecycle
   (start [this]
-    (core/log "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
+    (log/log "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
     (with-redefs [io.pedestal.http.impl.servlet-interceptor/stylobate stylobate]
       (let [server (-> {::http/routes (routes/sort (concat routes auth/routes editor/routes))
                         ::http/router :linear-search
@@ -194,7 +193,7 @@
                      (http/start))]
         (assoc this :server server))))
   (stop [this]
-    (core/log "[server] Stopping web server")
+    (log/log "[server] Stopping web server")
     (http/stop server)
     (dissoc this :server)))
 

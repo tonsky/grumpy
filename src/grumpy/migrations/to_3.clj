@@ -1,7 +1,6 @@
 (ns grumpy.migrations.to-3
   (:require
-   [grumpy.base :as base]
-   [grumpy.core :as core]
+   [grumpy.core.coll :as coll]
    [grumpy.migrations.to-2 :as migrations.to-2]))
 
 
@@ -11,17 +10,17 @@
         tg-id (:telegram/message_id post)]
     (cond-> post
       (some? tg-id)
-      (-> (update :reposts base/conjv {:type :telegram/text
+      (-> (update :reposts coll/conjv {:type :telegram/text
                                          :telegram/channel "whining"
                                          :telegram/message_id tg-id})
         (dissoc :telegram/message_id))
 
       (not-empty orig)
-      (-> (update :reposts base/conjv (assoc orig :type :telegram/photo, :telegram/channel "whining"))
+      (-> (update :reposts coll/conjv (assoc orig :type :telegram/photo, :telegram/channel "whining"))
         (update :picture-original dissoc :telegram/message_id :telegram/photo))
 
       (not-empty pic)
-      (-> (update :reposts base/conjv (assoc pic :type :telegram/photo, :telegram/channel "whining"))
+      (-> (update :reposts coll/conjv (assoc pic :type :telegram/photo, :telegram/channel "whining"))
         (update :picture dissoc :telegram/message_id :telegram/photo)))))
 
 

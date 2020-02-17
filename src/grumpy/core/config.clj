@@ -1,8 +1,7 @@
-(ns grumpy.config
+(ns grumpy.core.config
   (:refer-clojure :exclude [get load set])
   (:require
    [clojure.edn :as edn]
-   [clojure.string :as string]
    [clojure.java.io :as io]
    [clojure.pprint :as pprint])
   (:import
@@ -35,6 +34,7 @@
 
 (defn- store! [config]
   (let [file ^File (io/file "grumpy_data/config.edn")]
+    (.mkdirs (.getParentFile file))
     (with-open [wrt (io/writer file)]
       (pprint/pprint (into (sorted-map) config) wrt)))
   config)
@@ -63,8 +63,8 @@
 
 
 ;; force default value
-(get ::hostname (constantly "https://grumpy.website"))
+(get :grumpy.server/hostname (constantly "https://grumpy.website"))
 
 
 (def ^:dynamic dev?
-  (= "http://localhost:8080" (get ::hostname)))
+  (= "http://localhost:8080" (get :grumpy.server/hostname)))

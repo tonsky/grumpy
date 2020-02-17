@@ -1,34 +1,36 @@
 (ns grumpy.editor
   (:require
-   [rum.core :as rum]
    [clojure.edn :as edn]
-   [clojure.string :as str]
    [clojure.java.io :as io]
-   [ring.util.response :as response]
-   [clojure.stacktrace :as stacktrace]
+   [clojure.string :as str]
    [io.pedestal.http.ring-middlewares :as middlewares]
-    
    [grumpy.auth :as auth]
-   [grumpy.time :as time]
-   [grumpy.core :as core]
-   [grumpy.macros :refer [cond+]]
-   [grumpy.routes :as routes]
-   [grumpy.transit :as transit]
+   [grumpy.core.files :as files]
+   [grumpy.core.jobs :as jobs]
+   [grumpy.core.macros :refer [cond+]]
+   [grumpy.core.mime :as mime]
+   [grumpy.core.posts :as posts]
+   [grumpy.core.routes :as routes]
+   [grumpy.core.time :as time]
+   [grumpy.core.transit :as transit]
+   [grumpy.core.web :as web]
    [grumpy.telegram :as telegram]
-   [grumpy.video :as video])
+   [grumpy.video :as video]
+   [ring.util.response :as response]
+   [rum.core :as rum])
   (:import
    [java.io File InputStream]))
 
 
 (defn next-post-id [^java.time.Instant inst]
   (str
-    (core/encode (quot (.toEpochMilli inst) 1000) 6)
-    (core/encode (rand-int (* 64 64 64)) 3)))
+    (posts/encode (quot (.toEpochMilli inst) 1000) 6)
+    (posts/encode (rand-int (* 64 64 64)) 3)))
 
 
 (defn copy-dir [^File from ^File to]
   (.mkdirs to)
-  (doseq [name (core/list-files from)
+  (doseq [name (files/list-files from)
           :let [file (io/file from name)]]
     (io/copy file (io/file to name))))
 
@@ -38,11 +40,11 @@
         original (io/file (str "grumpy_data/posts/" post-id "/post.edn"))]
     (cond
       (.exists draft)
-        (core/read-edn-string (slurp draft))
+        (files/read-edn-string (slurp draft))
       (.exists original)
         (do
           (copy-dir (io/file (str "grumpy_data/posts/" post-id)) (io/file (str "grumpy_data/drafts/" post-id)))
-          (core/read-edn-string (slurp draft)))
+          (files/read-edn-string (slurp draft)))
       :else
         (do
           (.mkdirs (io/file (str "grumpy_data/drafts/" post-id "/")))
@@ -50,13 +52,13 @@
 
 
 (defn image-dimensions [^File file]
-  (let [out (:out (core/sh "convert" (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
-        [w h] (core/read-edn-string out)]
+  (let [out (:out (jobs/sh "convert" (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
+        [w h] (edn/read-string out)]
     [w h]))
 
 
 (defn convert-image! [^File from ^File to opts]
-  (apply core/sh "convert"
+  (apply jobs/sh "convert"
     (.getPath from)
     (concat
       (flatten
@@ -81,12 +83,12 @@
                           (some? content-type)
                           (pos? (.available input-stream)))
                    (let [[_ ext]  (str/split content-type #"/")
-                         prefix   (core/encode (System/currentTimeMillis) 7)
+                         prefix   (posts/encode (System/currentTimeMillis) 7)
                          original (io/file dir (str prefix ".orig." ext))]
                      (io/copy input-stream original)
                      (cond+
                        ;; video
-                       (str/starts-with? content-type "video/")
+                       (mime/video? content-type)
                        (assoc draft
                          :picture
                          { :url          (.getName original)
@@ -104,7 +106,7 @@
                              :content-type content-type
                              :dimensions   (video-dimensions original)}))
 
-                       (not (str/starts-with? content-type "image/"))
+                       (not (mime/image? content-type))
                        (throw (ex-info (str "Unknown content-type: " content-type) {:content-type content-type}))
 
                        :let [[w h] (image-dimensions original)]
@@ -156,7 +158,7 @@
 
 
 (defn update-post! [post-id f]
-  (let [post  (core/get-post post-id)
+  (let [post  (posts/get-post post-id)
         post' (f post)]
     (spit (io/file (str "grumpy_data/posts/" post-id) "post.edn") (pr-str post'))))
 
@@ -166,7 +168,7 @@
         draft-dir (io/file (str "grumpy_data/drafts/" post-id))]
     ;; clean up old post
     (when-not new?
-      (let [old (core/get-post post-id)]
+      (let [old (posts/get-post post-id)]
         (.delete (io/file (str "grumpy_data/posts/" post-id "/post.edn")))
         (doseq [key   [:picture :picture-original]
                 :let  [pic (get old key)]
@@ -197,13 +199,13 @@
       (.delete draft-dir)
 
       (if new?
-        (core/try-async
+        (jobs/try-async
           "telegram/post-picture!"
           #(update-post! (:id post) telegram/post-picture!)
-          { :after (fn [_] (core/try-async
+          { :after (fn [_] (jobs/try-async
                              "telegram/post-text!"
                              #(update-post! (:id post) telegram/post-text!))) })
-        (core/try-async
+        (jobs/try-async
           "telegram/update-text!"
           #(telegram/update-text! post)))
 
@@ -230,12 +232,12 @@
                :post-id post-id
                :post    post
                :user    user }]
-    (core/page { :title (if new? "Edit draft" "Edit post")
-                 :styles ["editor.css"]
-                 :subtitle? false }
+    (web/page {:title (if new? "Edit draft" "Edit post")
+               :styles ["editor.css"]
+               :subtitle? false }
       [:.mount { :data (pr-str data) }
         #_(editor/editor (assoc data :server? true))] ;; TODO
-      [:script { :src (str "/" (core/checksum-resource "static/editor.js")) }]
+      [:script { :src (str "/" (web/checksum-resource "static/editor.js")) }]
       [:script { :dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();" }}])))
 
 
@@ -248,25 +250,25 @@
      interceptors
      (fn [req]
        (let [user (auth/user req)]
-         (core/html-response (edit-post-page (str "@" user) user))))]
+         (web/html-response (edit-post-page (str "@" user) user))))]
 
     [:get "/post/:post-id/edit"
      interceptors
      (fn [{{:keys [post-id]} :path-params :as req}]
-       (core/html-response (edit-post-page post-id (auth/user req))))]
+       (web/html-response (edit-post-page post-id (auth/user req))))]
 
    [:post "/post/:post-id/save"
     interceptors
     (fn [{{:keys [post-id]} :path-params, body :body :as req}]
       (let [payload (transit/read-transit body)
             saved   (save-post! post-id (:post payload))]
-        (core/transit-response {:post saved})))]
+        (web/transit-response {:post saved})))]
 
    [:post "/post/:post-id/upload"
     interceptors
     (fn [{{:keys [post-id]} :path-params, body :body :as req}]
       (let [saved (save-picture! post-id (get-in req [:headers "content-type"]) body)]
-        (core/transit-response {:post saved})))]
+        (web/transit-response {:post saved})))]
 
    [:post "/post/:post-id/publish"
     interceptors
@@ -274,7 +276,7 @@
       (let [payload (transit/read-transit body)
             _       (save-post! post-id (:post payload))
             post'   (publish! post-id)]
-        (core/transit-response {:post post'})))]
+        (web/transit-response {:post post'})))]
 
    [:post "/draft/:post-id/delete"
     interceptors
@@ -285,8 +287,8 @@
    [:get "/post/:post-id/delete"
     interceptors
     (fn [{{:keys [post-id]} :path-params :as req}]
-      (core/delete-dir (str "grumpy_data/posts/" post-id))
-      (core/redirect "/"))]
+      (files/delete-dir (str "grumpy_data/posts/" post-id))
+      (web/redirect "/"))]
 
    [:get "/draft/:post-id/:img"
     [auth/populate-session]
@@ -304,4 +306,4 @@
          :body   body
          :author author}
         (when (some-> picture :size pos?) picture))
-      (core/redirect "/"))]))
+      (web/redirect "/"))]))

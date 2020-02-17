@@ -1,13 +1,12 @@
 (ns grumpy.feed
   (:require
-   [clojure.string :as str]
-   [rum.core :as rum]
-   [ring.util.mime-type :as mime-type]
-   [grumpy.xml :as xml]
-   [grumpy.base :as base]
-   [grumpy.time :as time]
-   [grumpy.core :as core]
-   [grumpy.config :as config]))
+   [grumpy.core.config :as config]
+   [grumpy.core.fragments :as fragments]
+   [grumpy.core.mime :as mime]
+   [grumpy.core.posts :as posts]
+   [grumpy.core.time :as time]
+   [grumpy.core.xml :as xml]
+   [rum.core :as rum]))
 
 
 (defn max-date [posts]
@@ -18,7 +17,7 @@
 
 
 (defn feed [post-ids]
-  (let [posts    (map core/get-post post-ids)
+  (let [posts    (map posts/get-post post-ids)
         updated  (or (max-date posts) (time/now))
         hostname (config/get ::config/hostname)]
     (xml/emit
@@ -36,10 +35,10 @@
               :rel  "alternate"}]
       [:id {} (str hostname "/")]
       [:updated {} (time/format-iso-inst updated)]
-      (for [author base/authors]
+      (for [author fragments/authors]
         [:author {} [:name {} (:user author)]])
       (for [post posts
-            :let [author (base/author-by :user (:author post))
+            :let [author (fragments/author-by :user (:author post))
                   url    (str hostname "/post/" (:id post))]]
         [:entry {}
          [:title {} (format "%s is being grumpy" (:author post))]
@@ -48,7 +47,7 @@
                  :href url}]
          (when-some [pic (some-> post :picture)]
            [:link {:rel  "enclosure"
-                   :type (core/mime-type (:url pic))
+                   :type (mime/mime-type (:url pic))
                    :href (str url "/" (:url pic))}])
          [:id {} url]
          [:published {} (time/format-iso-inst (:created post))]
@@ -59,16 +58,16 @@
              (when-some [pic (:picture post)]
                (let [src (str url "/" (:url pic))]
                  [:p {}
-                   (case (core/content-type pic)
-                     :content.type/video
+                   (case (mime/type pic)
+                     :mime.type/video
                        [:video
                          { :autoplay "autoplay"
                            :loop "loop"
                            :style { :max-width 550 :height "auto" :max-height 500 }}
-                         [:source {:type (core/mime-type (:url pic)) :src src}]]
-                     :content.type/image
+                         [:source {:type (mime/mime-type (:url pic)) :src src}]]
+                     :mime.type/image
                        (let [img (if-some [[w h] (:dimensions pic)]
-                                   (let [[w' h'] (core/fit w h 550 500)]
+                                   (let [[w' h'] (fragments/fit w h 550 500)]
                                      [:img { :src src
                                              :style { :width w'
                                                       :height h' }
@@ -81,7 +80,7 @@
                        (if-some [orig (:picture-original post)]
                          [:a { :href (str url "/" (:url orig)) } img]
                          img)))])))
-           (core/format-text
+           (fragments/format-text
              (str
                (rum/render-static-markup
                  [:strong {} (format "%s: " (:author post))])

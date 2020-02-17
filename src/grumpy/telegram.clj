@@ -1,10 +1,12 @@
 (ns grumpy.telegram
   (:require
-   [clojure.string :as str]
    [clj-http.client :as http]
-   [grumpy.base :as base]
-   [grumpy.core :as core]
-   [grumpy.config :as config]))
+   [clojure.string :as str]
+   [grumpy.core.coll :as coll]
+   [grumpy.core.config :as config]
+   [grumpy.core.fragments :as fragments]
+   [grumpy.core.log :as log]
+   [grumpy.core.mime :as mime]))
 
 
 (def ^:dynamic token
@@ -28,11 +30,11 @@
       (catch Exception e
         (cond
           (re-find #"Bad Request: message is not modified" (:body (ex-data e)))
-          (core/log "Telegram request failed:" url' (pr-str params'))
+          (log/log "Telegram request failed:" url' (pr-str params'))
 
           :else
           (do
-            (core/log "Telegram request failed:" url' (pr-str params'))
+            (log/log "Telegram request failed:" url' (pr-str params'))
             (throw e)))))))
 
 
@@ -51,10 +53,10 @@
        :else
        (let [picture (get post key)
              url     (str (config/get ::config/hostname) "/post/" (:id post) "/" (:url picture))
-             resp    (case (core/content-type picture)
-                       :content.type/video (post! (str "@" channel) "/sendVideo" {:video url})
-                       :content.type/image (post! (str "@" channel) "/sendPhoto" {:photo url}))]
-         (update post :reposts base/conjv
+             resp    (case (mime/type picture)
+                       :mime.type/video (post! (str "@" channel) "/sendVideo" {:video url})
+                       :mime.type/image (post! (str "@" channel) "/sendPhoto" {:photo url}))]
+         (update post :reposts coll/conjv
            { :type                :telegram/photo
              :telegram/channel    channel
              :telegram/message_id (get-in resp ["result" "message_id"])
@@ -62,7 +64,7 @@
 
 
 (defn format-user [user]
-  (if-some [telegram-user (:telegram/user (base/author-by :user user))]
+  (if-some [telegram-user (:telegram/user (fragments/author-by :user user))]
     (str "@" telegram-user)
     (str "@" user)))
 
@@ -79,7 +81,7 @@
                   {:text (str (format-user (:author post)) ": " (:body post))
                    ; :parse_mode "Markdown"
                    :disable_web_page_preview "true"})]
-       (update post :reposts base/conjv
+       (update post :reposts coll/conjv
          {:type                :telegram/text
           :telegram/channel    channel
           :telegram/message_id (get-in resp ["result" "message_id"]) })))))

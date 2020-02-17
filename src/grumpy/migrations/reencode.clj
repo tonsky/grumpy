@@ -2,14 +2,16 @@
   (:require
    [clojure.string :as str]
    [clojure.java.io :as io]
-   [grumpy.core :as core]
+   [grumpy.core.log :as log]
+   [grumpy.core.jobs :as jobs]
+   [grumpy.core.posts :as posts]
    [grumpy.video :as video]))
 
 
 (defn -main [& args]
-  (core/log "Converting videos...")
-  (doseq [id (core/post-ids)
-          :let [post (core/get-post id)
+  (log/log "Converting videos...")
+  (doseq [id (posts/post-ids)
+          :let [post (posts/get-post id)
                 pic  (:picture post)]
           :when (some? pic)
           :when (nil? (:picture-original post))
@@ -17,9 +19,9 @@
           :when (str/starts-with? (:content-type pic) "video/")]
     (let [dir        (io/file (str "grumpy_data/posts/" id))
           [name ext] (str/split (:url pic) #"\.")
-          _          (core/log "  converting" id "/" (:url pic))
+          _          (log/log "  converting" id "/" (:url pic))
           original   (io/file dir (str name ".orig." ext))
-          _          (core/sh "mv"
+          _          (jobs/sh "mv"
                        (str "grumpy_data/posts/" id "/" (:url pic))
                        (.getPath original))
           converted  (io/file dir (str name ".mp4"))
@@ -34,5 +36,5 @@
                          :url        (.getName original)
                          :dimensions (video/dimensions original)))]
       (spit (io/file dir "post.edn") (pr-str post'))))
-  (core/log "Done converting videos")
+  (log/log "Done converting videos")
   (shutdown-agents))

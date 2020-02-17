@@ -1,8 +1,7 @@
 (ns grumpy.migrations
   (:require
-   [clojure.edn :as edn]
-   [grumpy.core :as core]
-   [grumpy.config :as config]
+   [grumpy.core.config :as config]
+   [grumpy.core.log :as log]
    [grumpy.migrations.to-2 :as migrations.to-2]
    [grumpy.migrations.to-3 :as migrations.to-3]
    [grumpy.migrations.to-4 :as migrations.to-4]))
@@ -10,7 +9,7 @@
 
 (defn maybe-migrate-to [version f]
   (when (< (config/get :grumpy.db/version (constantly 1)) version)
-    (core/log "Migrating DB to version" version)
+    (log/log "Migrating DB to version" version)
     (f)
     (config/set :grumpy.db/version version)))
 

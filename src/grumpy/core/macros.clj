@@ -1,4 +1,4 @@
-(ns grumpy.macros)
+(ns grumpy.core.macros)
 
 
 (defmacro oget [obj key]

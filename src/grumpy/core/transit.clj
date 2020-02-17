@@ -1,10 +1,10 @@
-(ns grumpy.transit
+(ns grumpy.core.transit
   (:require
-    [cognitect.transit :as t])
+   [cognitect.transit :as t])
   (:import
-    [java.io ByteArrayInputStream ByteArrayOutputStream]
-    [java.time Instant]
-    [com.cognitect.transit WriteHandler ReadHandler]))
+   [java.io ByteArrayInputStream ByteArrayOutputStream]
+   [java.time Instant]
+   [com.cognitect.transit WriteHandler ReadHandler]))
  
 
 (def ^:private reader-opts

@@ -6,7 +6,6 @@ body {
   padding: 0.25em 1em;
   max-width: 652px; /* .post_img =>> 550px */
   margin: 0 auto;
-  transition: 500ms ease-in-out;
 }
 
 .icon_rotate { width: 20px; height: 20px; display: inline-block; background: url("/static/rotate.svg"); margin: 5px 5px -5px -25px; } 
@@ -49,8 +48,8 @@ body.anonymous .title_new { display: none; }
 .post_video_overlay { position: absolute; top: 0; bottom: 0; left: 0; right: 0; cursor: pointer; }
 .post_video_overlay-paused { background-color: rgba(0,0,0,0.3); background-image: url("/static/play.svg"); background-size: contain; background-position: center center; background-repeat: no-repeat; }
 .post_video_overlay-paused:hover { background-color: rgba(0,0,0,0.25); }
-.post_img, .post_video { display: block; margin-bottom: 1em; }
-.post_img-fix { display: block; background-size: 100%; position: relative; }
+.post_img, .post_video { display: block; margin-bottom: 1em; position: relative; }
+.post_img-fix { display: block; background-size: 100%; }
 .post_img-fix > img { position: absolute; height: 100%; }
 .post_video,
 .post_img-flex > img { display: block; max-width: 100%; height: auto; max-height: 500px; }

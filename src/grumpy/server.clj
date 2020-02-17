@@ -12,6 +12,7 @@
    [io.pedestal.http.ring-middlewares :as middlewares]
 
    [grumpy.auth :as auth]
+   [grumpy.base :as base]
    [grumpy.feed :as feed]
    [grumpy.time :as time]
    [grumpy.core :as core]
@@ -29,10 +30,7 @@
   [:.post
     { :data-id (:id post) }
     [:.post_side
-      [:img.post_avatar
-        { :src (if (some? (core/author-by :user (:author post)))
-                 (str "/static/" (:author post) ".jpg")
-                 "/static/guest.jpg")}]]
+     [:img.post_avatar { :src (base/avatar-url (:author post))}]]
     [:.post_content
       (when-some [pic (:picture post)]
         (let [src (str "/post/" (:id post) "/" (:url pic))

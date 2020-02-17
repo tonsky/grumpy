@@ -3,6 +3,7 @@
    [clojure.string :as str]
    [clojure.java.io :as io]
    [clj-http.client :as http]
+   [grumpy.base :as base]
    [grumpy.core :as core]
    [grumpy.config :as config])
   (:import
@@ -79,9 +80,9 @@
 
 #_(defn estimate-progress [build-resp]
   (when-some [step (some-> (get build-resp "steps")
-                     (->> (core/seek #(= "$REMOTE_COMMAND" (get % "name"))))
+                     (->> (base/seek #(= "$REMOTE_COMMAND" (get % "name"))))
                      (get "actions")
-                     (->> (core/seek #(= "$REMOTE_COMMAND" (get % "name")))))]
+                     (->> (base/seek #(= "$REMOTE_COMMAND" (get % "name")))))]
     (when-some [output (request-circleci :get "/" (get build-resp "build_num") "/output/" (get step "step") "/" (get step "index"))]
       (when-some [last-message (-> (last output) (get "message"))]
         (when-some [[_ frame] (last (re-seq #"frame=\s*(\d+)" last-message))]

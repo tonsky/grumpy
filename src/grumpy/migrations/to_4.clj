@@ -3,6 +3,7 @@
    [grumpy.db :as db]
    [crux.api :as crux]
    [clojure.set :as set]
+   [grumpy.base :as base]
    [grumpy.core :as core]
    [com.stuartsierra.component :as component]))
 
@@ -57,7 +58,7 @@
   (core/delete-dir "grumpy_data/crux_backup")
   (let [{system :system :as crux} (-> (db/crux) (component/start))]
     (try
-      (doseq [[idx id] (core/zip
+      (doseq [[idx id] (base/zip
                          (range 1 Integer/MAX_VALUE)
                          (sort (core/post-ids)))]
         (core/log "Converting" id "->" idx)

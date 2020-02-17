@@ -2,6 +2,7 @@
   (:require
    [clojure.string :as str]
    [clj-http.client :as http]
+   [grumpy.base :as base]
    [grumpy.core :as core]
    [grumpy.config :as config]))
 
@@ -53,7 +54,7 @@
              resp    (case (core/content-type picture)
                        :content.type/video (post! (str "@" channel) "/sendVideo" {:video url})
                        :content.type/image (post! (str "@" channel) "/sendPhoto" {:photo url}))]
-         (update post :reposts core/conjv
+         (update post :reposts base/conjv
            { :type                :telegram/photo
              :telegram/channel    channel
              :telegram/message_id (get-in resp ["result" "message_id"])
@@ -61,7 +62,7 @@
 
 
 (defn format-user [user]
-  (if-some [telegram-user (:telegram/user (core/author-by :user user))]
+  (if-some [telegram-user (:telegram/user (base/author-by :user user))]
     (str "@" telegram-user)
     (str "@" user)))
 
@@ -78,7 +79,7 @@
                   {:text (str (format-user (:author post)) ": " (:body post))
                    ; :parse_mode "Markdown"
                    :disable_web_page_preview "true"})]
-       (update post :reposts core/conjv
+       (update post :reposts base/conjv
          {:type                :telegram/text
           :telegram/channel    channel
           :telegram/message_id (get-in resp ["result" "message_id"]) })))))

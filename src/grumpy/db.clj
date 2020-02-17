@@ -1,6 +1,7 @@
 (ns grumpy.db
   (:require
    [crux.api :as crux]
+   [grumpy.base :as base]
    [grumpy.core :as core]
    [compact-uuids.core :as uuid]
    [com.stuartsierra.component :as component]))
@@ -38,9 +39,9 @@
 
 (defn put
   ([entity]
-   [:crux.tx/put (:crux.db/id entity) (core/filtermv some? entity)])
+   [:crux.tx/put (:crux.db/id entity) (base/filtermv some? entity)])
   ([entity valid-time]
-   [:crux.tx/put (:crux.db/id entity) (core/filtermv some? entity) valid-time]))
+   [:crux.tx/put (:crux.db/id entity) (base/filtermv some? entity) valid-time]))
 
 
 (defn upsert [system attr document]
@@ -61,9 +62,9 @@
       (assoc
         :post/created (:crux.db/valid-time (last history))
         :post/updated (:crux.db/valid-time (first history)))
-      (core/update-some :post/picture entity)
-      (core/update-some :post/picture-original entity)
-      (core/update-some :post/reposts #(mapv entity %)))))
+      (base/update-some :post/picture entity)
+      (base/update-some :post/picture-original entity)
+      (base/update-some :post/reposts #(mapv entity %)))))
 
 
 (defn post-by-idx [system idx]

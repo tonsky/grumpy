@@ -8,6 +8,7 @@
     [clojure.java.shell :as shell]
     [ring.util.mime-type :as mime-type]
     [grumpy.time :as time]
+    [grumpy.base :as base]
     [grumpy.config :as config]
     [grumpy.transit :as transit])
   (:import
@@ -25,67 +26,11 @@
 (.mkdirs (io/file "grumpy_data"))
 
 
-(def authors
-  [{:email "niki@tonsky.me"
-    :user  "nikitonsky"
-    :telegram/user "nikitonsky" 
-    :telegram/user-chat "232806939"
-    :name  "Nikita Prokopov"
-    :url   "https://twitter.com/nikitonsky"}
-   {:email "freetonik@gmail.com"
-    :user  "freetonik"
-    :telegram/user "freetonik"
-    :name  "Rakhim Davletkaliyev"
-    :url   "https://twitter.com/freetonik"}
-   {:email "ivan@grishaev.me"
-    :user  "igrishaev"
-    :telegram/user "igrishaev"
-    :name  "Ivan Grishaev"
-    :url   "https://grishaev.me/"}
-   {:email "dmitrii@dmitriid.com"
-    :user  "dmitriid"
-    :telegram/user "mamutnespit"
-    :telegram/user-chat "303519462"
-    :name  "Dmitrii Dimandt"
-    :url   "https://twitter.com/dmitriid"}
-   {:email "ulyanovskui@gmail.com"
-    :user  "andreivoronin"
-    :telegram/user "andreuvoronin"
-    :name  "Andrei Voronin"
-    :url   "https://twitter.com/UlyanovskUI"}])
-
-
-(defn author-by [attr value]
-  (first (filter #(= (get % attr) value) authors)))
-
-
-(defn zip [coll1 coll2]
-  (map vector coll1 coll2))
-
-
-(defn conjv [v x]
-  (conj (vec v) x))
-
-
 (defn make-uuid
   ([hi]
    (UUID. hi (.nextLong (Random.))))
   ([hi low]
    (UUID. hi low)))
-
-
-(defn update-some [m key f & args]
-  (if-some [value (get m key)]
-    (assoc m key (apply f value args))
-    m))
-
-
-(defn filtermv [pred m]
-  (reduce-kv (fn [m k v] (if (pred v) (assoc m k v) m)) {} m))
-
-
-(defn seek [pred coll]
-  (reduce #(when (pred %2) (reduced %2)) nil coll))
 
 
 (def readers {'inst time/parse-iso-inst})
@@ -277,7 +222,7 @@
           [:.loader [:img { :src "/static/favicons/apple-touch-icon-152x152.png" }]])
         [:footer
           (interpose ", "
-            (for [author authors]
+            (for [author base/authors]
               [:a { :href (:url author) } (:name author)]))
           ". 2019. All fights retarded."]]]))
 

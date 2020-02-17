@@ -12,6 +12,7 @@
     [ring.middleware.session.cookie :as session.cookie]
     [io.pedestal.http.ring-middlewares :as middlewares]
     [grumpy.time :as time]
+    [grumpy.base :as base]
     [grumpy.core :as core]
     [grumpy.config :as config]
     [grumpy.routes :as routes]
@@ -152,7 +153,7 @@
 
 (defn handle-forbidden [{:keys [query-params cookies]}]
   (let [user   (get-in cookies ["grumpy_user" :value])
-        author (core/author-by :user user)
+        author (base/author-by :user user)
         handle (or (and (:telegram/user-chat author) (:telegram/user author))
                  (:email author))]
     (core/html-response (forbidden-page (:redirect-url query-params) handle))))
@@ -160,8 +161,8 @@
 
 (defn handle-send-link [{:keys [form-params] :as req}]
   (let [handle       (-> (:handle form-params) str/trim str/lower-case)
-        email-author (core/author-by :email handle)
-        tg-author    (core/author-by :telegram/user handle)
+        email-author (base/author-by :email handle)
+        tg-author    (base/author-by :telegram/user handle)
         user         (:user (or email-author tg-author))]
     (cond
       (nil? user)
@@ -204,8 +205,8 @@
 
 (defn handle-authenticate [{:keys [query-params]}] ;; ?handle=...&token=...&redirect-url=...
   (let [handle (:handle query-params)
-        author (or (core/author-by :email handle)
-                 (core/author-by :telegram/user handle))
+        author (or (base/author-by :email handle)
+                 (base/author-by :telegram/user handle))
         user   (:user author)
         redirect-url (if (str/blank? (:redirect-url query-params))
                        "/"

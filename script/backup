@@ -1,4 +1,3 @@
 #!/bin/bash -ex
 
 rsync -r grumpy:grumpy_data/posts grumpy_data/
-rsync grumpy:grumpy_data/DB_VERSION grumpy_data/

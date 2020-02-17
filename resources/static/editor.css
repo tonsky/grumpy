@@ -26,6 +26,7 @@ button:active { transform: translateY(1px); }
 .btn.tertiary { background: #fff; color: #000; }
 .btn.tertiary:hover,
 .btn.tertiary:active { background: #eee; }
+.btn.small { padding: 2px 16px; }
 
 /* EDIT POST */
 
@@ -43,8 +44,9 @@ button:active { transform: translateY(1px); }
 .upload > .top-right { top: 0; right: 0; border-right: 2px solid #6A7C8F; border-top: 2px solid #6A7C8F; border-top-right-radius: 6px; }
 .upload > .bottom-left { bottom: 0; left: 0; border-left: 2px solid #6A7C8F; border-bottom: 2px solid #6A7C8F; border-bottom-left-radius: 6px; }
 .upload > .bottom-right { bottom: 0; right: 0; border-right: 2px solid #6A7C8F; border-bottom: 2px solid #6A7C8F; border-bottom-right-radius: 6px; }
-.media-delete { width: 34px; height: 34px; border-radius: 20px; background-color: #fff; background-image: url(/static/editor/delete_closed.svg); background-position: 50% 50%; background-repeat: no-repeat; position: absolute; top: 10px; right: 10px; }
-.media-delete:hover { background-color: #fff; background-image: url(/static/editor/delete_open.svg); }
+
+.media-delete { width: 34px; height: 34px; border-radius: 20px; background-color: #fff; background-image: url(/static/editor/delete_closed.svg); background-position: 50% 50%; background-repeat: no-repeat; position: absolute; top: 10px; right: 10px; box-shadow: 0 0 5px #00000050; }
+.media-delete:hover { background-image: url(/static/editor/delete_open.svg); }
 
 .textarea { position: relative; }
 .textarea > textarea { display: block; margin: 0; height: 300px; resize: none; }
@@ -53,7 +55,7 @@ button:active { transform: translateY(1px); }
 .textarea > .handle > .rope { width: 2px; height: 35px; background: #6A7C8F; margin: 0; }
 .textarea > .handle > .ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #6A7C8F; cursor: pointer; }
 
-.extra-col { grid-area: extra-col; grid-template-columns: min-content auto; grid-template-areas: "author-label author-input" "tags-label tags-input" "status-label status"; }
+.extra-col { grid-area: extra-col; grid-template-columns: min-content auto; grid-template-areas: "author-label author-input" "status-label status"; }
 
 .author-label { grid-area: author-label; }
 .author-input { grid-area: author-input; max-width: 180px; }
@@ -81,8 +83,8 @@ button:active { transform: translateY(1px); }
 @media (min-width: 922px) {
   body { max-width: 922px; }
   .editor { grid-template-columns: 50px 550px 250px; grid-template-areas: "post_avatar editing-col extra-col" ". post-post post-delete"; }
-  .extra-col { grid-template-columns: auto; grid-template-areas: "author-label" "author-input" "tags-label" "tags-input" "status-label" "status"; }
-  .author-label, .tags-label, .status-label { margin-bottom: -10px; }
+  .extra-col { grid-template-columns: auto; grid-template-areas: "author-label" "author-input" "status-label" "status"; }
+  .author-label, .status-label { margin-bottom: -10px; }
   .author-input { max-width: unset; }
   .post-delete { justify-self: left; }
 }

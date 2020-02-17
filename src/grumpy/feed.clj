@@ -4,6 +4,7 @@
    [rum.core :as rum]
    [ring.util.mime-type :as mime-type]
    [grumpy.xml :as xml]
+   [grumpy.base :as base]
    [grumpy.time :as time]
    [grumpy.core :as core]
    [grumpy.config :as config]))
@@ -35,10 +36,10 @@
               :rel  "alternate"}]
       [:id {} (str hostname "/")]
       [:updated {} (time/format-iso-inst updated)]
-      (for [author core/authors]
+      (for [author base/authors]
         [:author {} [:name {} (:user author)]])
       (for [post posts
-            :let [author (core/author-by :user (:author post))
+            :let [author (base/author-by :user (:author post))
                   url    (str hostname "/post/" (:id post))]]
         [:entry {}
          [:title {} (format "%s is being grumpy" (:author post))]

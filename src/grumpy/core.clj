@@ -224,7 +224,7 @@
           (interpose ", "
             (for [author base/authors]
               [:a { :href (:url author) } (:name author)]))
-          ". 2019. All fights retarded."]]]))
+          "and contributors. 2018–2222. All fights retarded."]]]))
 
 
 (defn html-response [component]

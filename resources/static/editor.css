@@ -45,8 +45,9 @@ button:active { transform: translateY(1px); }
 .upload > .bottom-left { bottom: 0; left: 0; border-left: 2px solid #6A7C8F; border-bottom: 2px solid #6A7C8F; border-bottom-left-radius: 6px; }
 .upload > .bottom-right { bottom: 0; right: 0; border-right: 2px solid #6A7C8F; border-bottom: 2px solid #6A7C8F; border-bottom-right-radius: 6px; }
 
-.media-delete { width: 34px; height: 34px; border-radius: 20px; background-color: #fff; background-image: url(/static/editor/delete_closed.svg); background-position: 50% 50%; background-repeat: no-repeat; position: absolute; top: 10px; right: 10px; box-shadow: 0 0 5px #00000050; }
-.media-delete:hover { background-image: url(/static/editor/delete_open.svg); }
+.post_img-flex > img, .media-delete { display: inline-block; }
+.media-delete { width: 32px; height: 32px; position: absolute; margin-left: 14px; background-image: url(/static/editor/delete.svg); }
+.media-delete:hover { background-position: -100% 0; }
 
 .textarea { position: relative; }
 .textarea > textarea { display: block; margin: 0; height: 300px; resize: none; }
@@ -78,13 +79,4 @@ button:active { transform: translateY(1px); }
   body { max-width: 582px; }
   .editor { max-width: 550px; grid-template-columns: min-content auto; grid-template-areas: "editing-col editing-col" "extra-col extra-col" "post-post post-delete"; }
   .editor .post_avatar { display: none; }
-}
-
-@media (min-width: 922px) {
-  body { max-width: 922px; }
-  .editor { grid-template-columns: 50px 550px 250px; grid-template-areas: "post_avatar editing-col extra-col" ". post-post post-delete"; }
-  .extra-col { grid-template-columns: auto; grid-template-areas: "author-label" "author-input" "status-label" "status"; }
-  .author-label, .status-label { margin-bottom: -10px; }
-  .author-input { max-width: unset; }
-  .post-delete { justify-self: left; }
 }

@@ -1,4 +1,4 @@
-(ns grumpy.system
+(ns grumpy.main
   (:require
    [com.stuartsierra.component :as component]
    ; [grumpy.db :as db]

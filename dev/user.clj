@@ -38,7 +38,7 @@
   ([] (start {}))
   ([opts]
     (let [opts' (merge-with merge {:server {:host "0.0.0.0"}} opts)]
-      (when-some [f (resolve 'grumpy.system/system)]
+      (when-some [f (resolve 'grumpy.main/system)]
         (when-some [system (f opts')]
           (when-some [system' (component/start system)]
             (reset! *system system')))))))

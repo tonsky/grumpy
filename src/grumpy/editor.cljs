@@ -20,7 +20,8 @@
       (if (some? picture)
         [:.post_img.post_img-flex
          [:img {:src (:url picture)}]
-         [:.media-delete.cursor-pointer]]
+         [:.media-delete.cursor-pointer]
+         [:.status "> Saved"]]
         [:.upload.no-select.cursor-pointer
          [:.corner.top-left]
          [:.corner.top-right]
@@ -29,33 +30,24 @@
          [:.label "Drag media here"]])
 
       [:.textarea
-       [:textarea {:placeholder "Be grumpy here..." :value body}]
+       [:.input
+        [:textarea {:placeholder "Be grumpy here..." :default-value body}]]
        [:.handle.column.center
         [:.rope]
         [:.ring.cursor-pointer]]]]
-
-     [:.extra-col.self-hstretch.grid.middle
-      [:.author-label.cursor-default "Author"]
-      [:input.author-input {:type "text" :value author}]
-
-      [:.status-label.cursor-default "Status"]
-      [:.status.row.cursor-default
-       [:.icon]
-       [:.label "Saved"]]]
 
      [:button.post-post.row
       [:img.button {:src "/static/editor/post_button.svg"}]
       [:img.hand {:src "/static/editor/post_hand.svg"}]
       [:.label (if (some? id) "Update" "POST")]]
 
-     [:button.post-delete.self-middle.btn.secondary
+     [:button.post-delete.btn.self-middle
        (if (some? id) "Cancel edit" "Delete draft")]]))
 
 
 (def debug-states
   [["New"              {}]
    ["Another author"   {:post {:author "freetonik"}}]
-   ["Anonymous author" {:post {:author "abc"}}]
    ["Body changed"     {:post {:body "Hello, world!"}}]
    ["Dragged"          {}]
    ["Sending"          {:post {:picture {:url "/post/0THGrh25y/M0C_mT1.orig.png"}}}]

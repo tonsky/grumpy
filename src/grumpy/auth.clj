@@ -140,10 +140,11 @@
       :method "post" }
      [:div "E-mail or Telegram user:"]
      [:div
+      [:.input
       [:input {:type "text"
                :name "handle"
                :autofocus true
-               :value handle}]
+               :value handle}]]
       [:input {:type "hidden" :name "redirect-url" :value redirect-url}]]
      [:div
       [:button.btn "Send authenticate link"]]]))

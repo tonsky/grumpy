@@ -2,8 +2,8 @@
   (:require
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [grumpy.core.coll :as coll]
-   [grumpy.core.files :as files])
+   [grumpy.core.files :as files]
+   [grumpy.core.jobs :as jobs])
   (:import
    [java.io File]
    [java.time Instant]))
@@ -63,25 +63,14 @@
           nil))))
 
 
-(defonce **agents (atom {})) ;; post-id -> agent
+(defonce **post-agents (jobs/jobs-pool)) ;; post-id -> agent
 
 
-(defn schedule! [post-id f]
-  (let [*a   (-> (swap! **agents coll/assoc-new post-id (agent nil))
-               (get post-id))
-        *res (promise)]
-    (send *a (fn [_] (deliver *res (f)) nil))
-    *res))
-
-
-(defn- update-draft-impl! [post-id update-fn]
-  (let [draft  (get-draft post-id)
-        draft' (update-fn draft)
-        dir    (str "grumpy_data/drafts/" post-id)
-        file   (io/file dir "post.edn")]
-    (spit (io/file file) (pr-str draft'))
-    draft'))
-
-
-(defn update-draft! [draft-id update-fn]
-  @(schedule! draft-id #(update-draft-impl! draft-id update-fn)))
+(defn update-draft! [post-id update-fn]
+  (jobs/linearize **post-agents post-id
+    #(let [draft  (get-draft post-id)
+           draft' (update-fn draft)
+           dir    (str "grumpy_data/drafts/" post-id)
+           file   (io/file dir "post.edn")]
+       (spit (io/file file) (pr-str draft'))
+       draft')))

@@ -2,6 +2,7 @@
   (:require
    [clojure.java.shell :as shell]
    [clojure.string :as str]
+   [grumpy.core.coll :as coll]
    [grumpy.core.log :as log]))
 
 
@@ -40,3 +41,33 @@
       res
       (throw (ex-info (str "External process failed: " (str/join " " args) " returned " exit)
                (assoc res :args args))))))
+
+
+(defn jobs-pool [] (atom {}))
+
+
+(defn linearize-async [**pool id f]
+  (let [*a   (-> (swap! **pool coll/assoc-new id (agent nil))
+               (get id))
+        *res (promise)]
+    (send *a
+      (fn [_]
+        (try
+          (deliver *res [:success (f)])
+          nil
+          (catch Throwable t
+            (deliver *res [:throwable t])))))
+    *res))
+
+
+(defn block [*promise timeout]
+  (let [[status value] (deref *promise timeout [:timeout])]
+    (case status
+      :success   value
+      :throwable (throw value)
+      :timeout   (throw (java.util.concurrent.TimeoutException.)))))
+ 
+
+(defn linearize [**pool id f]
+  (-> (linearize-async **pool id f)
+    (block 60000)))

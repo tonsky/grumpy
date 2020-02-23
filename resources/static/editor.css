@@ -13,22 +13,22 @@ textarea[disabled], input[type=text][disabled] { background-color: #EEE; color: 
 
 button { border: none; padding: 0; }
 
-.btn { padding: 6px 30px 4px; background: #D5D1C9; color: black; border: none; position: relative; border: 1px solid #000; }
+.btn { padding: 6px 30px 5px; background: #D5D1C9; color: black; border: none; position: relative; border: 1px solid #000; }
 .btn:before { border-top: 1px solid #FFF; border-left: 1px solid #FFF; border-right: 1px solid #3d3d3d; border-bottom: 1px solid #3d3d3d; content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0; }
 .btn:after { border-top: 1px solid #D5D1C9; border-left: 1px solid #D5D1C9; border-right: 1px solid #808080; border-bottom: 1px solid #808080; content: ''; position: absolute; top: 1px; right: 1px; bottom: 1px; left: 1px; }
-.btn:active { padding: 7px 29px 3px 31px; }
+.btn:active { padding: 7px 29px 4px 31px; }
 .btn:active:before, .btn:active:after { border: none; }
 
 /* EDIT POST */
 
-.editor { max-width: 620px; grid-template-columns: 50px min-content auto; grid-template-areas: "post_avatar editing-col editing-col" ". post-post post-delete"; }
+.editor { max-width: 620px; grid-template-columns: 50px min-content auto; grid-template-areas: "post_avatar editing-col editing-col" ". post-primary post-secondary"; }
 
 .editor .post_avatar { grid-area: post_avatar; }
 
 .editing-col { grid-area: editing-col; }
 
 .upload { height: 75px; background: #f5f5f0; border-radius: 6px; display: flex; justify-content: center; align-items: center; position: relative; }
-.upload:hover { background: #f5f5f5; }
+.upload:hover > .corner { border-color: #3d3d3d; }
 .upload > .label { color: #AAA; }
 .upload > .corner { position: absolute; width: 12px; height: 12px; }
 .upload > .top-left { top: 0; left: 0; border-left: 2px solid #808070; border-top: 2px solid #808070; border-top-left-radius: 0px; }
@@ -37,7 +37,7 @@ button { border: none; padding: 0; }
 .upload > .bottom-right { bottom: 0; right: 0; border-right: 2px solid #808070; border-bottom: 2px solid #808070; border-bottom-right-radius: 0px; }
 
 .post_img-flex { display: flex; margin-right: -46px; }
-.post_img-flex > img { border: 1px solid #00000030; max-width: 550px; }
+.post_img-flex > img { max-width: 550px; }
 .media-delete { width: 32px; height: 32px; margin-left: 14px; background-image: url(/static/editor/delete.svg); }
 .media-delete:hover { background-position: -100% 0; }
   
@@ -53,7 +53,7 @@ button { border: none; padding: 0; }
 
 .extra-col { grid-area: extra-col; grid-template-columns: min-content auto; grid-template-areas: "status-label status"; }
 
-.post-post { padding: 0; height: 74px; border: none; font-weight: bold; background-color: #C64A42; color: white; position: relative; box-shadow: 0 4px 0 #961A12; grid-area: post-post; }
+.post-post { padding: 0; height: 74px; border: none; font-weight: bold; background-color: #C64A42; color: white; position: relative; box-shadow: 0 4px 0 #961A12; grid-area: post-primary; }
 .post-post:active { box-shadow: 0 0 0 #961A12; transform: translateY(4px); }
 .post-post > .hand { position: absolute; left: 0; bottom: 22px; }
 .post-post:hover > .hand { transform: translateY(-12px); }
@@ -61,7 +61,9 @@ button { border: none; padding: 0; }
 .post-post > .button { position: absolute; left: 28px; bottom: 0; }
 .post-post > .label { margin: 0 24px 0 103px; font-size: 36px; line-height: 36px; align-self: center; letter-spacing: 1px; }
 
-.post-delete { grid-area: post-delete; justify-self: right; }
+.post-delete { grid-area: post-secondary;}
+.post-update { grid-area: post-primary; }
+.post-cancel { grid-area: post-secondary; }
 
 @media (max-width: 651px) {
   body { max-width: 582px; }

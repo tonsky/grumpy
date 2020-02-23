@@ -16,3 +16,4 @@ backup.sh
 *.sublime-project
 /.cpcache*
 .DS_Store
+cleanup.clj

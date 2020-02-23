@@ -21,3 +21,16 @@
 
 (defn seek [pred coll]
   (reduce #(when (pred %2) (reduced %2)) nil coll))
+
+
+(defn assoc-new [m k v]
+  (if (contains? m k)
+    m
+    (assoc m k v)))
+
+
+(defn deep-merge [o1 o2]
+  (if (and (map? o1) (map? o2))
+    (merge-with deep-merge o1 o2)
+    o2))
+

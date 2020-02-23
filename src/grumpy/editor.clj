@@ -22,35 +22,6 @@
    [java.io File InputStream]))
 
 
-(defn next-post-id [^java.time.Instant inst]
-  (str
-    (posts/encode (quot (.toEpochMilli inst) 1000) 6)
-    (posts/encode (rand-int (* 64 64 64)) 3)))
-
-
-(defn copy-dir [^File from ^File to]
-  (.mkdirs to)
-  (doseq [name (files/list-files from)
-          :let [file (io/file from name)]]
-    (io/copy file (io/file to name))))
-
-
-(defn get-draft [post-id]
-  (let [draft    (io/file (str "grumpy_data/drafts/" post-id "/post.edn"))
-        original (io/file (str "grumpy_data/posts/" post-id "/post.edn"))]
-    (cond
-      (.exists draft)
-        (files/read-edn-string (slurp draft))
-      (.exists original)
-        (do
-          (copy-dir (io/file (str "grumpy_data/posts/" post-id)) (io/file (str "grumpy_data/drafts/" post-id)))
-          (files/read-edn-string (slurp draft)))
-      :else
-        (do
-          (.mkdirs (io/file (str "grumpy_data/drafts/" post-id "/")))
-          nil))))
-
-
 (defn image-dimensions [^File file]
   (let [out (:out (jobs/sh "convert" (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
         [w h] (edn/read-string out)]
@@ -71,7 +42,7 @@
 
 
 (defn save-picture! [post-id content-type ^InputStream input-stream]
-  (let [draft (get-draft post-id)
+  (let [draft (posts/get-draft post-id)
         dir   (io/file (str "grumpy_data/drafts/" post-id))]
     (doseq [key   [:picture :picture-original]
             :let  [picture (get draft key)]
@@ -149,7 +120,7 @@
 
 
 (defn save-post! [post-id updates]
-  (let [draft  (get-draft post-id)
+  (let [draft  (posts/get-draft post-id)
         draft' (merge draft updates)
         dir    (str "grumpy_data/drafts/" post-id)
         file   (io/file dir "post.edn")]
@@ -176,10 +147,10 @@
           (.delete (io/file (str "grumpy_data/posts/" post-id "/" (:url pic)))))))
     ;; create/update new post
     (let [now  (time/now)
-          post (cond-> (get-draft post-id)
+          post (cond-> (posts/get-draft post-id)
                  true (assoc :updated now)
                  new? (assoc :created now
-                             :id (next-post-id now))) ;; assign post id
+                             :id (posts/next-post-id now))) ;; assign post id
           post-dir (io/file (str "grumpy_data/posts/" (:id post)))]
       ;; create new post dir
       (when new?
@@ -214,7 +185,7 @@
 
 (defn delete! [post-id]
   (let [dir   (io/file (str "grumpy_data/drafts/" post-id))
-        draft (get-draft post-id)]
+        draft (posts/get-draft post-id)]
     (doseq [key   [:picture :picture-original]
             :let  [pic (get draft key)]
             :when (some? pic)]
@@ -224,21 +195,21 @@
 
 
 (rum/defc edit-post-page [post-id user]
-  (let [post (or (get-draft (or post-id user))
-                 { :body ""
-                   :author user })
+  (let [post (or (posts/get-draft (or post-id user))
+                 {:body ""
+                  :author user})
         new? (str/starts-with? post-id "@")
-        data { :new?    new?
-               :post-id post-id
-               :post    post
-               :user    user }]
+        data {:new?    new?
+              :post-id post-id
+              :post    post
+              :user    user}]
     (web/page {:title (if new? "Edit draft" "Edit post")
                :styles ["editor.css"]
                :subtitle? false }
-      [:.mount { :data (pr-str data) }
+      [:.mount {:data (pr-str data)}
         #_(editor/editor (assoc data :server? true))] ;; TODO
       [:script { :src (str "/" (web/checksum-resource "static/editor.js")) }]
-      [:script { :dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();" }}])))
+      [:script { :dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();"}}])))
 
 
 (def ^:private interceptors [auth/populate-session auth/require-user])
@@ -263,6 +234,14 @@
       (let [payload (transit/read-transit body)
             saved   (save-post! post-id (:post payload))]
         (web/transit-response {:post saved})))]
+
+   [:post "/post/:post-id/update-body"
+    interceptors
+    (fn [{{:keys [post-id]} :path-params, body :body :as req}]
+      (let [payload (transit/read-transit body)
+            body    (:body (:post payload))
+            draft'  (posts/update-draft! post-id #(assoc % :body body))]
+        (web/transit-response {:post draft'})))]
 
    [:post "/post/:post-id/upload"
     interceptors

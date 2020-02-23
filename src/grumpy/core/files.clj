@@ -36,3 +36,10 @@
         (proxy [FilenameFilter] []
           (accept ^boolean [^File file ^String name]
             (boolean (re-matches re name))))))))
+
+
+(defn copy-dir [^File from ^File to]
+  (.mkdirs to)
+  (doseq [name (list-files from)
+          :let [file (io/file from name)]]
+    (io/copy file (io/file to name))))

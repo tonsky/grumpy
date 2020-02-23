@@ -108,20 +108,3 @@ footer {
 button, .no-select { user-select: none; -webkit-user-select: none; }
 .cursor-pointer { cursor: pointer; }
 .cursor-default { cursor: default; }
-
-.grid { display: grid; gap: 20px 20px; justify-items: start; align-items: start; }
-.grid.top    { align-items: start; }
-.grid.middle { align-items: center; }
-.grid.bottom { align-items: end; }
-.grid.left   { justify-items: start; }
-.grid.center { justify-items: center; }
-.grid.right  { justify-items: end; }
-
-.grid > .self-top { align-self: start; }
-.grid > .self-middle { align-self: center; }
-.grid > .self-bottom { align-self: end; }
-.grid > .self-left { justify-self: start; }
-.grid > .self-center { justify-self: center; }
-.grid > .self-right { justify-self: right; }
-.grid > .self-hstretch { justify-self: stretch; }
-.grid > .self-vstretch { align-self: stretch; }

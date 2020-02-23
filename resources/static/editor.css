@@ -5,7 +5,7 @@ textarea, input[type=text], button { font: inherit; outline: none; }
 .input { height: 32px; }
 .input { position: relative; border: 0px solid #d5d1c9; }
 .input:before { border-top: 1px solid #808080; border-right: 1px solid #D5D1C9; border-bottom: 1px solid #E5E1D9; border-left: 1px solid #808080; content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 0; }
-.input:after { border-top: 1px solid #3d3d3d; border-right: 1px solid #D5D1C9; border-bottom: 1px solid #E5E1D9; border-left: 1px solid #3d3d3d; content: ''; position: absolute; top: 1px; right: 1px; bottom: 1px; left: 1px; z-index: 1; }
+.input:after { border-top: 1px solid #3d3d3d; border-right: 1px solid #D5D1C9; border-bottom: 1px solid #E5E1D9; border-left: 1px solid #3d3d3d; content: ''; position: absolute; top: 1px; right: 1px; bottom: 1px; left: 1px; z-index: 1; background: #FFF; }
 .input > textarea,
 .input > input[type=text] { min-width: 100px; padding: 6px 6px 4px; background: transparent; border: none; height: 100%; width: 100%; margin: 0; position: absolute; z-index: 2; }
 
@@ -19,13 +19,12 @@ button { border: none; padding: 0; }
 .btn:active { padding: 7px 29px 4px 31px; }
 .btn:active:before, .btn:active:after { border: none; }
 
+button.inline { background: none; color: #00F; border-bottom: 1px dotted #00F; cursor: pointer; }
+button.inline:active { position: relative; top: 1px; }
+
 /* EDIT POST */
 
-.editor { max-width: 620px; grid-template-columns: 50px min-content auto; grid-template-areas: "post_avatar editing-col editing-col" ". post-primary post-secondary"; }
-
-.editor .post_avatar { grid-area: post_avatar; }
-
-.editing-col { grid-area: editing-col; }
+body.dragover { background-color: #afa; }
 
 .upload { height: 75px; background: #f5f5f0; border-radius: 6px; display: flex; justify-content: center; align-items: center; position: relative; }
 .upload:hover > .corner { border-color: #3d3d3d; }
@@ -36,10 +35,14 @@ button { border: none; padding: 0; }
 .upload > .bottom-left { bottom: 0; left: 0; border-left: 2px solid #808070; border-bottom: 2px solid #808070; border-bottom-left-radius: 0px; }
 .upload > .bottom-right { bottom: 0; right: 0; border-right: 2px solid #808070; border-bottom: 2px solid #808070; border-bottom-right-radius: 0px; }
 
-.post_img-flex { display: flex; margin-right: -46px; }
-.post_img-flex > img { max-width: 550px; }
-.media-delete { width: 32px; height: 32px; margin-left: 14px; background-image: url(/static/editor/delete.svg); }
+.media { position: relative; }
+.media-wrap { width: max-content; position: relative; }
+.media-wrap > img { display: block; max-width: 550px; max-height: 500px; }
+.media-delete { width: 32px; height: 32px; background-image: url(/static/editor/delete.svg); position: absolute; right: -46px; top: 0; }
 .media-delete:hover { background-position: -100% 0; }
+
+.upload-overlay { position: absolute; right: 0; left: 0; bottom: 0; background: #FFFFFFDD; }
+.upload-overlay-failed { position: absolute; top: 0; right: 0; left: 0; bottom: 0; background: #CC3333DD; }
   
 .status { position: absolute; left: 0px; bottom: 0px; background: #FFF; padding: 4px 10px; }
 
@@ -51,22 +54,10 @@ button { border: none; padding: 0; }
 .textarea > .handle > .rope { width: 2px; height: 35px; background: #808070; margin: 0; }
 .textarea > .handle > .ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #808070; cursor: pointer; }
 
-.extra-col { grid-area: extra-col; grid-template-columns: min-content auto; grid-template-areas: "status-label status"; }
-
-.post-post { padding: 0; height: 74px; border: none; font-weight: bold; background-color: #C64A42; color: white; position: relative; box-shadow: 0 4px 0 #961A12; grid-area: post-primary; }
+.post-post { padding: 0; height: 74px; border: none; font-weight: bold; background-color: #C64A42; color: white; position: relative; box-shadow: 0 4px 0 #961A12; }
 .post-post:active { box-shadow: 0 0 0 #961A12; transform: translateY(4px); }
 .post-post > .hand { position: absolute; left: 0; bottom: 22px; }
 .post-post:hover > .hand { transform: translateY(-12px); }
 .post-post:active > .hand { transform: translateY(15px); }
 .post-post > .button { position: absolute; left: 28px; bottom: 0; }
 .post-post > .label { margin: 0 24px 0 103px; font-size: 36px; line-height: 36px; align-self: center; letter-spacing: 1px; }
-
-.post-delete { grid-area: post-secondary;}
-.post-update { grid-area: post-primary; }
-.post-cancel { grid-area: post-secondary; }
-
-@media (max-width: 651px) {
-  body { max-width: 582px; }
-  .editor { max-width: 550px; grid-template-columns: min-content auto; grid-template-areas: "editing-col editing-col" "extra-col extra-col" "post-post post-delete"; }
-  .editor .post_avatar { display: none; }
-}

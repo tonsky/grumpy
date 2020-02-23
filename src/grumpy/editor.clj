@@ -5,6 +5,7 @@
    [clojure.string :as str]
    [io.pedestal.http.ring-middlewares :as middlewares]
    [grumpy.auth :as auth]
+   [grumpy.core.config :as config]
    [grumpy.core.files :as files]
    [grumpy.core.jobs :as jobs]
    [grumpy.core.macros :refer [cond+]]
@@ -89,7 +90,7 @@
                                     :content-type content-type
                                     :dimensions [w h] })
 
-                      :let [resize? (or (> w 1100) (> h 1000))]
+                       :let [resize? (or (> w 1100) (> h 1000))]
 
                        ;; small jpeg
                        (and (= "image/jpeg" content-type) (not resize?))
@@ -238,6 +239,10 @@
    [:post "/post/:post-id/update-body"
     interceptors
     (fn [{{:keys [post-id]} :path-params, body :body :as req}]
+      (when config/dev?
+        (Thread/sleep 1000)
+        (when (> (rand) 0.3)
+          (throw (ex-info "Dev simulated exception" {}))))
       (let [payload (transit/read-transit body)
             body    (:body (:post payload))
             draft'  (posts/update-draft! post-id #(assoc % :body body))]

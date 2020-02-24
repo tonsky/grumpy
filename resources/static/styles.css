@@ -108,3 +108,5 @@ footer {
 button, .no-select { user-select: none; -webkit-user-select: none; }
 .cursor-pointer { cursor: pointer; }
 .cursor-default { cursor: default; }
+
+.no-display { display: none; }

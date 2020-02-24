@@ -9,15 +9,15 @@
 (def AUTOSAVE_PERIOD_MS 1000) ;; FIXME
 
 
-(declare body->saving)
+(declare to-saving)
 
 
-(defn schedule-body->saving [*form]
+(defn schedule-to-saving [*form]
   (when (nil? (:body/timer @*form))
-    (swap! *form assoc :body/timer (js/setTimeout #(body->saving *form) AUTOSAVE_PERIOD_MS))))
+    (swap! *form assoc :body/timer (js/setTimeout #(to-saving *form) AUTOSAVE_PERIOD_MS))))
 
 
-(defn body->idle [*form saved]
+(defn to-idle [*form saved]
   (when (= (:body/edited @*form) saved)
     (swap! *form #(-> %
                     (dissoc :body/edited)
@@ -26,14 +26,14 @@
                     (assoc-in [:post :body] saved)))))
 
 
-(defn body->failed [*form msg]
+(defn to-failed [*form msg]
   (swap! *form assoc
     :body/status :body.status/failed
     :body.status/message msg)
-  (schedule-body->saving *form))
+  (schedule-to-saving *form))
 
 
-(defn body->saving [*form]
+(defn to-saving [*form]
   (let [form @*form
         edited (:body/edited form)]
     (when (not= edited (:body (:post form)))
@@ -42,16 +42,16 @@
                       (assoc :body/status :body.status/saving)))
       (fetch/fetch! "POST" (str "/post/" (:post-id form) "/update-body")
         {:body    (transit/write-transit-str {:post {:body edited}})
-         :success (fn [payload] (body->idle *form edited))
-         :error   (fn [payload] (body->failed *form payload))}))))
+         :success (fn [payload] (to-idle *form edited))
+         :error   (fn [payload] (to-failed *form payload))}))))
 
 
-(defn body->edited [*form value]
+(defn to-edited [*form value]
   (swap! *form #(-> %
                   (dissoc :body.status/message)
                   (assoc :body/edited value)
                   (assoc :body/status :body.status/edited))
-  (schedule-body->saving *form)))
+  (schedule-to-saving *form)))
 
 
 (rum/defc ui < rum/reactive [*form]
@@ -64,7 +64,7 @@
     [:textarea {:placeholder "Be grumpy here..."
                 :value       (or (rum/react (rum/cursor *form :body/edited))
                                (rum/react (rum/cursor-in *form [:post :body])))
-                :on-change   #(body->edited *form (-> % (oget "currentTarget") (oget "value")))}]]
+                :on-change   #(to-edited *form (-> % (oget "currentTarget") (oget "value")))}]]
    [:.handle.column.center
     [:.rope]
     [:.ring.cursor-pointer]]])

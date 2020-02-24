@@ -12,11 +12,11 @@
    ["Body changed"       {:post {:body "Hello, world!"} :body/edited "Hello, world! (edited)" :body/status :body.status/edited}]
    ["Body saving"        {:post {:body "Hello, world!"} :body/edited "Hello, world! (edited)" :body/status :body.status/saving}]
    ["Body failed"        {:post {:body "Hello, world!"} :body/edited "Hello, world! (edited)" :body/status :body.status/failed :body.status/message "Autosave failed"}]
-   ["Dragged"            {:media/dragging? true}]
-   ["Dragged over"       {:media/dragging? true :media/dragover? true}]
-   ["Dragged with image" {:media/dragging? true :post {:picture {:url "/post/0THGrh25y/M0C_mT1.orig.png"}}}]
-   ["Dragged over image" {:media/dragging? true :media/dragover? true :post {:picture {:url "/post/0THGrh25y/M0C_mT1.orig.png"}}}]
-   ["Dragged tall blob"  {:media/dragging? true :media/blob "/post/0T6kDVGD2/LycvDQV.orig.jpeg"}]
+   ["Dragging"           {:media/dragging? true}]
+   ["Dragging over"      {:media/dragging? true :media/dragover? true}]
+   ["Draging with image" {:media/dragging? true :post {:picture {:url "/post/0THGrh25y/M0C_mT1.orig.png"}}}]
+   ["Draging over image" {:media/dragging? true :media/dragover? true :post {:picture {:url "/post/0THGrh25y/M0C_mT1.orig.png"}}}]
+   ["Draging tall blob"  {:media/dragging? true :media/blob "/post/0T6kDVGD2/LycvDQV.orig.jpeg"}]
    ["Uploading 0%"       {:media/blob "/post/0THGrh25y/M0C_mT1.orig.png" :media/status :media.status/uploading :media.status/progress 0}]
    ["Uploading 50%"      {:media/blob "/post/0THGrh25y/M0C_mT1.orig.png" :media/status :media.status/uploading :media.status/progress 0.5}]
    ["Uploading tall 30%" {:media/blob "/post/0T6kDVGD2/LycvDQV.orig.jpeg" :media/status :media.status/uploading :media.status/progress 0.3}]
@@ -52,8 +52,8 @@
     [:button.btn.secondary.small {:on-click (fn [_] (switch-debug-form 1))} ">"]]
    (let [[_ form] (coll/seek (fn [[k v]] (= k (rum/react *debug-form-key))) debug-forms)
          form' (coll/deep-merge
-                  {:new? true, :post {:body "" :author "nikitonsky"}}
-                  form)]
+                 {:new? true, :post {:body "" :author "nikitonsky"}}
+                 form)]
      (editor-ctor (atom form')))])
 
 

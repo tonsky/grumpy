@@ -21,12 +21,13 @@
 
 
 (rum/defc editor [*form]
-  [:.editor.row
+  [:.editor.relative.row
    [:img.post_avatar {:src (fragments/avatar-url (:author (:post @*form)))}]
    [:.column.grow
     (editor.media/ui *form)
     (editor.body/ui *form)
-    (editor.buttons/ui *form)]])
+    (editor.buttons/ui *form)]
+   (editor.media/dragging *form)])
 
 
 (defn ^:after-load ^:export refresh []

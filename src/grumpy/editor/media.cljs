@@ -7,25 +7,24 @@
    [rum.core :as rum]))
 
 
-(rum/defc dragging
-  < {:did-mount
+(rum/defc dragging-impl
+  < rum/reactive
+    {:did-mount
      (fn [state]
        (let [[*form] (:rum/args state)]
-         (dnd/subscribe! (js/document.querySelector ".upload") ::dragover
+         (dnd/subscribe! (rum/dom-node state) ::dragover
            {:enter (fn [_] (swap! *form assoc  :media/dragover? true))
             :leave (fn [_] (swap! *form dissoc :media/dragover?))})
-         state))
-     :will-unmount
-     (fn [state]
-       (dnd/unsubscribe! (js/document.querySelector ".upload") ::dragover)
-       state)}
+         state))}
   [*form]
-  ;; TODO fit image size here
-  (if (:media/dragover? @*form)
-    [:.upload.dragover
-     [:.label "DROP IT!"]]
-    [:.upload.dragging
-     [:.label "Drag media here"]]))
+  [:.dragging
+   {:class (when (rum/react (rum/cursor *form :media/dragover?)) "dragover")}
+   [:.label "Drop here"]])
+
+
+(rum/defc dragging < rum/reactive [*form]
+  (when (rum/react (rum/cursor *form :media/dragging?))
+    (dragging-impl *form)))
 
 
 (rum/defc no-media []
@@ -50,21 +49,24 @@
      [:.status "> Uploading " (js/Math.floor percent) "%"]]))
 
 
-(rum/defc media-failed [{blob-url :media/blob
-                         message :media.status/message}]
+(rum/defc media-failed [{blob-url  :media/blob
+                         message   :media.status/message
+                         dragging? :media/dragging?}]
   [:.media
    [:.media-wrap
     [:img {:src blob-url}]
-    [:.media-delete.cursor-pointer]
+    (when-not dragging?
+      [:.media-delete.cursor-pointer])
     [:.upload-overlay-failed]]
    [:.status "> Upload failed (" message ") " [:button.inline "↻ Try again"]]])
 
 
-(rum/defc media-uploaded [picture]
+(rum/defc media-uploaded [form]
   [:.media
    [:.media-wrap
-    [:img {:src (:url picture)}]
-    [:.media-delete.cursor-pointer]]])
+    [:img {:src (:url (:picture (:post form)))}]
+    (when-not (:media/dragging? form)
+      [:.media-delete.cursor-pointer])]])
 
 
 (defn to-uploading [*form files]
@@ -99,11 +101,8 @@
     (list
       (input *form)
       (cond+
-        (:media/dragging? form)
-        (dragging *form)
-
         (some? picture)
-        (media-uploaded picture)
+        (media-uploaded form)
         
         (= :media.status/uploading status)
         (media-uploading form)

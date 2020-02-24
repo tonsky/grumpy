@@ -17,17 +17,22 @@
 (enable-console-print!)
 
 
-(defonce *form (atom nil))
+(defonce *post (atom nil))
 
 
-(rum/defc editor [*form]
+(rum/defc avatar < rum/reactive
+  [*avatar]
+  [:img.post_avatar {:src (fragments/avatar-url (rum/react *avatar))}])
+
+
+(rum/defc editor [*post]
   [:.editor.relative.row
-   [:img.post_avatar {:src (fragments/avatar-url (:author (:post @*form)))}]
+   (avatar (rum/cursor *post :author))
    [:.column.grow
-    (editor.media/ui *form)
-    (editor.body/ui *form)
-    (editor.buttons/ui *form)]
-   (editor.media/dragging *form)])
+    (editor.media/ui *post)
+    (editor.body/ui *post)
+    (editor.buttons/ui *post)]
+   (editor.media/dragging *post)])
 
 
 (defn ^:after-load ^:export refresh []
@@ -35,7 +40,7 @@
         comp  (if (editor.debug/debug?)
                 (editor.debug/ui editor)
                 (do
-                  (when (nil? @*form)
-                    (reset! *form (-> (.getAttribute mount "data") (edn/read-string))))
-                  (editor *form)))]
+                  (when (nil? @*post)
+                    (reset! *post (-> (.getAttribute mount "data") (edn/read-string))))
+                  (editor *post)))]
     (rum/mount comp mount)))

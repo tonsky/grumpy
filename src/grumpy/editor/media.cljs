@@ -11,20 +11,20 @@
   < rum/reactive
     {:did-mount
      (fn [state]
-       (let [[*form] (:rum/args state)]
+       (let [[*post] (:rum/args state)]
          (dnd/subscribe! (rum/dom-node state) ::dragover
-           {:enter (fn [_] (swap! *form assoc  :media/dragover? true))
-            :leave (fn [_] (swap! *form dissoc :media/dragover?))})
+           {:enter (fn [_] (swap! *post assoc  :media/dragover? true))
+            :leave (fn [_] (swap! *post dissoc :media/dragover?))})
          state))}
-  [*form]
+  [*post]
   [:.dragging
-   {:class (when (rum/react (rum/cursor *form :media/dragover?)) "dragover")}
+   {:class (when (rum/react (rum/cursor *post :media/dragover?)) "dragover")}
    [:.label "Drop here"]])
 
 
-(rum/defc dragging < rum/reactive [*form]
-  (when (rum/react (rum/cursor *form :media/dragging?))
-    (dragging-impl *form)))
+(rum/defc dragging < rum/reactive [*post]
+  (when (rum/react (rum/cursor *post :media/dragging?))
+    (dragging-impl *post)))
 
 
 (rum/defc no-media []
@@ -61,56 +61,55 @@
    [:.status "> Upload failed (" message ") " [:button.inline "↻ Try again"]]])
 
 
-(rum/defc media-uploaded [form]
+(rum/defc media-uploaded [post]
   [:.media
    [:.media-wrap
-    [:img {:src (:url (:picture (:post form)))}]
-    (when-not (:media/dragging? form)
+    [:img {:src (:url (:picture post))}]
+    (when-not (:media/dragging? post)
       [:.media-delete.cursor-pointer])]])
 
 
-(defn to-uploading [*form files]
+(defn to-uploading [*post files]
   )
 
 (rum/defc input
   < rum/static
     {:did-mount
      (fn [state]
-       (let [[*form] (:rum/args state)]
+       (let [[*post] (:rum/args state)]
          (dnd/subscribe! js/document.documentElement ::dragging
-           {:start (fn [_] (swap! *form assoc  :media/dragging? true))
+           {:start (fn [_] (swap! *post assoc  :media/dragging? true))
             :drop  (fn [_ files]
-                     (when (:media/dragover? @*form)
-                       (to-uploading *form files)))
-            :end   (fn [_] (swap! *form dissoc :media/dragging?))})
+                     (when (:media/dragover? @*post)
+                       (to-uploading *post files)))
+            :end   (fn [_] (swap! *post dissoc :media/dragging?))})
          state))
      :will-unmount
      (fn [state]
        (dnd/unsubscribe! js/document.documentElement ::dragging)
        state)}
-  [*form]
+  [*post]
   [:input.media-input.no-display
    {:type      "file"
     :on-change #(let [files (-> % (oget "target") (oget "files"))]
-                  (to-uploading *form files))}])
+                  (to-uploading *post files))}])
 
 
 (rum/defc ui < rum/reactive
-  [*form]
-  (let [form (rum/react *form)
-        {{picture :picture} :post
-         status   :media/status} form]
+  [*post]
+  (let [status (rum/react (rum/cursor *post :media/status))]
     (list
-      (input *form)
+      (input *post)
       (cond+
-        (some? picture)
-        (media-uploaded form)
-        
+        ;; TODO do not subscribe to the whole *post
         (= :media.status/uploading status)
-        (media-uploading form)
+        (media-uploading (rum/react *post))
 
         (= :media.status/failed status)
-        (media-failed form)
+        (media-failed (rum/react *post))
+
+        (some? (rum/react (rum/cursor *post :picture)))
+        (media-uploaded (rum/react *post))
 
         :else
         (no-media)))))

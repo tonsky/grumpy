@@ -8,6 +8,7 @@
    [grumpy.core.config :as config]
    [grumpy.core.drafts :as drafts]
    [grumpy.core.files :as files]
+   [grumpy.core.fragments :as fragments]
    [grumpy.core.jobs :as jobs]
    [grumpy.core.macros :refer [cond+]]
    [grumpy.core.mime :as mime]
@@ -186,22 +187,18 @@
 
 
 (rum/defc edit-draft-page [post-id user]
-  (let [new? (str/starts-with? post-id "@")
+  (let [new? (fragments/new? post-id)
         post (jobs/linearize post-id
                (or (drafts/load post-id)
                  (if new?
                    (drafts/create-new user)
-                   (drafts/create-edit post-id))))
-        data {:new?    new?
-              :post-id post-id
-              :post    post
-              :user    user}]
+                   (drafts/create-edit post-id))))]
     (web/page {:title     (if new? "Edit draft" "Edit post")
                :styles    ["editor.css"]
-               :subtitle? false }
-      [:.mount {:data (pr-str data)}]
+               :subtitle? false}
+      [:.mount {:data (pr-str post)}] ;; TODO transit?
       [:script {:src (str "/" (web/checksum-resource "static/editor.js"))}]
-      [:script {:dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();"}}])))
+      [:script {:dangerouslySetInnerHTML {:__html "grumpy.editor.refresh();"}}])))
 
 
 (def ^:private interceptors [auth/populate-session auth/require-user])
@@ -222,33 +219,32 @@
 
    [:post "/post/:post-id/save"
     interceptors
-    (fn [{{:keys [post-id]} :path-params, body :body :as req}]
-      (let [payload (transit/read-transit body)
+    (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
+      (let [payload (transit/read-transit request-body)
             saved   (save-post! post-id (:post payload))]
         (web/transit-response {:post saved})))]
 
    [:post "/post/:post-id/update-body"
     interceptors
-    (fn [{{:keys [post-id]} :path-params, body :body :as req}]
+    (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
       (when config/dev?
         (Thread/sleep 1000)
-        (when (> (rand) 0.9)
+        (when (> (rand) 0.666667)
           (throw (ex-info "Dev simulated exception" {}))))
-      (let [payload (transit/read-transit body)
-            body    (:body (:post payload))
+      (let [body    (slurp request-body)
             draft'  (drafts/update! post-id #(assoc % :body body))]
         (web/transit-response {:post draft'})))]
 
    [:post "/post/:post-id/upload"
     interceptors
-    (fn [{{:keys [post-id]} :path-params, body :body :as req}]
-      (let [saved (save-picture! post-id (get-in req [:headers "content-type"]) body)]
+    (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
+      (let [saved (save-picture! post-id (get-in req [:headers "content-type"]) request-body)]
         (web/transit-response {:post saved})))]
 
    [:post "/post/:post-id/publish"
     interceptors
-    (fn [{{:keys [post-id]} :path-params, body :body :as req}]
-      (let [payload (transit/read-transit body)
+    (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
+      (let [payload (transit/read-transit request-body)
             _       (save-post! post-id (:post payload))
             post'   (publish! post-id)]
         (web/transit-response {:post post'})))]

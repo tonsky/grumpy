@@ -9,13 +9,14 @@
 
 
 (defn create-new [user]
-  (jobs/linearize (str "@" user)
-    (let [draft-dir (io/file (str "grumpy_data/drafts/@" user))
-          draft     (io/file draft-dir "post.edn")
-          edn       {:author user :body ""}]
-      (.mkdirs draft-dir)
-      (spit draft (pr-str edn))
-      edn)))
+  (let [post-id (str "@" user)]
+    (jobs/linearize post-id
+      (let [draft-dir (io/file (str "grumpy_data/drafts/" post-id))
+            draft     (io/file draft-dir "post.edn")
+            edn       {:author user :body "" :id post-id}]
+        (.mkdirs draft-dir)
+        (spit draft (pr-str edn))
+        edn))))
 
 
 (defn create-edit [post-id]

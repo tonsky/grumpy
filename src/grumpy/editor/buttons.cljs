@@ -1,43 +1,44 @@
 (ns grumpy.editor.buttons
   (:require
    [grumpy.core.fetch :as fetch]
+   [grumpy.core.fragments :as fragments]
    [grumpy.core.macros :refer [oget oset! cond+]]
    [grumpy.core.transit :as transit]
    [rum.core :as rum]))
 
 
-;; FIXME
+;; FIXME "deleting" state
 
-(defn to-deleting [*form]
-  (let [form @*form]
-    (fetch/fetch! "POST" (str "/draft/" (:post-id form) "/delete")
+(defn to-deleting [*post]
+  (let [post @*post]
+    (fetch/fetch! "POST" (str "/draft/" (:id post) "/delete")
       {:success
        (fn [_]
-         (if (:new? form)
+         (if (fragments/new? (:id post))
            (oset! js/location "href" "/")
-           (oset! js/location "href" (str "/post/" (:post-id form)))))})))
+           (oset! js/location "href" (str "/post/" (:id post)))))})))
 
 
-(rum/defc buttons-new [*form]
+(rum/defc buttons-new [*post]
   [:.row.middle.space-between
    [:button.post-post.row
     [:img.button {:src "/static/editor/post_button.svg"}]
     [:img.hand {:src "/static/editor/post_hand.svg"}]
     [:.label "POST"]]
    [:button.post-delete.btn.self-middle.self-right
-    {:on-click (fn [_] (to-deleting *form))}
+    {:on-click (fn [_] (to-deleting *post))}
     "Delete draft"]])
 
 
-(rum/defc buttons-edit [*form]
+(rum/defc buttons-edit [*post]
   [:.row.middle.space-between
    [:button.btn.post-update "Update"]
    [:button.post-cancel.btn.self-right
-    {:on-click (fn [_] (to-deleting *form))}
+    {:on-click (fn [_] (to-deleting *post))}
     "Cancel edit"]])
 
 
-(rum/defc ui < rum/reactive [*form]
-  (if (rum/react (rum/cursor *form :new?))
-    (buttons-new *form)
-    (buttons-edit *form)))
+(rum/defc ui < rum/reactive [*post]
+  (if (fragments/new? (rum/react (rum/cursor *post :id)))
+    (buttons-new *post)
+    (buttons-edit *post)))

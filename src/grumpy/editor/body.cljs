@@ -12,60 +12,60 @@
 (declare to-saving)
 
 
-(defn schedule-to-saving [*form]
-  (when (nil? (:body/timer @*form))
-    (swap! *form assoc :body/timer (js/setTimeout #(to-saving *form) AUTOSAVE_PERIOD_MS))))
+(defn schedule-to-saving [*post]
+  (when (nil? (:body/timer @*post))
+    (swap! *post assoc :body/timer (js/setTimeout #(to-saving *post) AUTOSAVE_PERIOD_MS))))
 
 
-(defn to-idle [*form saved]
-  (when (= (:body/edited @*form) saved)
-    (swap! *form #(-> %
+(defn to-idle [*post saved]
+  (when (= (:body/edited @*post) saved)
+    (swap! *post #(-> %
                     (dissoc :body/edited)
                     (dissoc :body/status)
                     (dissoc :body.status/message)
-                    (assoc-in [:post :body] saved)))))
+                    (assoc :body saved)))))
 
 
-(defn to-failed [*form msg]
-  (swap! *form assoc
+(defn to-failed [*post msg]
+  (swap! *post assoc
     :body/status :body.status/failed
     :body.status/message msg)
-  (schedule-to-saving *form))
+  (schedule-to-saving *post))
 
 
-(defn to-saving [*form]
-  (let [form @*form
-        edited (:body/edited form)]
-    (when (not= edited (:body (:post form)))
-      (swap! *form #(-> %
+(defn to-saving [*post]
+  (let [post @*post
+        edited (:body/edited post)]
+    (when (not= edited (:body post))
+      (swap! *post #(-> %
                       (dissoc :body/timer)
                       (assoc :body/status :body.status/saving)))
-      (fetch/fetch! "POST" (str "/post/" (:post-id form) "/update-body")
-        {:body    (transit/write-transit-str {:post {:body edited}})
-         :success (fn [payload] (to-idle *form edited))
-         :error   (fn [payload] (to-failed *form payload))}))))
+      (fetch/fetch! "POST" (str "/post/" (:id post) "/update-body")
+        {:body    edited
+         :success (fn [payload] (to-idle *post edited))
+         :error   (fn [payload] (to-failed *post payload))}))))
 
 
-(defn to-edited [*form value]
-  (swap! *form #(-> %
+(defn to-edited [*post value]
+  (swap! *post #(-> %
                   (dissoc :body.status/message)
                   (assoc :body/edited value)
                   (assoc :body/status :body.status/edited))
-  (schedule-to-saving *form)))
+  (schedule-to-saving *post)))
 
 
-(rum/defc ui < rum/reactive [*form]
+(rum/defc ui < rum/reactive [*post]
   [:.textarea
    [:div
-    (str (or (rum/react (rum/cursor *form :body/status)) "👍 Saved"))
+    (str (or (rum/react (rum/cursor *post :body/status)) "👍 Saved"))
     " "
-    (rum/react (rum/cursor *form :body.status/message))]
+    (rum/react (rum/cursor *post :body.status/message))]
    [:.input
     [:textarea {:placeholder "Be grumpy here..."
-                :value       (or (rum/react (rum/cursor *form :body/edited))
-                               (rum/react (rum/cursor-in *form [:post :body]))
+                :value       (or (rum/react (rum/cursor *post :body/edited))
+                               (rum/react (rum/cursor *post :body))
                                "")
-                :on-change   #(to-edited *form (-> % (oget "currentTarget") (oget "value")))}]]
+                :on-change   #(to-edited *post (-> % (oget "currentTarget") (oget "value")))}]]
    [:.handle.column.center
     [:.rope]
     [:.ring.cursor-pointer]]])

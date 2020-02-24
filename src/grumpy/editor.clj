@@ -6,6 +6,7 @@
    [io.pedestal.http.ring-middlewares :as middlewares]
    [grumpy.auth :as auth]
    [grumpy.core.config :as config]
+   [grumpy.core.drafts :as drafts]
    [grumpy.core.files :as files]
    [grumpy.core.jobs :as jobs]
    [grumpy.core.macros :refer [cond+]]
@@ -43,7 +44,7 @@
 
 
 (defn save-picture! [post-id content-type ^InputStream input-stream]
-  (let [draft (posts/get-draft post-id)
+  (let [draft (drafts/load post-id)
         dir   (io/file (str "grumpy_data/drafts/" post-id))]
     (doseq [key   [:picture :picture-original]
             :let  [picture (get draft key)]
@@ -121,7 +122,7 @@
 
 
 (defn save-post! [post-id updates]
-  (let [draft  (posts/get-draft post-id)
+  (let [draft  (drafts/load post-id)
         draft' (merge draft updates)
         dir    (str "grumpy_data/drafts/" post-id)
         file   (io/file dir "post.edn")]
@@ -148,7 +149,7 @@
           (.delete (io/file (str "grumpy_data/posts/" post-id "/" (:url pic)))))))
     ;; create/update new post
     (let [now  (time/now)
-          post (cond-> (posts/get-draft post-id)
+          post (cond-> (drafts/load post-id)
                  true (assoc :updated now)
                  new? (assoc :created now
                              :id (posts/next-post-id now))) ;; assign post id
@@ -184,33 +185,23 @@
       post)))
 
 
-(defn delete! [post-id]
-  (let [dir   (io/file (str "grumpy_data/drafts/" post-id))
-        draft (posts/get-draft post-id)]
-    (doseq [key   [:picture :picture-original]
-            :let  [pic (get draft key)]
-            :when (some? pic)]
-      (.delete (io/file dir (:url pic))))
-    (.delete (io/file dir "post.edn"))
-    (.delete dir)))
-
-
-(rum/defc edit-post-page [post-id user]
-  (let [post (or (posts/get-draft (or post-id user))
-                 {:body ""
-                  :author user})
-        new? (str/starts-with? post-id "@")
+(rum/defc edit-draft-page [post-id user]
+  (let [new? (str/starts-with? post-id "@")
+        post (jobs/linearize post-id
+               (or (drafts/load post-id)
+                 (if new?
+                   (drafts/create-new user)
+                   (drafts/create-edit post-id))))
         data {:new?    new?
               :post-id post-id
               :post    post
               :user    user}]
-    (web/page {:title (if new? "Edit draft" "Edit post")
-               :styles ["editor.css"]
+    (web/page {:title     (if new? "Edit draft" "Edit post")
+               :styles    ["editor.css"]
                :subtitle? false }
-      [:.mount {:data (pr-str data)}
-        #_(editor/editor (assoc data :server? true))] ;; TODO
-      [:script { :src (str "/" (web/checksum-resource "static/editor.js")) }]
-      [:script { :dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();"}}])))
+      [:.mount {:data (pr-str data)}]
+      [:script {:src (str "/" (web/checksum-resource "static/editor.js"))}]
+      [:script {:dangerouslySetInnerHTML { :__html "grumpy.editor.refresh();"}}])))
 
 
 (def ^:private interceptors [auth/populate-session auth/require-user])
@@ -222,12 +213,12 @@
      interceptors
      (fn [req]
        (let [user (auth/user req)]
-         (web/html-response (edit-post-page (str "@" user) user))))]
+         (web/html-response (edit-draft-page (str "@" user) user))))]
 
     [:get "/post/:post-id/edit"
      interceptors
      (fn [{{:keys [post-id]} :path-params :as req}]
-       (web/html-response (edit-post-page post-id (auth/user req))))]
+       (web/html-response (edit-draft-page post-id (auth/user req))))]
 
    [:post "/post/:post-id/save"
     interceptors
@@ -241,11 +232,11 @@
     (fn [{{:keys [post-id]} :path-params, body :body :as req}]
       (when config/dev?
         (Thread/sleep 1000)
-        (when (> (rand) 0.3)
+        (when (> (rand) 0.9)
           (throw (ex-info "Dev simulated exception" {}))))
       (let [payload (transit/read-transit body)
             body    (:body (:post payload))
-            draft'  (posts/update-draft! post-id #(assoc % :body body))]
+            draft'  (drafts/update! post-id #(assoc % :body body))]
         (web/transit-response {:post draft'})))]
 
    [:post "/post/:post-id/upload"
@@ -265,13 +256,13 @@
    [:post "/draft/:post-id/delete"
     interceptors
     (fn [{{:keys [post-id]} :path-params :as req}]
-      (delete! post-id)
+      (drafts/delete! post-id)
       {:status 200})]
 
    [:get "/post/:post-id/delete"
     interceptors
     (fn [{{:keys [post-id]} :path-params :as req}]
-      (files/delete-dir (str "grumpy_data/posts/" post-id))
+      (posts/delete! post-id)
       (web/redirect "/"))]
 
    [:get "/draft/:post-id/:img"

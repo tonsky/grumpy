@@ -79,7 +79,9 @@
        (let [[*form] (:rum/args state)]
          (dnd/subscribe! js/document.documentElement ::dragging
            {:start (fn [_] (swap! *form assoc  :media/dragging? true))
-            :drop  (fn [_ files] (to-uploading *form files))
+            :drop  (fn [_ files]
+                     (when (:media/dragover? @*form)
+                       (to-uploading *form files)))
             :end   (fn [_] (swap! *form dissoc :media/dragging?))})
          state))
      :will-unmount

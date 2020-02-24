@@ -63,7 +63,8 @@
    [:.input
     [:textarea {:placeholder "Be grumpy here..."
                 :value       (or (rum/react (rum/cursor *form :body/edited))
-                               (rum/react (rum/cursor-in *form [:post :body])))
+                               (rum/react (rum/cursor-in *form [:post :body]))
+                               "")
                 :on-change   #(to-edited *form (-> % (oget "currentTarget") (oget "value")))}]]
    [:.handle.column.center
     [:.rope]

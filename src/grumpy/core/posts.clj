@@ -3,7 +3,8 @@
    [clojure.java.io :as io]
    [clojure.string :as str]
    [grumpy.core.files :as files]
-   [grumpy.core.jobs :as jobs])
+   [grumpy.core.jobs :as jobs]
+   [grumpy.core.macros :as macros])
   (:import
    [java.io File]
    [java.time Instant]))
@@ -47,30 +48,6 @@
     (encode (rand-int (* 64 64 64)) 3)))
 
 
-(defn get-draft [post-id]
-  (let [draft    (io/file (str "grumpy_data/drafts/" post-id "/post.edn"))
-        original (io/file (str "grumpy_data/posts/" post-id "/post.edn"))]
-    (cond
-      (.exists draft)
-        (files/read-edn-string (slurp draft))
-      (.exists original)
-        (do
-          (files/copy-dir (io/file (str "grumpy_data/posts/" post-id)) (io/file (str "grumpy_data/drafts/" post-id)))
-          (files/read-edn-string (slurp draft)))
-      :else
-        (do
-          (.mkdirs (io/file (str "grumpy_data/drafts/" post-id "/")))
-          nil))))
-
-
-(defonce **post-agents (jobs/jobs-pool)) ;; post-id -> agent
-
-
-(defn update-draft! [post-id update-fn]
-  (jobs/linearize **post-agents post-id
-    #(let [draft  (get-draft post-id)
-           draft' (update-fn draft)
-           dir    (str "grumpy_data/drafts/" post-id)
-           file   (io/file dir "post.edn")]
-       (spit (io/file file) (pr-str draft'))
-       draft')))
+(defn delete! [post-id]
+  (jobs/linearize post-id
+    (files/delete-dir (str "grumpy_data/posts/" post-id))))

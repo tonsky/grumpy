@@ -40,7 +40,7 @@
       (swap! *post #(-> %
                       (dissoc :body/timer)
                       (assoc :body/status :body.status/saving)))
-      (fetch/fetch! "POST" (str "/post/" (:id post) "/update-body")
+      (fetch/post! (str "/draft/" (:id post) "/update-body")
         {:body    edited
          :success (fn [payload] (to-idle *post edited))
          :error   (fn [payload] (to-failed *post payload))}))))

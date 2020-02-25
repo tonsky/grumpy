@@ -7,6 +7,57 @@
    [rum.core :as rum]))
 
 
+(defn to-deleting [*post])
+
+
+(defn to-displaying [*post updates]
+  (swap! *post
+    (fn [post]
+      (js/URL.revokeObjectURL (:media/object-url post))
+      (-> post
+        (dissoc
+          :media/object-url
+          :media/mime-type
+          :media/file
+          :media/status
+          :media.status/progress
+          :media/request)
+        (merge updates)))))
+
+
+(defn to-failed [*post post])
+
+
+(defn to-uploading [*post files]
+  (to-deleting *post) ;; make sure current state is cleaned up
+
+  (when-some [file (when (> (alength files) 0)
+                     (aget files 0))]
+    (let [url     (js/URL.createObjectURL file)
+          active? #(let [post @*post]
+                     (and
+                       (= url (:media/object-url post))
+                       (= :media.status/uploading (:media/status post))))]
+      (swap! *post assoc
+        :media/object-url      url
+        :media/mime-type       (oget file "type")
+        :media/file            file
+        :media/status          :media.status/uploading
+        :media.status/progress 0
+        :media/request
+        (fetch/post! (str "/draft/" (:id @*post) "/upload-media")
+          {:body     file
+           :progress (fn [progress]
+                       (when (active?)
+                         (swap! *post assoc :media.status/progress progress)))
+           :success  (fn [payload]
+                       (when (active?)
+                         (to-displaying *post (transit/read-transit-str payload))))
+           :error    (fn [message]
+                       (when (active?)
+                         (to-failed *post message)))})))))
+
+
 (rum/defc dragging-impl
   < rum/reactive
     {:did-mount
@@ -14,6 +65,7 @@
        (let [[*post] (:rum/args state)]
          (dnd/subscribe! (rum/dom-node state) ::dragover
            {:enter (fn [_] (swap! *post assoc  :media/dragover? true))
+            :drop  (fn [_ files] (to-uploading *post files))
             :leave (fn [_] (swap! *post dissoc :media/dragover?))})
          state))}
   [*post]
@@ -39,38 +91,35 @@
    [:.label "Drag media here"]])
 
 
-(rum/defc media-uploading [{blob-url :media/blob
-                            progress :media.status/progress}]
+(rum/defc uploading [{object-url :media/object-url
+                            progress   :media.status/progress}]
   (let [percent (-> progress (* 100))]
     [:.media
      [:.media-wrap
-      [:img {:src blob-url}]
+      [:img {:src object-url}]
       [:.upload-overlay {:style {:height (str (- 100 percent) "%")}}]]
      [:.status "> Uploading " (js/Math.floor percent) "%"]]))
 
 
-(rum/defc media-failed [{blob-url  :media/blob
-                         message   :media.status/message
-                         dragging? :media/dragging?}]
+(rum/defc failed [{object-url :media/object-url
+                   message    :media.status/message
+                   dragging?  :media/dragging?}]
   [:.media
    [:.media-wrap
-    [:img {:src blob-url}]
+    [:img {:src object-url}]
     (when-not dragging?
       [:.media-delete.cursor-pointer])
     [:.upload-overlay-failed]]
    [:.status "> Upload failed (" message ") " [:button.inline "↻ Try again"]]])
 
 
-(rum/defc media-uploaded [post]
+(rum/defc displaying [post]
   [:.media
    [:.media-wrap
-    [:img {:src (:url (:picture post))}]
+    [:img {:src (str "/draft/" (:id post) "/" (:url (:picture post)))}]
     (when-not (:media/dragging? post)
       [:.media-delete.cursor-pointer])]])
 
-
-(defn to-uploading [*post files]
-  )
 
 (rum/defc input
   < rum/static
@@ -79,9 +128,6 @@
        (let [[*post] (:rum/args state)]
          (dnd/subscribe! js/document.documentElement ::dragging
            {:start (fn [_] (swap! *post assoc  :media/dragging? true))
-            :drop  (fn [_ files]
-                     (when (:media/dragover? @*post)
-                       (to-uploading *post files)))
             :end   (fn [_] (swap! *post dissoc :media/dragging?))})
          state))
      :will-unmount
@@ -101,15 +147,16 @@
     (list
       (input *post)
       (cond+
+        ;; TODO deleting state
         ;; TODO do not subscribe to the whole *post
         (= :media.status/uploading status)
-        (media-uploading (rum/react *post))
+        (uploading (rum/react *post))
 
         (= :media.status/failed status)
-        (media-failed (rum/react *post))
+        (failed (rum/react *post))
 
         (some? (rum/react (rum/cursor *post :picture)))
-        (media-uploaded (rum/react *post))
+        (displaying (rum/react *post))
 
         :else
         (no-media)))))

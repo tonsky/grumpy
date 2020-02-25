@@ -11,7 +11,7 @@
 
 (defn to-deleting [*post]
   (let [post @*post]
-    (fetch/fetch! "POST" (str "/draft/" (:id post) "/delete")
+    (fetch/post! (str "/draft/" (:id post) "/delete")
       {:success
        (fn [_]
          (if (fragments/new? (:id post))

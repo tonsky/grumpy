@@ -22,6 +22,19 @@
       (.addEventListener (oget xhr "upload") "progress"
         (fn [e]
           (when (some? (oget e "lengthComputable"))
-            (progress (-> (oget e "loaded") (* 100) (/ (oget e "total")) js/Math.floor))))))
+            (progress (/ (oget e "loaded") (oget e "total")))))))
     (.open xhr method url)
-    (.send xhr (:body opts))))
+    (.send xhr (:body opts))
+    xhr))
+
+
+(defn abort! [xhr]
+  (.abort xhr))
+
+
+(defn get! [url opts]
+  (fetch! "GET" url opts))
+
+
+(defn post! [url opts]
+  (fetch! "POST" url opts))

@@ -6,6 +6,7 @@
    [grumpy.core.fragments :as fragments]
    [grumpy.core.transit :as transit]
    [grumpy.core.url :as url]
+   [ring.util.response :as response]
    [rum.core :as rum]))
 
 
@@ -22,6 +23,16 @@
   (cond-> (fn [name]
             (slurp (io/resource (str "static/" name))))
     (not config/dev?) (memoize)))
+
+
+(defn first-file [& paths]
+  (reduce
+    (fn [resp path]
+      (let [file (io/file path)]
+        (if (.exists file)
+          (reduced (response/file-response path))
+          resp)))
+    {:status 404} paths))
 
 
 (def checksum-resource

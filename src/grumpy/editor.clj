@@ -19,7 +19,6 @@
    [grumpy.core.web :as web]
    [grumpy.telegram :as telegram]
    [grumpy.video :as video]
-   [ring.util.response :as response]
    [rum.core :as rum])
   (:import
    [java.io File InputStream]))
@@ -204,10 +203,10 @@
     [:post "/draft/:post-id/update-body"
      interceptors
      (fn [{{:keys [post-id]} :path-params, request-body :body}]
-       (when config/dev?
-         (Thread/sleep 1000)
-         (when (> (rand) 0.666667)
-           (throw (ex-info (str "/draft/" post-id "/update-body simulated exception") {}))))
+       ; (when config/dev?
+       ;   (Thread/sleep 1000)
+       ;   (when (> (rand) 0.666667)
+       ;     (throw (ex-info (str "/draft/" post-id "/update-body simulated exception") {}))))
        (let [body (slurp request-body)]
          (drafts/update! post-id #(assoc % :body body))
          {:status 200}))]
@@ -215,8 +214,8 @@
     [:post "/draft/:post-id/upload-media"
      interceptors
      (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
-       (when (and config/dev? (> (rand) 0.666667))
-         (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))
+       ; (when (and config/dev? (> (rand) 0.666667))
+       ;   (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))
        (let [updates (upload-media! post-id (get-in req [:headers "content-type"]) request-body)]
          (web/transit-response updates)))]
 
@@ -258,7 +257,11 @@
    [:get "/draft/:post-id/:img"
     [auth/populate-session]
     (fn [{{:keys [post-id img]} :path-params}]
-      (response/file-response (str "grumpy_data/drafts/" post-id "/" img)))]
+      ; (when (and config/dev? (> (rand) 0.3333))
+      ;   (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))  
+      (web/first-file
+        (str "grumpy_data/drafts/" post-id "/" img)
+        (str "grumpy_data/posts/" post-id "/" img)))]
 
    [:post "/post/:post-id/edit"
     interceptors

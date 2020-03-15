@@ -80,4 +80,4 @@
 
  (defmacro linearize [agent-id & body]
   `(-> (jobs/linearize-async **agents ~agent-id (fn [] ~@body))
-     (block 1000))) ;; FIXME 60000
+     (block 60000)))

@@ -26,16 +26,17 @@
 ;  :body/status         (:body.status/failed | :body.status/edited | :body.status/saving)
 ;  :body/failed-message "..."
 ;  :body/autosave-timer js/Timer
- 
+
 ;  :media/dragging?       true
 ;  :media/dragover?       true
 ;  :media/mime-type       "image/jpeg"
 ;  :media/file            file
 ;  :media/object-url      "blob://"
-;  :media/status          (:media.status/uploading | :media.status/failed)
+;  :media/status          (:media.status/uploading | :media.status/downloading | :media.status/failed)
 ;  :media/upload-request  XHR
 ;  :media/upload-progress 0..100
 ;  :media/failed-message  "..."}
+
 
 (defonce *post (atom nil))
 

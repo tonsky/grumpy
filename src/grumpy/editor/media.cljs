@@ -20,8 +20,8 @@
           :media/mime-type
           :media/file
           :media/status
-          :media.status/progress
-          :media/request)
+          :media/upload-progress
+          :media/upload-request)
         (merge updates)))))
 
 
@@ -43,13 +43,13 @@
         :media/mime-type       (oget file "type")
         :media/file            file
         :media/status          :media.status/uploading
-        :media.status/progress 0
-        :media/request
+        :media/upload-progress 0
+        :media/upload-request
         (fetch/post! (str "/draft/" (:id @*post) "/upload-media")
           {:body     file
            :progress (fn [progress]
                        (when (active?)
-                         (swap! *post assoc :media.status/progress progress)))
+                         (swap! *post assoc :media/upload-progress progress)))
            :success  (fn [payload]
                        (when (active?)
                          (to-displaying *post (transit/read-transit-str payload))))
@@ -92,7 +92,7 @@
 
 
 (rum/defc uploading [{object-url :media/object-url
-                            progress   :media.status/progress}]
+                      progress   :media/upload-progress}]
   (let [percent (-> progress (* 100))]
     [:.media
      [:.media-wrap
@@ -102,7 +102,7 @@
 
 
 (rum/defc failed [{object-url :media/object-url
-                   message    :media.status/message
+                   message    :media/failed-message
                    dragging?  :media/dragging?}]
   [:.media
    [:.media-wrap

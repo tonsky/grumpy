@@ -1,4 +1,5 @@
-(ns grumpy.core.coll)
+(ns grumpy.core.coll
+  (:refer-clojure :exclude [replace]))
 
 
 (defn zip [coll1 coll2]
@@ -34,3 +35,10 @@
     (merge-with deep-merge o1 o2)
     o2))
 
+
+(defn dissoc-all [m re]
+  (reduce-kv (fn [m k v] (if (re-matches re (str k)) (dissoc m k) m)) m m))
+
+
+(defn replace [m re & kvs]
+  (apply assoc (dissoc-all m re) kvs))

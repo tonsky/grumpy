@@ -1,5 +1,6 @@
 (ns grumpy.editor.body
   (:require
+   [grumpy.core.coll :as coll]
    [grumpy.core.fetch :as fetch]
    [grumpy.core.macros :refer [oget oset! cond+]]
    [grumpy.core.transit :as transit]
@@ -13,23 +14,21 @@
 
 
 (defn schedule-to-saving [*post]
-  (when (nil? (:body/timer @*post))
-    (swap! *post assoc :body/timer (js/setTimeout #(to-saving *post) AUTOSAVE_PERIOD_MS))))
+  (when (nil? (:body/autosave-timer @*post))
+    (swap! *post assoc :body/autosave-timer (js/setTimeout #(to-saving *post) AUTOSAVE_PERIOD_MS))))
 
 
 (defn to-idle [*post saved]
   (when (= (:body/edited @*post) saved)
-    (swap! *post #(-> %
-                    (dissoc :body/edited)
-                    (dissoc :body/status)
-                    (dissoc :body.status/message)
-                    (assoc :body saved)))))
+    (swap! *post coll/replace
+      #":body/.*"
+      :body saved)))
 
 
 (defn to-failed [*post msg]
   (swap! *post assoc
     :body/status :body.status/failed
-    :body.status/message msg)
+    :body/failed-message msg)
   (schedule-to-saving *post))
 
 
@@ -37,9 +36,9 @@
   (let [post @*post
         edited (:body/edited post)]
     (when (not= edited (:body post))
-      (swap! *post #(-> %
-                      (dissoc :body/timer)
-                      (assoc :body/status :body.status/saving)))
+      (swap! *post coll/replace
+        #":body/(?!edited).*"
+        :body/status :body.status/saving)
       (fetch/post! (str "/draft/" (:id post) "/update-body")
         {:body    edited
          :success (fn [payload] (to-idle *post edited))
@@ -47,11 +46,11 @@
 
 
 (defn to-edited [*post value]
-  (swap! *post #(-> %
-                  (dissoc :body.status/message)
-                  (assoc :body/edited value)
-                  (assoc :body/status :body.status/edited))
-  (schedule-to-saving *post)))
+  (swap! *post coll/replace
+    #":body/(?!autosave-timer).*"
+    :body/edited value
+    :body/status :body.status/edited)
+  (schedule-to-saving *post))
 
 
 (rum/defc ui < rum/reactive [*post]
@@ -59,7 +58,7 @@
    [:div
     (str (or (rum/react (rum/cursor *post :body/status)) "👍 Saved"))
     " "
-    (rum/react (rum/cursor *post :body.status/message))]
+    (rum/react (rum/cursor *post :body/failed-message))]
    [:.input
     [:textarea {:placeholder "Be grumpy here..."
                 :value       (or (rum/react (rum/cursor *post :body/edited))

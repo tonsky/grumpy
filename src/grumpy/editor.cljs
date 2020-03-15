@@ -16,6 +16,26 @@
 
 (enable-console-print!)
 
+; {:id      "0THGrh25y"
+;  :body    "..."
+;  :picture {:url "/post/0THGrh25y/M0C_mT1.fit.jpeg"
+;            :content-type "image/jpeg"
+;            :dimensions [750 265]}
+ 
+;  :body/edited         "..."
+;  :body/status         (:body.status/failed | :body.status/edited | :body.status/saving)
+;  :body/failed-message "..."
+;  :body/autosave-timer js/Timer
+ 
+;  :media/dragging?       true
+;  :media/dragover?       true
+;  :media/mime-type       "image/jpeg"
+;  :media/file            file
+;  :media/object-url      "blob://"
+;  :media/status          (:media.status/uploading | :media.status/failed)
+;  :media/upload-request  XHR
+;  :media/upload-progress 0..100
+;  :media/failed-message  "..."}
 
 (defonce *post (atom nil))
 

@@ -32,7 +32,7 @@
 ;  :media/mime-type       "image/jpeg"
 ;  :media/file            file
 ;  :media/object-url      "blob://"
-;  :media/status          (:media.status/uploading | :media.status/downloading | :media.status/failed)
+;  :media/status          (:media.status/uploading | :media.status/downloading | :media.status/upload-failed | :media.status/delete-failed)
 ;  :media/upload-request  XHR
 ;  :media/upload-progress 0..100
 ;  :media/failed-message  "..."}

@@ -3,26 +3,45 @@
    [cljs-drag-n-drop.core :as dnd]
    [grumpy.core.coll :as coll]
    [grumpy.core.fetch :as fetch]
+   [grumpy.core.fragments :as fragments]
    [grumpy.core.macros :refer [oget oset! js-fn cond+]]
    [grumpy.core.transit :as transit]
    [rum.core :as rum]))
 
 
-(defn to-deleting [*post])
-
-
-(defn to-failed [*post message]
+(defn to-upload-failed [*post message]
   (swap! *post coll/replace
     #":media/upload-.*"
-    :media/status :media.status/failed
+    :media/status :media.status/upload-failed
     :media/failed-message message))
+
+
+(defn to-no-media [*post]
+  (swap! *post coll/dissoc-all #":picture|:picture-original|:media/.*"))
+
+
+(defn to-delete-failed [*post message]
+  (swap! *post coll/replace
+    #":media/upload-.*"
+    :media/status :media.status/delete-failed
+    :media/failed-message message))
+
+
+(defn to-deleting [*post]
+  (swap! *post assoc
+    :media/status :media.status/deleting)
+  (fetch/post! (str "/draft/" (:id @*post) "/delete-media")
+    {:success (fn [payload]
+                (to-no-media *post))
+     :error   (fn [message]
+                (to-delete-failed *post message))}))
 
 
 (defn to-displaying [*post]
   (swap! *post
     (fn [post]
       (js/URL.revokeObjectURL (:media/object-url post))
-      (coll/replace post #":media/.*"))))
+      (coll/dissoc-all post #":media/.*"))))
 
 
 (defn to-downloading [*post updates]
@@ -34,11 +53,10 @@
         img (js/Image.)]
     (oset! img "src" (str "/draft/" (:id post) "/" (:url (:picture post))))
     (.addEventListener img "load" #(to-displaying *post))
-    (.addEventListener img "error" #(to-failed *post "Failed to fetch img from server"))))
+    (.addEventListener img "error" #(to-upload-failed *post "Failed to fetch img from server"))))
 
 
 (defn to-uploading [*post file]
-  (to-deleting *post) ;; make sure current state is cleaned up
   (let [url     (js/URL.createObjectURL file)
         active? #(let [post @*post]
                    (and
@@ -61,12 +79,25 @@
                        (to-downloading *post (transit/read-transit-str payload))))
          :error    (fn [message]
                      (when (active?)
-                       (to-failed *post message)))}))))
+                       (to-upload-failed *post message)))}))))
 
 (defn to-uploading* [*post files]
   (when-some [file (when (> (alength files) 0)
                      (aget files 0))]
     (to-uploading *post file)))
+
+
+;; Components
+
+
+(rum/defc local-img < rum/reactive [*post]
+  [:img {:src (fragments/subscribe *post :media/object-url)}])
+
+
+(rum/defc remote-img < rum/reactive [*post]
+  (let [id  (fragments/subscribe *post :id)
+        url (fragments/subscribe-in *post [:picture :url])]
+    [:img {:src (str "/draft/" id "/" url)}]))
 
 
 (rum/defc dragging-impl
@@ -81,80 +112,20 @@
          state))}
   [*post]
   [:.dragging
-   {:class (when (rum/react (rum/cursor *post :media/dragover?)) "dragover")}
+   {:class (when (fragments/subscribe *post :media/dragover?) "dragover")}
    [:.label "Drop here"]])
 
 
 (rum/defc dragging < rum/reactive [*post]
-  (when (and (rum/react (rum/cursor *post :media/dragging?))
-          (not (contains?
-                 #{:media.status/uploading :media.status/deleting}
-                 (rum/react (rum/cursor *post :media/status)))))
+  (when (and
+          (fragments/subscribe *post :media/dragging?)
+          (contains?
+            #{nil :media.status/upload-failed :media.status/deleting-failed}
+            (fragments/subscribe *post :media/status)))
     (dragging-impl *post)))
 
 
-(rum/defc no-media []
-  [:.upload.no-select.cursor-pointer
-   {:on-click (fn [e]
-                (-> (js/document.querySelector ".media-input") (.click))
-                (.preventDefault e))}
-   [:.corner.top-left]
-   [:.corner.top-right]
-   [:.corner.bottom-left]
-   [:.corner.bottom-right]
-   [:.label "Drag media here"]])
-
-
-(rum/defc uploading [{object-url :media/object-url
-                      progress   :media/upload-progress}]
-  (let [percent (-> progress (* 100))]
-    [:.media
-     [:.media-wrap
-      [:img {:src object-url}]
-      [:.upload-overlay {:style {:height (str (- 100 percent) "%")}}]]
-     [:.status "Uploading " (js/Math.floor percent) "%"]]))
-
-
-(rum/defc failed < rum/reactive [*post]
-  (let [object-url (rum/react (rum/cursor *post :media/object-url))
-        message    (rum/react (rum/cursor *post :media/failed-message))
-        dragging?  (rum/react (rum/cursor *post :media/dragging?))]
-    [:.media
-     [:.media-wrap
-      [:img {:src object-url}]
-      (when-not dragging?
-        [:.media-delete.cursor-pointer])
-      [:.upload-overlay-failed]]
-     [:.status "Upload failed with " message " " 
-      [:button.inline 
-       {:on-click (fn [_]
-                    (to-uploading *post (:media/file @*post)))}
-       "↻ Try again"]]]))
-
-
-(rum/defc downloading [post]
-  [:.media
-   [:.media-wrap
-    [:img {:src (:media/object-url post)}]]
-   [:.status "Downloading..."]])
-
-
-(rum/defc displaying [post]
-  [:.media
-   [:.media-wrap
-    [:img {:src (str "/draft/" (:id post) "/" (:url (:picture post)))}]
-    (when-not (:media/dragging? post)
-      [:.media-delete.cursor-pointer])]])
-
-
-(rum/defc deleting [post]
-  [:.media
-   [:.media-wrap
-    [:img {:src (str "/draft/" (:id post) "/" (:url (:picture post)))}]
-    [:.media-deleting]]])
-
-
-(rum/defc input
+(rum/defc file-input
   < rum/static
     {:did-mount
      (fn [state]
@@ -168,31 +139,102 @@
        (dnd/unsubscribe! js/document.documentElement ::dragging)
        state)}
   [*post]
-  [:input.media-input.no-display
+  [:input.no-display
    {:type      "file"
     :on-change #(let [files (-> % (oget "target") (oget "files"))]
                     (to-uploading* *post files))}])
 
 
-(rum/defc ui < rum/reactive
-  [*post]
-  (let [status (rum/react (rum/cursor *post :media/status))]
+(rum/defc no-media [*post]
+  [:.upload.no-select.cursor-pointer
+   {:on-click (fn [e]
+                (-> (js/document.querySelector "input[type=file]") (.click))
+                (.preventDefault e))}
+   [:.corner.top-left]
+   [:.corner.top-right]
+   [:.corner.bottom-left]
+   [:.corner.bottom-right]
+   [:.label "Drag media here"]])
+
+
+(rum/defc uploading < rum/reactive [*post]
+  (let [percent (-> (fragments/subscribe *post :media/upload-progress) (* 100))]
+    [:.media
+     [:.media-wrap
+      (local-img *post)
+      [:.upload-overlay {:style {:height (str (- 100 percent) "%")}}]]
+     [:.status "Uploading " (:media/object-url @*post) " / " (js/Math.floor percent) "%"]]))
+
+
+(rum/defc upload-failed < rum/reactive [*post]
+  [:.media
+   [:.media-wrap
+    (local-img *post)
+    (when-not (fragments/subscribe *post :media/dragging?)
+      [:.media-delete.cursor-pointer])
+    [:.failed-overlay]]
+   [:.status "Upload failed with " (fragments/subscribe *post :media/failed-message) " " 
+    [:button.inline 
+     {:on-click (fn [_] (to-uploading *post (:media/file @*post)))}
+     "↻ Try again"]]])
+
+
+(rum/defc downloading < rum/reactive [*post]
+  [:.media
+   [:.media-wrap (local-img *post)]
+   [:.status "Downloading..."]])
+
+
+(rum/defc displaying < rum/reactive [*post]
+  [:.media
+   [:.media-wrap
+    (remote-img *post)
+    (when-not (fragments/subscribe *post :media/dragging?)
+      [:.media-delete.cursor-pointer
+       {:on-click (fn [_] (to-deleting *post))}])]])
+
+
+(rum/defc deleting < rum/reactive [*post]
+  [:.media
+   [:.media-wrap
+    (remote-img *post)
+    [:.deleting-overlay]]
+   [:.status "Deleting..."]])
+
+
+(rum/defc delete-failed < rum/reactive [*post]
+  [:.media
+   [:.media-wrap
+    (remote-img *post)
+    [:.failed-overlay]]
+   [:.status "Delete failed with " (fragments/subscribe *post :media/failed-message) " "
+    [:button.inline 
+     {:on-click (fn [_] (to-deleting *post))}
+      "↻ Try again"]]])
+
+
+(rum/defc ui < rum/reactive [*post]
+  (let [status (fragments/subscribe *post :media/status)]
     (list
-      (input *post)
+      (file-input *post)
       (cond+
-        ;; TODO deleting state
-        ;; TODO do not subscribe to the whole *post
         (= :media.status/uploading status)
-        (uploading (rum/react *post))
+        (uploading *post)
 
         (= :media.status/downloading status)
-        (downloading (rum/react *post))
+        (downloading *post)
 
-        (= :media.status/failed status)
-        (failed *post)
+        (= :media.status/upload-failed status)
+        (upload-failed *post)
 
-        (some? (rum/react (rum/cursor *post :picture)))
-        (displaying (rum/react *post))
+        (= :media.status/deleting status)
+        (deleting *post)
+
+        (= :media.status/delete-failed status)
+        (delete-failed *post)
+
+        (some? (fragments/subscribe *post :picture))
+        (displaying *post)
 
         :else
-        (no-media)))))
+        (no-media *post)))))

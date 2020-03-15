@@ -1,6 +1,7 @@
 (ns grumpy.core.fragments
   (:require
-   [clojure.string :as str]))
+   [clojure.string :as str]
+   [rum.core :as rum]))
 
 
 (def authors
@@ -70,3 +71,11 @@
 
 (defn new? [post-id]
   (str/starts-with? post-id "@"))
+
+
+(defn subscribe [*ref key]
+  (rum/react (rum/cursor *ref key)))
+
+
+(defn subscribe-in [*ref keys]
+  (rum/react (rum/cursor-in *ref keys)))

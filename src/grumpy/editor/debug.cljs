@@ -20,10 +20,13 @@
    ["Uploading 0%"       {:media/object-url "/post/0THGrh25y/M0C_mT1.orig.png" :media/status :media.status/uploading :media/upload-progress 0}]
    ["Uploading 50%"      {:media/object-url "/post/0THGrh25y/M0C_mT1.orig.png" :media/status :media.status/uploading :media/upload-progress 0.5}]
    ["Uploading tall 30%" {:media/object-url "/post/0T6kDVGD2/LycvDQV.orig.jpeg" :media/status :media.status/uploading :media/upload-progress 0.3}]
-   ["Upload failed"      {:media/object-url "/post/0THGrh25y/M0C_mT1.orig.png" :media/status :media.status/failed :media/failed-message "500 Internal Server Error"}]
-   ["Upload failed long" {:media/object-url "/post/0THGrh25y/M0C_mT1.orig.png" :media/status :media.status/failed :media/failed-message "500 Internal Server Error Machine says no No way Nope NaN NaN NaN"}]
-   ["Uploaded"           {:id "0THGrh25y" :picture {:url "M0C_mT1.fit.jpeg", :content-type "image/jpeg", :dimensions [750 265]}}]
-   ["Uploaded vertical"  {:id "0TDdxMGm8" :picture {:url "M-Jw_2o.fit.jpeg", :content-type "image/jpeg", :dimensions [638 922]}}]
+   ["Upload failed"      {:media/object-url "/post/0THGrh25y/M0C_mT1.orig.png" :media/status :media.status/upload-failed :media/failed-message "500 Internal Server Error"}]
+   ["Upload failed long" {:media/object-url "/post/0THGrh25y/M0C_mT1.orig.png" :media/status :media.status/upload-failed :media/failed-message "500 Internal Server Error Machine says no No way Nope NaN NaN NaN"}]
+   ["Upload failed tall" {:media/object-url "/post/0T6kDVGD2/LycvDQV.orig.jpeg" :media/status :media.status/upload-failed :media/failed-message "500 Internal Server Error"}]
+   ["Displaying"          {:id "0THGrh25y" :picture {:url "M0C_mT1.fit.jpeg", :content-type "image/jpeg", :dimensions [750 265]}}]
+   ["Displaying vertical" {:id "0TDdxMGm8" :picture {:url "M-Jw_2o.fit.jpeg", :content-type "image/jpeg", :dimensions [638 922]}}]
+   ["Deleting"           {:media/status :media.status/deleting :id "0THGrh25y" :picture {:url "M0C_mT1.fit.jpeg", :content-type "image/jpeg", :dimensions [750 265]}}]
+   ["Delete failed"      {:media/status :media.status/delete-failed :media/failed-message "500 Internal Server Error" :id "0THGrh25y" :picture {:url "M0C_mT1.fit.jpeg", :content-type "image/jpeg", :dimensions [750 265]}}]
 ])
 
 

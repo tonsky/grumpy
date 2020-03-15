@@ -209,7 +209,7 @@
        ;     (throw (ex-info (str "/draft/" post-id "/update-body simulated exception") {}))))
        (let [body (slurp request-body)]
          (drafts/update! post-id #(assoc % :body body))
-         {:status 200}))]
+         {:status 200 :headers {"content-type" "text/plain"}}))]
 
     [:post "/draft/:post-id/upload-media"
      interceptors
@@ -225,7 +225,7 @@
        (when (and config/dev? (> (rand) 0.666667))
          (throw (ex-info (str "/draft/" post-id "/delete-media simulated exception") {})))
        (drafts/delete-media! post-id)
-       {:status 200})]
+       {:status 200 :headers {"content-type" "text/plain"}})]
 
    [:post "/post/:post-id/save"
     interceptors

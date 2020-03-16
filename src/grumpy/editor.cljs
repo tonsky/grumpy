@@ -27,13 +27,13 @@
 ;  :body/failed-message "..."
 ;  :body/autosave-timer js/Timer
 
-;  :media/dragging?       true
-;  :media/dragover?       true
+;  :media/dragging?       true | false
+;  :media/dragover?       true | false
+;  :media/dropped?        true | false
+;  :media/object-url      "blob:..."
 ;  :media/mime-type       "image/jpeg"
-;  :media/file            file
-;  :media/object-url      "blob://"
-;  :media/status          (:media.status/uploading | :media.status/downloading | :media.status/upload-failed | :media.status/delete-failed)
-;  :media/upload-request  XHR
+;  :media/dimensions      [w h]
+;  :media/status          nil | :media.status/uploading | :media.status/deleting | :media.status/failed
 ;  :media/upload-progress 0..100
 ;  :media/failed-message  "..."}
 
@@ -53,7 +53,7 @@
     (editor.media/ui *post)
     (editor.body/ui *post)
     (editor.buttons/ui *post)]
-   (editor.media/dragging *post)])
+   (editor.media/render-dragging *post)])
 
 
 (defn ^:after-load ^:export refresh []

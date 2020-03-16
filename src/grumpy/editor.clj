@@ -214,8 +214,8 @@
     [:post "/draft/:post-id/upload-media"
      interceptors
      (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
-       ; (when (and config/dev? (> (rand) 0.666667))
-       ;   (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))
+       (when (and config/dev? (> (rand) 0.666667))
+         (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))
        (let [updates (upload-media! post-id (get-in req [:headers "content-type"]) request-body)]
          (web/transit-response updates)))]
 
@@ -257,8 +257,6 @@
    [:get "/draft/:post-id/:img"
     [auth/populate-session]
     (fn [{{:keys [post-id img]} :path-params}]
-      ; (when (and config/dev? (> (rand) 0.3333))
-      ;   (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))  
       (web/first-file
         (str "grumpy_data/drafts/" post-id "/" img)
         (str "grumpy_data/posts/" post-id "/" img)))]

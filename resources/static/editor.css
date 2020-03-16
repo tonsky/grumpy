@@ -43,11 +43,11 @@ button.inline:active { position: relative; top: 1px; }
 .media-delete { width: 32px; height: 32px; background-image: url(/static/editor/delete.svg); position: absolute; right: -46px; top: 0; }
 .media-delete:hover { background-position: -100% 0; }
 
-.upload-overlay { position: absolute; right: 0; left: 0; bottom: 0; background: #FFFFFFDD; }
+.upload-overlay { position: absolute; right: 0; left: 0; bottom: 0; background: #FFFFFF; }
 .failed-overlay { position: absolute; top: 0; right: 0; left: 0; bottom: 0; background: #CC3333DD; }
 .deleting-overlay { position: absolute; top: 0; right: 0; left: 0; bottom: 0; background: #FFFFFF99; }
   
-.status { position: absolute; left: 0px; bottom: 0px; background: #FFF; padding: 4px 10px; }
+.status { background-color: #FFE5E5; color: #c33; position: absolute; left: 0px; bottom: 0px; padding: 4px 10px; }
 
 .textarea { position: relative; }
 .textarea > .input { height: 300px; }

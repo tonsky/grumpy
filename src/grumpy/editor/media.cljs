@@ -5,6 +5,7 @@
    [grumpy.core.fetch :as fetch]
    [grumpy.core.fragments :as fragments]
    [grumpy.core.macros :refer [oget oset! js-fn cond+]]
+   [grumpy.core.mime :as mime]
    [grumpy.core.transit :as transit]
    [rum.core :as rum]))
 
@@ -35,7 +36,7 @@
                      (= :media.status/uploading (:media/status @*post)))]
     (when-some [object-url (:media/object-url @*post)]
       (js/URL.revokeObjectURL object-url))
-    (swap! *post assoc
+    (swap! *post coll/replace #":media/.*"
       :media/object-url      object-url
       :media/dimensions      dimensions
       :media/mime-type       (oget file "type")
@@ -59,18 +60,21 @@
 
 (defn to-measuring [*post file]
   (let [object-url (js/URL.createObjectURL file)
-        img        (js/Image.)]
-    (.addEventListener img "load"
-      (fn [_]
-        (swap! *post dissoc :media/error :media/dragging? :media/dragover? :media/dropped?)
-        (to-uploading *post file object-url [(.-naturalWidth img) (.-naturalHeight img)])))
-    (.addEventListener img "error"
-      (fn [_]
-         (swap! *post #(-> %
-                         (dissoc :media/dragging? :media/dragover? :media/dropped?)
-                         (assoc :media/error "Unsupported format, we accept jpg/png/gif/mp4")))
-         (js/URL.revokeObjectURL object-url)))
-    (oset! img "src" object-url)))
+        video?     (mime/video? (oget file "type"))
+        media      (js/document.createElement (if video? "video" "img"))]
+      (.addEventListener media (if video? "loadedmetadata" "load")
+        #(let [dimensions (if video?
+                            [(.-videoWidth media) (.-videoHeight media)]
+                            [(.-naturalWidth media) (.-naturalHeight media)])]
+           (swap! *post dissoc :media/error :media/dragging? :media/dragover? :media/dropped?)
+           (to-uploading *post file object-url dimensions)))
+      (.addEventListener media "error"
+        (fn [_]
+           (js/URL.revokeObjectURL object-url)
+           (swap! *post #(-> %
+                           (dissoc :media/dragging? :media/dragover? :media/dropped?)
+                           (assoc :media/error "Unsupported format, we accept jpg/png/gif/mp4")))))
+      (oset! media "src" object-url)))
 
 
 (defn to-measuring* [*post files]
@@ -147,19 +151,31 @@
      [:.status.stick-left.stick-bottom msg])])
 
 
-(rum/defc render-img < rum/reactive [*post]
-  (if-some [src (fragments/subscribe *post :media/object-url)]
-    (let [[w h] (fragments/subscribe *post :media/dimensions)
-          [w' h'] (fragments/fit w h 550 500)]
+(rum/defc render-media-element [src mime-type dimensions]
+  (let [style (when-some [[w h] dimensions]
+                (let [[w' h'] (fragments/fit w h 550 500)]
+                  {:width w' :height h'}))]
+    (if (mime/video? mime-type)
+      [:video
+       {:auto-play    true
+        :muted        true
+        :loop         true
+        :preload      "auto"
+        :plays-inline true
+        :style        style}
+       [:source {:type mime-type :src src}]]
       [:img {:src src
-             :style {:width (str w' "px") :height (str h' "px")}}])
-    (when-some [url (fragments/subscribe-in *post [:picture :url])]
-      (let [id (fragments/subscribe *post :id)]
-        (if-some [[w h] (fragments/subscribe-in *post [:picture :dimensions])]
-          (let [[w' h'] (fragments/fit w h 550 500)]
-            [:img {:src (str "/draft/" id "/" url)
-                   :style {:width (str w' "px") :height (str h' "px")}}])
-          [:img {:src (str "/draft/" id "/" url)}])))))
+             :style style}])))
+
+(rum/defc render-media < rum/reactive [*post]
+  (if-some [src (fragments/subscribe *post :media/object-url)]
+    (let [mime-type (fragments/subscribe *post :media/mime-type)
+          dimensions (fragments/subscribe *post :media/dimensions)]
+      (render-media-element src mime-type dimensions))
+    (when-some [picture (fragments/subscribe *post :picture)]
+      (let [id  (fragments/subscribe *post :id)
+            src (str "/draft/" id "/" (:url picture))]
+        (render-media-element src (:content-type picture) (:dimensions picture))))))
 
 
 (rum/defc render-delete < rum/reactive [*post]
@@ -199,7 +215,7 @@
             (some? (fragments/subscribe *post :media/object-url)))
         [:.media
          [:.media-wrap
-          (render-img *post)
+          (render-media *post)
           (render-delete *post)
           (render-overlay *post)]
          (render-status *post)]

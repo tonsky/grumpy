@@ -43,10 +43,9 @@
       [(.getPath to)])))
 
 
-(defn convert-media! [^File original]
+(defn convert-media! [^File original mime-type]
   (cond+
-    :let [original-name (.getName original)
-          mime-type     (mime/mime-type original-name)]
+    :let [original-name (.getName original)]
 
     ;; video
     (mime/video? mime-type)
@@ -92,15 +91,15 @@
        :dimensions   [w h]}})))
 
 
-(defn upload-media! [post-id content-type ^InputStream input-stream]
+(defn upload-media! [post-id mime-type ^InputStream input-stream]
   (jobs/linearize post-id
     (drafts/delete-media! post-id)
     (let [dir      (io/file "grumpy_data/drafts" post-id)
           name     (posts/encode (System/currentTimeMillis) 7)
-          [_ ext]  (str/split content-type #"/")
+          ext      (mime/extension mime-type)
           original (io/file dir (str name ".orig." ext))
           _        (io/copy input-stream original)
-          updates  (convert-media! original)]
+          updates  (convert-media! original mime-type)]
       (drafts/update! post-id #(merge % updates))
       updates)))
 

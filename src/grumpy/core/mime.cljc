@@ -99,6 +99,20 @@
    "zip"      "application/zip"})
 
 
+(defn extension [mime-type]
+  (let [[_ ext] (str/split mime-type #"/")]
+    (if
+      (contains? default-mime-types ext)
+      ext
+      (or
+        (reduce-kv
+          (fn [_ ext type]
+            (when (= type mime-type)
+              (reduced ext)))
+          nil default-mime-types)
+        ext))))
+
+
 (defn mime-type [filename]
   (or
     (when-some [[_ ext] (re-matches #".*\.([^./\\]+)" filename)]

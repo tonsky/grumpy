@@ -10,6 +10,11 @@
    [rum.core :as rum]))
 
 
+(def empty-success-response
+  {:status 200
+   :headers {"content-type" "text/plain"}})
+
+
 (defn redirect
   ([path]
     { :status 302
@@ -66,13 +71,14 @@
               subtitle? true}} opts]
     [:html
       [:head
-        [:meta { :http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
-        [:meta { :name "viewport" :content "width=device-width, initial-scale=1.0"}]
-        [:link { :href "/feed.xml" :rel "alternate" :title "Grumpy Website" :type "application/atom+xml" }]
+        [:meta {:http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
+        [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
+        [:link {:href "/feed.xml" :rel "alternate" :title "Grumpy Website" :type "application/atom+xml"}]
 
-        [:link { :href "/static/favicons/apple-touch-icon-152x152.png" :rel "apple-touch-icon-precomposed" :sizes "152x152" }]
-        [:link { :href "/static/favicons/favicon-196x196.png" :rel "icon" :sizes "196x196" }]
-        [:link { :href "/static/favicons/favicon-32x32.png"  :rel "icon" :sizes "32x32" }]
+        [:link {:href "/static/favicons/apple-touch-icon-152x152.png" :rel "apple-touch-icon-precomposed" :sizes "152x152"}]
+        [:link {:href "/static/favicons/favicon-196x196.png" :rel "icon" :sizes "196x196"}]
+        [:link {:href "/static/favicons/favicon-32x32.png" :rel "icon" :sizes "32x32"}]
+        [:link {:rel "preload" :href "/static/favicons/apple-touch-icon-152x152.png" :as "image"}]
 
         [:title title]
         (style "styles.css")
@@ -93,7 +99,7 @@
               [:span.subtitle-text " "]])]
         children
         (when (= page :index)
-          [:.loader [:img { :src "/static/favicons/apple-touch-icon-152x152.png" }]])
+          [:.loader-block.row.center [:.loader]])
         [:footer
           (interpose ", "
             (for [author fragments/authors]

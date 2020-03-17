@@ -17,7 +17,7 @@
 
 
 (defn feed [post-ids]
-  (let [posts    (map posts/get-post post-ids)
+  (let [posts    (map posts/load post-ids)
         updated  (or (max-date posts) (time/now))
         hostname (config/get ::config/hostname)]
     (xml/emit

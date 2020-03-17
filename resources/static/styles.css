@@ -68,11 +68,11 @@ body.anonymous .post_meta_edit { display: none; }
     to { transform: rotate(360deg); }
 }
 
-.loader { margin: 0 0 3em 0; text-align: center; }
-.loader > img { width: 76px; height: 76px; border: 2px solid #000; border-radius: 50%; }
-.loader-loading > img { animation: rotating 1s ease-in-out infinite; }
-.loader-error > img { cursor: pointer; border-color: red; }
-.loader-error > img:hover { position: relative; top: -1px; }
+.loader-block { margin: 0 0 3em 0; text-align: center; }
+.loader { width: 76px; height: 76px; border: 2px solid #000; border-radius: 50%; display: block; background-image: url("/static/favicons/apple-touch-icon-152x152.png"); background-size: 100%; }
+.loader.loading { animation: rotating 1s ease-in-out infinite; }
+.loader.error { cursor: pointer; border-color: red; }
+.loader.error:hover { position: relative; top: -1px; }
 
 footer {
   padding: 1em 0 1em;
@@ -112,3 +112,8 @@ button, .no-select { user-select: none; -webkit-user-select: none; }
 .cursor-default { cursor: default; }
 
 .no-display { display: none; }
+
+.stick-left { position: absolute; left: 0; }
+.stick-right { position: absolute; right: 0; }
+.stick-top { position: absolute; top: 0; }
+.stick-bottom { position: absolute; bottom: 0; }

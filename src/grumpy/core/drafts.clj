@@ -40,8 +40,7 @@
   (jobs/linearize post-id
     (let [draft  (load post-id)
           draft' (update-fn draft)
-          dir    (str "grumpy_data/drafts/" post-id)
-          file   (io/file dir "post.edn")]
+          file   (io/file "grumpy_data/drafts" post-id "post.edn")]
       (spit file (pr-str draft'))
       draft')))
 

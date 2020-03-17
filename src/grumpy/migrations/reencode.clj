@@ -11,7 +11,7 @@
 (defn -main [& args]
   (log/log "Converting videos...")
   (doseq [id (posts/post-ids)
-          :let [post (posts/get-post id)
+          :let [post (posts/load id)
                 pic  (:picture post)]
           :when (some? pic)
           :when (nil? (:picture-original post))

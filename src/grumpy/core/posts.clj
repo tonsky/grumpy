@@ -1,4 +1,5 @@
 (ns grumpy.core.posts
+  (:refer-clojure :exclude [load])
   (:require
    [clojure.java.io :as io]
    [clojure.string :as str]
@@ -25,7 +26,7 @@
              (dec len)))))
 
 
-(defn get-post [post-id]
+(defn load [post-id]
   (let [path (str "grumpy_data/posts/" post-id "/post.edn")]
     (some-> (io/file path)
       (files/slurp)
@@ -46,6 +47,15 @@
   (str
     (encode (quot (.toEpochMilli inst) 1000) 6)
     (encode (rand-int (* 64 64 64)) 3)))
+
+
+(defn update! [post-id update-fn]
+  (jobs/linearize post-id
+    (let [post  (load post-id)
+          post' (update-fn post)
+          file  (io/file "grumpy_data/posts" post-id "post.edn")]
+      (spit file (pr-str post'))
+      post')))
 
 
 (defn delete! [post-id]

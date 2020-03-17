@@ -72,17 +72,17 @@
 (rum/defc index-page [post-ids]
   (web/page {:page :index :scripts ["loader.js"]}
     (for [post-id post-ids]
-      (post (posts/get-post post-id)))))
+      (post (posts/load post-id)))))
 
 
 (rum/defc posts-fragment [post-ids]
   (for [post-id post-ids]
-    (post (posts/get-post post-id))))
+    (post (posts/load post-id))))
 
 
 (rum/defc post-page [post-id]
   (web/page {:page :post}
-    (post (posts/get-post post-id))))
+    (post (posts/load post-id))))
 
 
 (def no-cache

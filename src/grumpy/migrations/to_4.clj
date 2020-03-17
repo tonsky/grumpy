@@ -64,6 +64,6 @@
                          (range 1 Integer/MAX_VALUE)
                          (sort (posts/post-ids)))]
         (log/log "Converting" id "->" idx)
-        (crux/submit-tx system (convert-post idx (posts/get-post id))))
+        (crux/submit-tx system (convert-post idx (posts/load id))))
       (finally
         (component/stop crux)))))

@@ -105,27 +105,12 @@
       updates)))
 
 
-(defn save-post! [post-id updates]
-  (let [draft  (drafts/load post-id)
-        draft' (merge draft updates)
-        dir    (str "grumpy_data/drafts/" post-id)
-        file   (io/file dir "post.edn")]
-    (spit (io/file file) (pr-str draft'))
-    draft'))
-
-
-(defn update-post! [post-id f]
-  (let [post  (posts/get-post post-id)
-        post' (f post)]
-    (spit (io/file (str "grumpy_data/posts/" post-id) "post.edn") (pr-str post'))))
-
-
 (defn publish! [post-id]
   (let [new?      (str/starts-with? post-id "@")
         draft-dir (io/file (str "grumpy_data/drafts/" post-id))]
     ;; clean up old post
     (when-not new?
-      (let [old (posts/get-post post-id)]
+      (let [old (posts/load post-id)]
         (.delete (io/file (str "grumpy_data/posts/" post-id "/post.edn")))
         (doseq [key   [:picture :picture-original]
                 :let  [pic (get old key)]
@@ -137,7 +122,8 @@
                  true (assoc :updated now)
                  new? (assoc :created now
                              :id (posts/next-post-id now))) ;; assign post id
-          post-dir (io/file (str "grumpy_data/posts/" (:id post)))]
+          post-id' (:id post)
+          post-dir (io/file "grumpy_data/posts" post-id')]
       ;; create new post dir
       (when new?
         (.mkdirs post-dir))
@@ -155,15 +141,14 @@
       (.delete (io/file draft-dir "post.edn"))
       (.delete draft-dir)
 
+      ;; notify telegram
       (if new?
-        (jobs/try-async
-          "telegram/post-picture!"
-          #(update-post! (:id post) telegram/post-picture!)
-          { :after (fn [_] (jobs/try-async
-                             "telegram/post-text!"
-                             #(update-post! (:id post) telegram/post-text!))) })
-        (jobs/try-async
-          "telegram/update-text!"
+        (jobs/try-async "telegram/post-picture!"
+          #(posts/update! post-id' telegram/post-picture!)
+          {:after (fn [_]
+                    (jobs/try-async "telegram/post-text!"
+                      #(posts/update! post-id' telegram/post-text!)))})
+        (jobs/try-async "telegram/update-text!"
           #(telegram/update-text! post)))
 
       post)))
@@ -193,65 +178,63 @@
      interceptors
      (fn [req]
        (let [user (auth/user req)]
-         (web/html-response (edit-draft-page (str "@" user) user))))]
+         (web/html-response
+           (edit-draft-page (str "@" user) user))))]
 
     [:get "/post/:post-id/edit"
      interceptors
-     (fn [{{:keys [post-id]} :path-params :as req}]
-       (web/html-response (edit-draft-page post-id (auth/user req))))]
+     (fn [req]
+       (web/html-response
+         (edit-draft-page (:post-id (:path-params req)) (auth/user req))))]
 
     [:post "/draft/:post-id/update-body"
      interceptors
      (fn [{{:keys [post-id]} :path-params, request-body :body}]
        ; (when config/dev?
-       ;   (Thread/sleep 1000)
-       ;   (when (> (rand) 0.666667)
+       ;   (Thread/sleep 500)
+       ;   (when (> (rand) 0.5)
        ;     (throw (ex-info (str "/draft/" post-id "/update-body simulated exception") {}))))
        (let [body (slurp request-body)]
          (drafts/update! post-id #(assoc % :body body))
-         {:status 200 :headers {"content-type" "text/plain"}}))]
+         web/empty-success-response))]
 
     [:post "/draft/:post-id/upload-media"
      interceptors
      (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
-       (when (and config/dev? (> (rand) 0.666667))
-         (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))
+       ; (when (and config/dev? (> (rand) 0.666667))
+       ;   (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))
        (let [updates (upload-media! post-id (get-in req [:headers "content-type"]) request-body)]
          (web/transit-response updates)))]
 
     [:post "/draft/:post-id/delete-media"
      interceptors
      (fn [{{:keys [post-id]} :path-params}]
-       (when (and config/dev? (> (rand) 0.666667))
-         (throw (ex-info (str "/draft/" post-id "/delete-media simulated exception") {})))
+       ; (when (and config/dev? (> (rand) 0.666667))
+       ;   (throw (ex-info (str "/draft/" post-id "/delete-media simulated exception") {})))
        (drafts/delete-media! post-id)
-       {:status 200 :headers {"content-type" "text/plain"}})]
+       web/empty-success-response)]
 
-   [:post "/post/:post-id/save"
-    interceptors
-    (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
-      (let [payload (transit/read-transit request-body)
-            saved   (save-post! post-id (:post payload))]
-        (web/transit-response {:post saved})))]
+    [:post "/draft/:post-id/publish"
+     interceptors
+     (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
+       ; (Thread/sleep 1000)
+       (let [body  (slurp request-body)
+             post' (jobs/linearize post-id
+                     (drafts/update! post-id #(assoc % :body body))
+                     (publish! post-id))]
+         (web/transit-response post')))]
 
-   [:post "/post/:post-id/publish"
-    interceptors
-    (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
-      (let [payload (transit/read-transit request-body)
-            _       (save-post! post-id (:post payload))
-            post'   (publish! post-id)]
-        (web/transit-response {:post post'})))]
-
-   [:post "/draft/:post-id/delete"
-    interceptors
-    (fn [{{:keys [post-id]} :path-params :as req}]
-      (drafts/delete! post-id)
-      {:status 200})]
+    [:post "/draft/:post-id/delete"
+     interceptors
+     (fn [req]
+       ; (Thread/sleep 1000)
+       (drafts/delete! (:post-id (:path-params req)))
+       web/empty-success-response)]
 
    [:get "/post/:post-id/delete"
     interceptors
-    (fn [{{:keys [post-id]} :path-params :as req}]
-      (posts/delete! post-id)
+    (fn [req]
+      (posts/delete! (:post-id (:path-params req)))
       (web/redirect "/"))]
 
    [:get "/draft/:post-id/:img"
@@ -259,17 +242,4 @@
     (fn [{{:keys [post-id img]} :path-params}]
       (web/first-file
         (str "grumpy_data/drafts/" post-id "/" img)
-        (str "grumpy_data/posts/" post-id "/" img)))]
-
-   [:post "/post/:post-id/edit"
-    interceptors
-    middlewares/multipart-params
-    (fn [{{:keys [post-id]} :path-params
-          {:keys [body picture author]} :multipart-params
-          :as req}]
-      (save-post!
-        {:id     post-id
-         :body   body
-         :author author}
-        (when (some-> picture :size pos?) picture))
-      (web/redirect "/"))]))
+        (str "grumpy_data/posts/" post-id "/" img)))]))

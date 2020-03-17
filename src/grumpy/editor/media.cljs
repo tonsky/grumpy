@@ -12,14 +12,14 @@
 (defn to-failed [*post message]
   (swap! *post assoc
     :media/status :media.status/failed
-    :media/failed-message message))
+    :media/error message))
 
 
 (defn to-deleting [*post]
   (let [post      (swap! *post assoc :media/status :media.status/deleting)
         relevant? #(= post @*post)]
     (fetch/post! (str "/draft/" (:id @*post) "/delete-media")
-      {:success (fn [payload]
+      {:success (fn [_]
                   (when (relevant?)
                     (when-some [object-url (:media/object-url @*post)]
                       (js/URL.revokeObjectURL object-url))
@@ -62,13 +62,13 @@
         img        (js/Image.)]
     (.addEventListener img "load"
       (fn [_]
-        (swap! *post dissoc :media/failed-message :media/dragging? :media/dragover? :media/dropped?)
+        (swap! *post dissoc :media/error :media/dragging? :media/dragover? :media/dropped?)
         (to-uploading *post file object-url [(.-naturalWidth img) (.-naturalHeight img)])))
     (.addEventListener img "error"
       (fn [_]
          (swap! *post #(-> %
                          (dissoc :media/dragging? :media/dragover? :media/dropped?)
-                         (assoc :media/failed-message "Unsupported format, we accept jpg/png/gif/mp4")))
+                         (assoc :media/error "Unsupported format, we accept jpg/png/gif/mp4")))
          (js/URL.revokeObjectURL object-url)))
     (oset! img "src" object-url)))
 
@@ -104,9 +104,9 @@
 
 (rum/defc render-dragging < rum/reactive [*post]
   (when (and
+          (nil? (fragments/subscribe *post :post/status))
           (fragments/subscribe *post :media/dragging?)
-          (contains? #{nil :media.status/failed}
-            (fragments/subscribe *post :media/status)))
+          (contains? #{nil :media.status/failed} (fragments/subscribe *post :media/status)))
     (render-dragging-impl *post)))
 
 
@@ -135,15 +135,16 @@
 (defn render-no-media [*post]
   [:.upload.no-select.cursor-pointer
    {:on-click (fn [e]
-                (-> (js/document.querySelector "input[type=file]") (.click))
+                (when (nil? (:post/status @*post))
+                  (-> (js/document.querySelector "input[type=file]") (.click)))
                 (.preventDefault e))}
    [:.corner.top-left]
    [:.corner.top-right]
    [:.corner.bottom-left]
    [:.corner.bottom-right]
    [:.label "Drag media here"]
-   (when-some [msg (fragments/subscribe *post :media/failed-message)]
-     [:.status msg])])
+   (when-some [msg (fragments/subscribe *post :media/error)]
+     [:.status.stick-left.stick-bottom msg])])
 
 
 (rum/defc render-img < rum/reactive [*post]
@@ -162,7 +163,9 @@
 
 
 (rum/defc render-delete < rum/reactive [*post]
-  (when-not (fragments/subscribe *post :media/dragging?)
+  (when (and
+          (not (fragments/subscribe *post :media/dragging?))
+          (nil? (fragments/subscribe *post :post/status)))
     [:.media-delete.cursor-pointer
      {:on-click (fn [_] (to-deleting *post))}]))
 
@@ -183,8 +186,8 @@
 
 
 (rum/defc render-status < rum/reactive [*post]
-  (when-some [msg (fragments/subscribe *post :media/failed-message)]
-     [:.status msg]))
+  (when-some [msg (fragments/subscribe *post :media/error)]
+     [:.status.stick-left.stick-bottom msg]))
 
 
 (rum/defc ui < rum/reactive

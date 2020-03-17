@@ -24,7 +24,7 @@
  
 ;  :body/edited         "..."
 ;  :body/status         (:body.status/failed | :body.status/edited | :body.status/saving)
-;  :body/failed-message "..."
+;  :body/error          "..."
 ;  :body/autosave-timer js/Timer
 
 ;  :media/dragging?       true | false
@@ -35,7 +35,10 @@
 ;  :media/dimensions      [w h]
 ;  :media/status          nil | :media.status/uploading | :media.status/deleting | :media.status/failed
 ;  :media/upload-progress 0..100
-;  :media/failed-message  "..."}
+;  :media/error           "..."
+
+;  :post/status           nil | :post.status/publishing | :post.status/deleting
+;  :post/error            "..." }
 
 
 (defonce *post (atom nil))

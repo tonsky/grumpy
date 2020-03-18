@@ -67,7 +67,7 @@
     [:button.btn.self-middle.self-right
      {:on-click (fn [_] (to-deleting *post))}
      "Delete draft"]
-    [:.post-btn-loader [:.loader.loading] "Delete draft"]))
+    [:.post-btn-loader [:.loader.small.loading] "Delete draft"]))
 
 
 (rum/defc button-update < rum/reactive [*post]
@@ -76,7 +76,7 @@
      {:disabled (not (ready? *post))
       :on-click (fn [_] (to-publishing *post))}
      "Update"]
-   [:.post-btn-loader [:.loader.loading] "Update"]))
+   [:.post-btn-loader [:.loader.small.loading] "Update"]))
 
 
 (rum/defc button-cancel < rum/reactive [*post]
@@ -84,7 +84,7 @@
     [:button.btn.self-right
      {:on-click (fn [_] (to-deleting *post))}
      "Cancel edit"]
-    [:.post-btn-loader [:.loader.loading] "Cancel edit"]))
+    [:.post-btn-loader [:.loader.small.loading] "Cancel edit"]))
 
 
 (rum/defc ui < rum/reactive [*post]

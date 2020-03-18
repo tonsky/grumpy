@@ -10,6 +10,7 @@
    [grumpy.core.files :as files]
    [grumpy.core.fragments :as fragments]
    [grumpy.core.jobs :as jobs]
+   [grumpy.core.log :as log]
    [grumpy.core.macros :refer [cond+]]
    [grumpy.core.mime :as mime]
    [grumpy.core.posts :as posts]
@@ -177,6 +178,7 @@
      interceptors
      (fn [req]
        (let [user (auth/user req)]
+         (log/log (str "Created /draft/@" user))
          (web/html-response
            (edit-draft-page (str "@" user) user))))]
 
@@ -199,10 +201,14 @@
 
     [:post "/draft/:post-id/upload-media"
      interceptors
-     (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
+     (fn [{{:keys [post-id]} :path-params
+           {:strs [content-type]} :headers
+           request-body :body}]
        ; (when (and config/dev? (> (rand) 0.666667))
        ;   (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))
-       (let [updates (upload-media! post-id (get-in req [:headers "content-type"]) request-body)]
+       (log/log (str "Uploading " content-type " to /draft/" post-id "..."))
+       (let [updates (upload-media! post-id content-type request-body)]
+         (log/log (str "Uploaded " content-type " to /draft/" post-id " as " (pr-str updates)))
          (web/transit-response updates)))]
 
     [:post "/draft/:post-id/delete-media"
@@ -210,6 +216,7 @@
      (fn [{{:keys [post-id]} :path-params}]
        ; (when (and config/dev? (> (rand) 0.666667))
        ;   (throw (ex-info (str "/draft/" post-id "/delete-media simulated exception") {})))
+       (log/log (str "Deleting media from /draft/" post-id))
        (drafts/delete-media! post-id)
        web/empty-success-response)]
 
@@ -217,23 +224,27 @@
      interceptors
      (fn [{{:keys [post-id]} :path-params, request-body :body :as req}]
        ; (Thread/sleep 1000)
+       (log/log (str "Publishing /draft/" post-id "..."))
        (let [body  (slurp request-body)
              post' (jobs/linearize post-id
                      (drafts/update! post-id #(assoc % :body body))
                      (publish! post-id))]
+         (log/log (str "Published /draft/" post-id " as /post/" (:id post')))
          (web/transit-response post')))]
 
     [:post "/draft/:post-id/delete"
      interceptors
-     (fn [req]
+     (fn [{{:keys [post-id]} :path-params}]
+       (log/log (str "Deleting /draft/" post-id))
        ; (Thread/sleep 1000)
-       (drafts/delete! (:post-id (:path-params req)))
+       (drafts/delete! post-id)
        web/empty-success-response)]
 
    [:get "/post/:post-id/delete"
     interceptors
-    (fn [req]
-      (posts/delete! (:post-id (:path-params req)))
+    (fn [{{:keys [post-id]} :path-params}]
+      (log/log (str "Deleting /post/" post-id))
+      (posts/delete! post-id)
       (web/redirect "/"))]
 
    [:get "/draft/:post-id/:img"

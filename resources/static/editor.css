@@ -26,10 +26,10 @@ button.inline:active { position: relative; top: 1px; }
 /* EDIT POST */
 
 .upload,
-.dragging { background: #f5f5f0; color: #AAA; display: flex; justify-content: center; align-items: center; }
+.dragging { background: #f5f5f0; color: #3d3d3d; display: flex; justify-content: center; align-items: center; }
 
 .upload { height: 75px; position: relative; }
-.upload > .corner { position: absolute; width: 12px; height: 12px; border-width: 3px; border-color: #D5D1C9; border-style: solid; }
+.upload > .corner { position: absolute; width: 12px; height: 12px; border-width: 3px; border-color: #808080; border-style: solid; }
 .upload > .top-left { top: 0; left: 0; border-bottom: none; border-right: none; }
 .upload > .top-right { top: 0; right: 0; border-left: none; border-bottom: none; }
 .upload > .bottom-left { bottom: 0; left: 0; border-right: none; border-top: none; }
@@ -61,7 +61,7 @@ button.inline:active { position: relative; top: 1px; }
 .post-post { padding: 0; height: 78px; font-weight: bold; background-color: #C64A42; color: white; position: relative; }
 .post-post:not([disabled]) { border-bottom: 4px solid #961A12; }
 .post-post[disabled] { height: 74px; margin-top: 4px; filter: grayscale(); }
-.post-post:not([disabled]):active { box-shadow: 0 0 0 #961A12; transform: translateY(4px); }
+.post-post:not([disabled]):active { border-bottom: none; height: 74px; margin-top: 4px; }
 .post-post > .hand { position: absolute; left: 0; bottom: 22px; }
 .post-post:not([disabled]):hover > .hand { transform: translateY(-12px); }
 .post-post:not([disabled]):active > .hand { transform: translateY(15px); }

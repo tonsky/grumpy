@@ -173,7 +173,7 @@
       (nil? (get-token handle))
       (let [token        (gen-token)
             redirect-url (:redirect-url form-params)
-            link         (url/build (str (config/get ::config/hostname) "/authenticate")
+            link         (url/build (str (config/get :grumpy.server/hostname) "/authenticate")
                            {:handle       handle
                             :token        token
                             :redirect-url redirect-url})]

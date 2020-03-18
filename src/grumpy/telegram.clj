@@ -52,7 +52,7 @@
        (nil? key)   post
        :else
        (let [picture (get post key)
-             url     (str (config/get ::config/hostname) "/post/" (:id post) "/" (:url picture))
+             url     (str (config/get :grumpy.server/hostname) "/post/" (:id post) "/" (:url picture))
              resp    (case (mime/type picture)
                        :mime.type/video (post! (str "@" channel) "/sendVideo" {:video url})
                        :mime.type/image (post! (str "@" channel) "/sendPhoto" {:photo url}))]

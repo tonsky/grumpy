@@ -17,8 +17,10 @@
       {:body    (or (:body/edited post) (:body post))
        :success
        (fn [payload]
-         (let [post' (transit/read-transit-str payload)]
-           (oset! js/location "href" (str "/post/" (:id post')))))
+         (if (fragments/new? (:id post))
+           (oset! js/location "href" "/")
+           (let [post' (transit/read-transit-str payload)]
+             (oset! js/location "href" (str "/post/" (:id post'))))))
        :error
        (fn [error]
          (let [error (str "Publising failed with " error)]

@@ -26,12 +26,7 @@
     :telegram/user "mamutnespit"
     :telegram/user-chat "303519462"
     :name  "Dmitrii Dimandt"
-    :url   "https://twitter.com/dmitriid"}
-   {:email "ulyanovskui@gmail.com"
-    :user  "andreivoronin"
-    :telegram/user "andreuvoronin"
-    :name  "Andrei Voronin"
-    :url   "https://twitter.com/UlyanovskUI"}])
+    :url   "https://twitter.com/dmitriid"}])
 
 
 (defn author-by [attr value]

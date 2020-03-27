@@ -94,5 +94,5 @@
    (when-some [error (fragments/subscribe *post :post/error)]
      [:.status {:style {:z-index 1}} error])
    (if (fragments/new? (fragments/subscribe *post :id))
-     [:.row.middle.space-between (button-post *post) (button-delete *post)]
-     [:.row.middle.space-between (button-update *post) (button-cancel *post)])])
+     [:.row.middle.space-between (button-delete *post) (button-post *post)]
+     [:.row.middle.space-between (button-cancel *post) (button-update *post)])])

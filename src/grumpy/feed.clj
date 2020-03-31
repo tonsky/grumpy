@@ -61,10 +61,13 @@
                    (case (mime/type pic)
                      :mime.type/video
                        [:video
-                         { :autoplay "autoplay"
-                           :loop "loop"
-                           :style { :max-width 550 :height "auto" :max-height 500 }}
-                         [:source {:type (mime/mime-type (:url pic)) :src src}]]
+                        {:autoplay    "autoplay"
+                         :loop        "loop"
+                         :muted       "muted"
+                         :playsinline "playsinline"
+                         :controls    "controls" ;; Feedly won’t autoplay :( https://github.com/tonsky/grumpy/issues/46
+                         :style       {:max-width 550 :height "auto" :max-height 500}}
+                        [:source {:type (mime/mime-type (:url pic)) :src src}]]
                      :mime.type/image
                        (let [img (if-some [[w h] (:dimensions pic)]
                                    (let [[w' h'] (fragments/fit w h 550 500)]

@@ -1,6 +1,6 @@
 /* FORMS */
 
-textarea, input[type=text], button { font: inherit; outline: none; }
+textarea, input[type=text], button { font: inherit; outline: none; color: inherit; }
 
 .input { height: 32px; }
 .input { position: relative; border: 0px solid #d5d1c9; }
@@ -74,3 +74,14 @@ button.inline:active { position: relative; top: 1px; }
 .post-btn-loader { /* same as btn */ padding: 6px 30px 5px;  position: relative; color: transparent; }
 .post-btn-loader > .loader { margin: 0; position: absolute; top: calc(50% - 19px); left: calc(50% - 19px); } /* .loader width / 2 */
 
+
+@media (prefers-color-scheme: dark) {
+  .upload, .dragging { background-color: #363A3A; color: #999; }
+  .dragging { border-color: #808070; } 
+  .dragover { border-color: #D5D1C9; }
+  .input:before { display: none; }
+  .input:after { background-color: #363A3A; border-top-color: #1d1d1d; border-left-color: #1d1d1d; border-right-color: #999; border-bottom-color: #999; }
+  .upload-overlay { background-color: var(--body-bg); }
+  .deleting-overlay { background-color: rgba(0,0,0,0.55); }
+  .btn { border: none; }
+}

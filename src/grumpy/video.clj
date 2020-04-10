@@ -23,7 +23,7 @@
 
 (defn stats [^File file]
   (let [out (:out (jobs/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))
-        [_ w h frames] (re-matches #"(\d+|N/A)x(\d+|N/A)x(\d+|N/A)" (str/trim out))]
+        [_ w h frames] (re-matches #"(\d+|N/A)x(\d+|N/A)x(\d+|N/A).*" out)]
     {:width  (parse-long w)
      :height (parse-long h)
      :frames (parse-long frames)}))
@@ -36,8 +36,8 @@
 (defn local-convert! [^File original ^File converted]
   (let [[w h]   (dimensions original)
         aspect  (/ w h)
-        [w1 h1] (if (> w 1000) [1000 (/ 1000 aspect)] [w h])
-        [w2 h2] (if (> h1 1100) [(* aspect 1100) 1100] [w1 h1])
+        [w1 h1] (if (> w 1100) [1100 (/ 1100 aspect)] [w h])
+        [w2 h2] (if (> h1 1000) [(* aspect 1000) 1000] [w1 h1])
         round   (fn [x] (-> x (/ 2) long (* 2)))
         [w3 h3] [(round w2) (round h2)]]
     (jobs/sh "ffmpeg"

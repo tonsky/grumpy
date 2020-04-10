@@ -22,16 +22,18 @@
 
 
 (defn stats [^File file]
-  (let [out (:out (jobs/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))
-        [_ w h frames] (re-matches #"(\d+|N/A)x(\d+|N/A)x(\d+|N/A).*" out)]
-    {:width  (parse-long w)
-     :height (parse-long h)
-     :frames (parse-long frames)}))
+  (let [out (:out (jobs/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))]
+    (if-some [[_ w h frames] (re-find #"^(\d+|N/A)x(\d+|N/A)x(\d+|N/A)" out)]
+      {:width  (parse-long w)
+       :height (parse-long h)
+       :frames (parse-long frames)}
+      (throw (ex-info (str "Unexpected ffprobe output: " out) {:out out})))))
 
 
 (defn dimensions [^File file]
   (let [stats (stats file)]
     [(:width stats) (:height stats)]))
+
 
 (defn local-convert! [^File original ^File converted]
   (let [[w h]   (dimensions original)

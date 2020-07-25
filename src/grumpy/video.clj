@@ -22,7 +22,7 @@
 
 
 (defn stats [^File file]
-  (let [out (:out (jobs/sh "ffprobe" "-v" "error" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))]
+  (let [out (:out (jobs/sh "ffprobe" "-v" "error" "-select_streams" "v" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))]
     (if-some [[_ w h frames] (re-find #"^(\d+|N/A)x(\d+|N/A)x(\d+|N/A)" out)]
       {:width  (parse-long w)
        :height (parse-long h)

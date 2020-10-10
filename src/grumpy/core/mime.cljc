@@ -116,7 +116,7 @@
 (defn mime-type [filename]
   (or
     (when-some [[_ ext] (re-matches #".*\.([^./\\]+)" filename)]
-      (get default-mime-types ext))
+      (get default-mime-types (str/lower-case ext)))
     "application/octet-stream"))
 
 

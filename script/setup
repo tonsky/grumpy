@@ -1,4 +1,6 @@
 #!/bin/bash -e
 
-echo -n "nikitonsky" > grumpy_data/FORCED_USER
-echo -n "http://localhost:8080" > grumpy_data/HOSTNAME
+cat > grumpy_data/config.edn << 'EOF'
+{:grumpy.auth/forced-user "nikitonsky",
+ :grumpy.server/hostname "http://localhost:8080"}
+EOF

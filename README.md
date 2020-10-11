@@ -9,6 +9,7 @@
 - ffmpeg
 
 ## Development
+You need JDK 14 to run.
 
 ```
 mkdir grumpy_data

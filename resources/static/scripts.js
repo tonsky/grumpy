@@ -56,7 +56,8 @@ var subtitles =
     'This website wants to know your location',
     'We’re sorry! You need to update your Flash Player.',
     'You have one unread message',
-    'We are updating our privacy policy'],
+    'We are updating our privacy policy',
+    'To read the rest of the story, please buy a subscription'],
   subtitle_el,
   subtitle_idx = subtitles.length;
 

@@ -11,9 +11,8 @@ pom.xml.asc
 .hg/
 grumpy_data
 figwheel_server.log
-backup.sh
 *.sublime-workspace
 *.sublime-project
 /.cpcache*
 .DS_Store
-cleanup.clj
+script/cleanup.clj

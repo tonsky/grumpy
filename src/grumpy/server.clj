@@ -176,7 +176,7 @@
                                         :error error-stylobate}))
 
 
-(defrecord Server [opts crux server]
+(defrecord Server [opts server]
   component/Lifecycle
   (start [this]
     (log/log "[server] Starting web server at" (str (:host opts) ":" (:port opts)))

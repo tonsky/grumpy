@@ -4,16 +4,16 @@
 
 ## Runtime dependencies
 
+- JDK 14
 - imagemagick
 - mailutils
 - ffmpeg
 
 ## Development
-You need JDK 14 to run.
 
 ```
 mkdir grumpy_data
-./script/setup
-./script/console
+./script/bootstrap.sh
+./script/repl.sh
 open http://localhost:8080
 ```

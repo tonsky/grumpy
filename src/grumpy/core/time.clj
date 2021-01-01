@@ -8,7 +8,7 @@
 (def ^:private ^ZoneId UTC (ZoneId/of "UTC"))
 
 
-(def ^:private ^DateTimeFormatter date-formatter (DateTimeFormatter/ofPattern "MMMM d, YYYY"))
+(def ^:private ^DateTimeFormatter date-formatter (DateTimeFormatter/ofPattern "MMMM d, yyyy"))
 
 
 (defn format-date [^Instant inst]

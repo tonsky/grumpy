@@ -57,7 +57,7 @@
           ;; highlight links
           (str/replace paragraph #"https?://([^\s<>]+[^\s.,!?:;'\"<>()\[\]{}*])"
             (fn [[href path]]
-              (let [norm-path     (re-find #"[^?#]+" path)
+              (let [norm-path     (re-find #"[^#]+" path)
                     without-slash (str/replace norm-path #"/$" "")]
                 (str "<a href=\"" href "\" target=\"_blank\">" without-slash "</a>"))))
           (str "<p>" paragraph "</p>"))))

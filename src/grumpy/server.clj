@@ -47,7 +47,9 @@
                     :playsinline true
                     :onplay "toggle_video(this.parentNode, true);" }
                   [:source { :type (mime/mime-type (:url pic)) :src src }]]
-                [:.post_video_overlay.post_video_overlay-paused { :onclick "toggle_video(this.parentNode);"}]]
+                [:.controls
+                 [:button.paused {:onclick "toggle_video(this.parentNode.parentNode);"}]
+                 [:button.fullscreen {:onclick "toggle_video_fullscreen(this.parentNode.parentNode);"}]]]
             :mime.type/image
               (if-some [[w h] (:dimensions pic)]
                 (let [[w' h'] (fragments/fit w h 550 500)]

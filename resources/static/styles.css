@@ -50,11 +50,9 @@ body.anonymous .title_new { display: none; }
 }
 .post_avatar { width: 50px; height: 50px; }
 
-.post_video_outer { position: relative; }
-.post_video_overlay { position: absolute; top: 0; bottom: 0; left: 0; right: 0; cursor: pointer; }
-.post_video_overlay-paused { background-color: rgba(0,0,0,0.3); background-image: url("/static/play.svg"); background-size: contain; background-position: center center; background-repeat: no-repeat; }
-.post_video_overlay-paused:hover { background-color: rgba(0,0,0,0.25); }
-.post_img, .post_video { display: block; margin-bottom: 1em; position: relative; }
+.post_video_outer { position: relative; max-width: max-content; }
+.post_img, .post_video { display: block; position: relative; }
+.post_img, .post_video_outer { margin-bottom: 1em; }
 .post_img-fix { display: block; background-size: 100%; }
 .post_img-fix > img { position: absolute; height: 100%; }
 .post_video,
@@ -67,6 +65,13 @@ body.anonymous .title_new { display: none; }
 .post_meta_edit:hover { color: #d4d; }
 body.anonymous .post_meta_edit { display: none; }
 
+.controls { display: flex; justify-content: space-between; background-color: #eee; }
+.controls > button { width: 24px; height: 24px; background-image: url(/static/controls.svg); border: none; background-color: transparent; cursor: pointer; }
+button.paused:hover { background-position: -100% 0; }
+button.playing { background-position: 0 -100%; }
+button.playing:hover { background-position: -100% -100%; }
+button.fullscreen { background-position: 0 -200%; }
+button.fullscreen:hover { background-position: -100% -200%; }
 
 /* FOOTER */
 @keyframes rotating {

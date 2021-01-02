@@ -98,15 +98,29 @@ function body_rotate() {
 }
 
 function toggle_video(wrapper, play) {
-  var video = wrapper.querySelector("video"),
-      overlay = wrapper.querySelector(".post_video_overlay");
+  var video = wrapper.querySelector("video");
+  var button = wrapper.querySelector(".paused");
   if (play) {
-    overlay.classList.remove("post_video_overlay-paused");
+    button.classList.add("playing");
   } else if (video.paused) {
     video.play();
-    overlay.classList.remove("post_video_overlay-paused");
+    button.classList.add("playing");
   } else {
     video.pause();
-    overlay.classList.add("post_video_overlay-paused");
+    button.classList.remove("playing");
   }
+}
+
+function toggle_video_fullscreen(wrapper) {
+  var video = wrapper.querySelector("video");
+  if (video.requestFullscreen)
+    video.requestFullscreen();
+  else if (video.mozRequestFullScreen)
+    video.mozRequestFullScreen();
+  else if (video.webkitRequestFullScreen)
+    video.webkitRequestFullScreen();
+  else if (video.msRequestFullscreen)
+    video.msRequestFullscreen();
+  else
+    console.log("Fullscreen is not supported", video);
 }

@@ -57,7 +57,8 @@ var subtitles =
     'We’re sorry! You need to update your Flash Player.',
     'You have one unread message',
     'We are updating our privacy policy',
-    'To read the rest of the story, please buy a subscription'],
+    'To read the rest of the story, please buy a subscription',
+    'If your download does not start automatically, use the following link'],
   subtitle_el,
   subtitle_idx = subtitles.length;
 

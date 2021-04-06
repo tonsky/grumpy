@@ -50,7 +50,6 @@ var subtitles =
     'Loading...',
     'Remind me tomorrow',
     'Stop showing me this',
-    'Why am I seeing this?',
     'See fewer posts like this',
     'This content is not available in your country',
     'This website wants to know your location',

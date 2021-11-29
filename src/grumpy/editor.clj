@@ -50,9 +50,18 @@
 
     ;; video
     (mime/video? mime-type)
-    {:picture {:url          original-name
-               :content-type mime-type
-               :dimensions   (video/dimensions original)}}
+    (let [[w h]          (video/dimensions original)
+          converted-name (str/replace original-name #"^([^.]+)\.orig\.[a-z]+$" "$1.fit.mp4")
+          converted      (io/file (.getParentFile original) converted-name)]
+      (video/local-convert! original converted [w h])
+      {:picture
+       {:url          converted-name
+        :content-type "video/mp4"
+        :dimensions   (video/dimensions converted)}
+       :picture-original 
+       {:url          original-name
+        :content-type mime-type
+        :dimensions   [w h]}})
 
     ;; neither image nor video
     (not (mime/image? mime-type))
@@ -77,7 +86,7 @@
    ;; png, large jpeg, etc
    :else
    (let [converted-name (str/replace original-name #"^([^.]+)\.orig\.[a-z]+$" "$1.fit.jpeg")
-         converted (io/file (.getParentFile original) converted-name)]
+         converted      (io/file (.getParentFile original) converted-name)]
      (convert-image! original converted
        {:quality 85
         :flatten true

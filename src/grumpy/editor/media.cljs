@@ -167,6 +167,7 @@
       [:img {:src src
              :style style}])))
 
+
 (rum/defc render-media < rum/reactive [*post]
   (if-some [src (fragments/subscribe *post :media/object-url)]
     (let [mime-type (fragments/subscribe *post :media/mime-type)

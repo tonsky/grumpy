@@ -42,10 +42,12 @@
   ([post]
     (reduce post-picture! post channels))
   ([post channel]
-   (let [key (cond
-               (contains? post :picture-original) :picture-original
-               (contains? post :picture) :picture
-               :else nil)]
+   (let [video? (= :mime.type/video (some-> post :picture mime/type))
+         key    (cond
+                  video? :picture
+                  (contains? post :picture-original) :picture-original
+                  (contains? post :picture) :picture
+                  :else nil)]
      (cond
        config/dev?  post
        (nil? token) post

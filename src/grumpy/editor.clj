@@ -51,7 +51,7 @@
     ;; video
     (mime/video? mime-type)
     (let [[w h]          (video/dimensions original)
-          converted-name (str/replace original-name #"^([^.]+)\.orig\.[a-z]+$" "$1.fit.mp4")
+          converted-name (str/replace original-name #"^([^.]+)\.orig\.[a-z0-9]+$" "$1.fit.mp4")
           converted      (io/file (.getParentFile original) converted-name)]
       (video/local-convert! original converted [w h])
       {:picture

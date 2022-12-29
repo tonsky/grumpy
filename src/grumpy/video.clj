@@ -1,4 +1,5 @@
 (ns grumpy.video
+  (:refer-clojure :exclude [parse-long])
   (:require
    [clj-http.client :as http]
    [clojure.string :as str]

@@ -19,11 +19,11 @@
   (:import
    [java.security SecureRandom]))
 
+(defonce *tokens
+  (atom {}))
 
-(defonce *tokens (atom {}))
-(def session-ttl-ms (* 1000 86400 14)) ;; 14 days
-(def token-ttl-ms (* 1000 60 15)) ;; 15 min
-
+(def token-ttl-ms
+  (* 1000 60 15)) ;; 15 min
 
 (def user-cookie-attrs
   {:path "/"
@@ -36,7 +36,7 @@
   {:path      "/"
    :http-only true
    :secure    (not config/dev?)
-   :max-age   (quot session-ttl-ms 1000)
+   :max-age   2147483647
    :same-site :lax})
 
 
@@ -46,27 +46,11 @@
     seed))
 
 
-(def cookie-secret (config/get ::cookie-secret #(random-bytes 16)))
-(def forced-user (config/get-optional ::forced-user))
+(def cookie-secret
+  (config/get ::cookie-secret #(random-bytes 16)))
 
-
-(defn send-email! [{:keys [to subject body]}]
-  (jobs/sh
-    "mail"
-    "-s"
-    subject
-    to
-    "-a" "Content-Type: text/html"
-    "-a" "From: Grumpy Admin <admin@grumpy.website>"
-    :in body))
-
-
-(defn send-link! [email link]
-  (send-email!
-    {:to      email
-     :subject (str "Log into Grumpy " (time/format-date (time/now)))
-     :body    (str "<html><div style='text-align: center;'><a href=\"" link "\" style='display: inline-block; font-size: 16px; padding: 0.5em 1.75em; background: #c3c; color: white; text-decoration: none; border-radius: 4px;'>Login now!</a></div></html>")}))
-
+(def forced-user
+  (config/get-optional ::forced-user))
 
 (defn gen-token []
   (str
@@ -79,17 +63,6 @@
     (let [created (:created token)]
       (when (<= (time/age created) token-ttl-ms)
         (:value token)))))
-
-
-(def expire-session
-  {:name ::expire-session
-   :enter
-   (fn [ctx]
-     (let [created (-> ctx :request :session :created)]
-       (if (and (some? created)
-                (> (time/age created) session-ttl-ms))
-         (update ctx :request dissoc :session)
-         ctx)))})
 
 
 (def force-user
@@ -116,7 +89,8 @@
      :cookie-attrs session-cookie-attrs}))
 
 
-(def populate-session [session force-user expire-session])
+(def populate-session
+  [session force-user])
 
 
 (defn user [req]
@@ -153,16 +127,14 @@
 (defn handle-forbidden [{:keys [query-params cookies]}]
   (let [user   (get-in cookies ["grumpy_user" :value])
         author (fragments/author-by :user user)
-        handle (or (and (:telegram/user-chat author) (:telegram/user author))
-                 (:email author))]
+        handle (:telegram/user author)]
     (web/html-response (forbidden-page (:redirect-url query-params) handle))))
 
 
 (defn handle-send-link [{:keys [form-params] :as req}]
-  (let [handle       (-> (:handle form-params) str/trim str/lower-case)
-        email-author (fragments/author-by :email handle)
-        tg-author    (fragments/author-by :telegram/user handle)
-        user         (:user (or email-author tg-author))]
+  (let [handle    (-> (:handle form-params) str/trim str/lower-case)
+        tg-author (fragments/author-by :telegram/user handle)
+        user      (:user tg-author)]
     (cond
       (nil? user)
       (web/redirect "/link-sent" {:message (str "You are not the author, " handle)})
@@ -178,13 +150,8 @@
                             :token        token
                             :redirect-url redirect-url})]
         (swap! *tokens assoc handle {:value token :created (time/now)})
-        (if email-author
-          (send-link! handle link)
-          (telegram/post! (:telegram/user-chat tg-author) "/sendMessage" {:text link :disable_web_page_preview true}))
-        (web/redirect "/link-sent" {:message (str "Check your " (if email-author "email" "Telegram") ", " user)}))
-
-      (some? email-author)
-      (web/redirect "/link-sent" {:message (str "Emailed link is still valid, " user)})
+        (telegram/post! (:telegram/user-chat tg-author) "/sendMessage" {:text link :disable_web_page_preview true})
+        (web/redirect "/link-sent" {:message (str "Check your Telegram, " user)}))
 
       (some? tg-author)
       (web/redirect "/link-sent" {:message (str "Link in Telegram is still valid, " user)}))))
@@ -204,8 +171,7 @@
 
 (defn handle-authenticate [{:keys [query-params]}] ;; ?handle=...&token=...&redirect-url=...
   (let [handle (:handle query-params)
-        author (or (fragments/author-by :email handle)
-                 (fragments/author-by :telegram/user handle))
+        author (fragments/author-by :telegram/user handle)
         user   (:user author)
         redirect-url (if (str/blank? (:redirect-url query-params))
                        "/"

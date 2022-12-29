@@ -44,7 +44,7 @@
             (reset! *system system')))))))
 
 
-(defn reset []
+(defn reload []
   (stop)
   (refresh)
   (start))
@@ -59,9 +59,9 @@
 
 
 (migrations/migrate!)
-(reset)
+(reload)
 
 
-(println "[user] Run (reset) for full system reload")
+(println "[user] Run (reload) for full system reload")
 (println "[user] Run (cljs-repl) for upgrading REPL to CLJS")
 (println "[user] Open http://localhost:8080/")

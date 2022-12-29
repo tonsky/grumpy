@@ -1,11 +1,10 @@
 (ns grumpy.package
   (:require
-   [clojure.edn :as edn]
-   [clojure.string :as str]
-   [clojure.java.io :as io]
-   [cljs.build.api :as cljs]
-   [uberdeps.api :as uberdeps]))
-
+    [clojure.edn :as edn]
+    [clojure.string :as str]
+    [clojure.java.io :as io]
+    [cljs.build.api :as cljs]
+    [uberdeps.api :as uberdeps]))
 
 (defn compile-cljs []
   (let [t0 (System/currentTimeMillis)]
@@ -21,16 +20,16 @@
        :parallel-build  true})
     (println "[package] Compiled target/uberjar/static/editor.js in" (- (System/currentTimeMillis) t0) "ms")))
 
-
 (defn package []
-  (binding [uberdeps/exclusions (into uberdeps/exclusions
-                                  [#"\.DS_Store"
-                                   #".*\.cljs"
-                                   #"cljsjs/.*"
-                                   #"META-INF/maven/cljsjs/.*"])
-            uberdeps/level :debug]
-    (uberdeps/package (edn/read-string (slurp "deps.edn")) "target/grumpy.jar" {:aliases #{:uberjar}})))
-
+  (binding [uberdeps/level :debug]
+    (uberdeps/package
+      (edn/read-string (slurp "deps.edn"))
+      "target/grumpy.jar"
+      {:aliases #{:uberjar}
+       :exclusions [#"\.DS_Store"
+                    #".*\.cljs"
+                    #"cljsjs/.*"
+                    #"META-INF/maven/cljsjs/.*"]})))
 
 (defn -main [& args]
   (compile-cljs)

@@ -5,28 +5,20 @@
 
 
 (def authors
-  [{:email "niki@tonsky.me"
-    :user  "nikitonsky"
+  [{:user  "nikitonsky"
     :telegram/user "nikitonsky" 
     :telegram/user-chat "232806939"
     :name  "Nikita Prokopov"
     :url   "https://twitter.com/nikitonsky"}
-   {:email "freetonik@gmail.com"
-    :user  "freetonik"
-    :telegram/user "freetonik"
-    :name  "Rakhim Davletkaliyev"
-    :url   "https://twitter.com/freetonik"}
-   {:email "ivan@grishaev.me"
-    :user  "igrishaev"
-    :telegram/user "igrishaev"
-    :name  "Ivan Grishaev"
-    :url   "https://grishaev.me/"}
-   {:email "dmitrii@dmitriid.com"
-    :user  "dmitriid"
+   {:user  "dmitriid"
     :telegram/user "mamutnespit"
     :telegram/user-chat "303519462"
     :name  "Dmitrii Dimandt"
-    :url   "https://twitter.com/dmitriid"}])
+    :url   "https://twitter.com/dmitriid"}
+   {:user  "freetonik"
+    :telegram/user "freetonik"
+    :name  "Rakhim Davletkaliyev"
+    :url   "https://twitter.com/freetonik"}])
 
 
 (defn author-by [attr value]

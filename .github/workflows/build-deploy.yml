@@ -9,13 +9,11 @@ on:
       - 'resources/**'
       - 'package/**'
       - deps.edn
+      - .github/workflows/build-deploy.yml
 
 jobs:  
   build:
     runs-on: ubuntu-22.04
-
-    # env:
-    #   JVM_OPTS: -Xmx3200m
 
     steps:
       - uses: actions/checkout@v3
@@ -28,7 +26,15 @@ jobs:
         uses: DeLaGuardo/setup-clojure@10.0
         with:
           cli: 1.11.1.1200
-      
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-clojure-${{ hashFiles('deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-clojure
+
       - name: Package
         run: ./script/package.sh
 
@@ -41,7 +47,7 @@ jobs:
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_KEY }}
-          known_hosts: grumpy.website
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
       - name: Deploy
         run: |

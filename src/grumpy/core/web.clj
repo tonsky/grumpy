@@ -104,7 +104,7 @@
           (interpose ", "
             (for [author fragments/authors]
               [:a { :href (:url author) } (:name author)]))
-          " and contributors. 2018–2222. All fights retarded."]]]))
+          " & contributors. 2018–2222. All fights retarded."]]]))
 
 
 (defn html-response [component]

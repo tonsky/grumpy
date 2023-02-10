@@ -57,7 +57,11 @@ var subtitles =
     'You have one unread message',
     'We are updating our privacy policy',
     'To read the rest of the story, please buy a subscription',
-    'If your download does not start automatically, use the following link'],
+    'If your download does not start automatically, use the following link',
+    'Your browser will soon be unsupported. Please upgrade your browser to the latest version',
+    'Click here to update to the latest version',
+    'This page was reloaded due to inactivity or something',
+    'Something went wrong'],
   subtitle_el,
   subtitle_idx = subtitles.length;
 

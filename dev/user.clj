@@ -62,6 +62,7 @@
 (reload)
 
 
+(println "[user] Started Socket REPL server on port 5555")
 (println "[user] Run (reload) for full system reload")
 (println "[user] Run (cljs-repl) for upgrading REPL to CLJS")
 (println "[user] Open http://localhost:8080/")

@@ -61,3 +61,7 @@
 (defn age [^Instant inst]
   (-> (Duration/between inst (now))
     (.toMillis)))
+
+
+(defn year [^Instant inst]
+  (some-> inst (.atZone UTC) (.getYear)))

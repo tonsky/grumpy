@@ -42,3 +42,13 @@
 
 (defn replace [m re & kvs]
   (apply assoc (dissoc-all m re) kvs))
+
+
+(defn some-map [& kvs]
+  (persistent!
+    (reduce
+      (fn [m [k v]]
+        (cond-> m
+          (some? v) (assoc! k v)))
+      (transient {})
+      (partition 2 kvs))))

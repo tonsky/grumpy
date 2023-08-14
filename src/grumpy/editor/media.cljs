@@ -51,7 +51,7 @@
                    (when (relevant?)
                      (swap! *post #(-> %
                                      (dissoc :media/status :media/upload-progress)
-                                     (merge (transit/read-transit-str payload))))))
+                                     (merge (transit/read-string payload))))))
        :error    (fn [message]
                    (when (relevant?)
                      (swap! *post dissoc :media/upload-progress)

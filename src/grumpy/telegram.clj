@@ -15,7 +15,7 @@
 
 (def ^:dynamic channels
   (or (config/get-optional ::channels)
-    #{"grumpy_chat" "grumpy_test"}))
+    #{"grumpy_test"}))
 
 
 (defn post! [channel url params]

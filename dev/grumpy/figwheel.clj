@@ -1,13 +1,11 @@
 (ns grumpy.figwheel
   (:require
-   [com.stuartsierra.component :as component]
-   [cljs.stacktrace]
-   [figwheel.main.api :as fig]))
+    [figwheel.main.api :as fig]
+    [mount.core :as mount]))
 
-
-(defrecord Figwheel []
-  component/Lifecycle
-  (start [this]
+(mount/defstate figwheel
+  :start
+  (do
     (println "[Figwheel] Starting figwheel build")
     (fig/start
       {:mode               :serve
@@ -21,9 +19,8 @@
        :options {:main       'grumpy.editor
                  :output-to  "target/resources/static/editor.js"
                  :output-dir "target/resources/static/editor"
-                 :asset-path "/static/editor"}})
-    this)
-  (stop [this]
+                 :asset-path "/static/editor"}}))
+  :stop
+  (do
     (println "[Figwheel] Stopping figwheel build")
-    (fig/stop "dev")
-    this))
+    (fig/stop "dev")))

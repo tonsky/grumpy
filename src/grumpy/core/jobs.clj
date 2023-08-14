@@ -30,7 +30,7 @@
                 (if success?
                   (after res)
                   (do
-                    (Thread/sleep interval-ms)
+                    (Thread/sleep (long interval-ms))
                     (recur (inc i)))))
                 (log/log "[" name "] Giving up after" retries "retries")))
           (catch Exception e

@@ -8,7 +8,7 @@
    [java.io File Writer]))
 
 
-(defn- write-bytes [^bytes bytes]
+(defn- write-bytes ^String [^bytes bytes]
   (.encodeToString (java.util.Base64/getEncoder) bytes))
 
 

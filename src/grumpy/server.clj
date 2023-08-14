@@ -1,25 +1,24 @@
 (ns grumpy.server
   (:require
-   [clojure.stacktrace :as stacktrace]
-   [com.stuartsierra.component :as component]
-   [io.pedestal.interceptor :as interceptor]
-   [io.pedestal.http :as http]
-
-   [grumpy.auth :as auth]
-   [grumpy.core.config :as config]
-   [grumpy.core.fragments :as fragments]
-   [grumpy.core.log :as log]
-   [grumpy.core.mime :as mime]
-   [grumpy.core.posts :as posts]
-   [grumpy.core.routes :as routes]
-   [grumpy.core.time :as time]
-   [grumpy.core.web :as web]
-   [grumpy.feed :as feed]
-   [grumpy.editor :as editor]
-   [ring.util.response :as response]
-   [rum.core :as rum])
+    [clojure.stacktrace :as stacktrace]
+    [io.pedestal.interceptor :as interceptor]
+    [io.pedestal.http :as http]
+    [grumpy.auth :as auth]
+    [grumpy.core.config :as config]
+    [grumpy.core.fragments :as fragments]
+    [grumpy.core.log :as log]
+    [grumpy.core.mime :as mime]
+    [grumpy.core.posts :as posts]
+    [grumpy.core.routes :as routes]
+    [grumpy.core.time :as time]
+    [grumpy.core.web :as web]
+    [grumpy.feed :as feed]
+    [grumpy.editor :as editor]
+    [mount.core :as mount]
+    [ring.util.response :as response]
+    [rum.core :as rum])
   (:import
-   [java.io IOException]))
+    [java.io IOException]))
 
 
 (def page-size 5)
@@ -169,44 +168,35 @@
         :context context))
     (@#'io.pedestal.http.impl.servlet-interceptor/leave-stylobate context)))
 
-
 ; io.pedestal.http.impl.servlet-interceptor/stylobate
 (def stylobate
-  (io.pedestal.interceptor/interceptor {:name ::stylobate
-                                        :enter @#'io.pedestal.http.impl.servlet-interceptor/enter-stylobate
-                                        :leave @#'io.pedestal.http.impl.servlet-interceptor/leave-stylobate
-                                        :error error-stylobate}))
+  (io.pedestal.interceptor/interceptor
+    {:name ::stylobate
+     :enter @#'io.pedestal.http.impl.servlet-interceptor/enter-stylobate
+     :leave @#'io.pedestal.http.impl.servlet-interceptor/leave-stylobate
+     :error error-stylobate}))
 
+(def *opts
+  (atom
+    {:host "localhost"
+     :port 8080}))
 
-(defrecord Server [opts server]
-  component/Lifecycle
-  (start [this]
-    (log/log "[server] Starting web server at" (str (:host opts) ":" (:port opts)))
-    (with-redefs [io.pedestal.http.impl.servlet-interceptor/stylobate stylobate]
-      (let [server (-> {::http/routes (routes/sort (concat routes auth/routes editor/routes))
-                        ::http/router :linear-search
-                        ::http/type   :immutant
-                        ::http/host   (:host opts)
-                        ::http/port   (:port opts)
-                        ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
-                     (http/default-interceptors)
-                     (update ::http/interceptors conj no-cache)
-                     (http/create-server)
-                     (http/start))]
-        (assoc this :server server))))
-  (stop [this]
+(mount/defstate server
+  :start
+  (with-redefs [io.pedestal.http.impl.servlet-interceptor/stylobate stylobate]
+    (let [{:keys [host port]} @*opts]
+      (log/log "[server] Starting web server at" (str host ":" port))
+      (-> {::http/routes (routes/sort (concat routes auth/routes editor/routes))
+           ::http/router :linear-search
+           ::http/type   :immutant
+           ::http/host   host
+           ::http/port   port
+           ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
+        (http/default-interceptors)
+        (update ::http/interceptors conj no-cache)
+        (http/create-server)
+        (http/start))))
+  :stop
+  (do
     (log/log "[server] Stopping web server")
-    (http/stop server)
-    (dissoc this :server)))
-
-
-(def default-opts
-  {:host "localhost"
-   :port 8080})
-
-
-(defn server
-  ([] (server {}))
-  ([opts]
-   (let [opts' (merge-with #(or %2 %1) default-opts opts)]
-     (map->Server {:opts opts'}))))
+    (http/stop server)))

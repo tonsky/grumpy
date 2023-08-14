@@ -1,20 +1,22 @@
 {:deps
- {org.clojure/clojure               {:mvn/version "1.11.1"}
-  com.stuartsierra/component        {:mvn/version "1.0.0"}
-  ring/ring-core                    {:mvn/version "1.8.0"}
-  org.immutant/web                  {:mvn/version "2.1.10"}
-  io.pedestal/pedestal.service      {:mvn/version "0.5.10"}
-  io.pedestal/pedestal.route        {:mvn/version "0.5.10"}
-  io.pedestal/pedestal.immutant     {:mvn/version "0.5.10" :exclusions [javax.servlet/javax.servlet-api]}
-  datascript/datascript             {:mvn/version "1.5.1"}
-  rum/rum                           {:mvn/version "0.11.4"}
-  com.cognitect/transit-clj         {:mvn/version "1.0.329"}
-  clj-http/clj-http                 {:mvn/version "3.11.0"}
-  cheshire/cheshire                 {:mvn/version "5.11.0"} ; for clj-http :as :json
-  cljs-drag-n-drop/cljs-drag-n-drop {:mvn/version "0.1.0"}
-  com.cognitect/transit-cljs        {:mvn/version "0.8.280"}
-  compact-uuids/compact-uuids       {:mvn/version "0.2.1"}
-  org.clojure/tools.analyzer.jvm    {:mvn/version "1.2.3"}}
+ {cheshire/cheshire                       {:mvn/version "5.11.0"} ; for clj-http :as :json
+  clj-http/clj-http                       {:mvn/version "3.11.0"}
+  cljs-drag-n-drop/cljs-drag-n-drop       {:mvn/version "0.1.0"}
+  com.cognitect/transit-clj               {:mvn/version "1.0.333"}
+  com.cognitect/transit-cljs              {:mvn/version "0.8.280"}
+  compact-uuids/compact-uuids             {:mvn/version "0.2.1"}
+  datascript/datascript                   {:local/root "/Users/tonsky/ws/datascript"} #_{:mvn/version "1.5.2"}
+  io.github.tonsky/datascript-storage-sql {:mvn/version "0.1.0"}
+  io.pedestal/pedestal.immutant           {:mvn/version "0.5.10" :exclusions [javax.servlet/javax.servlet-api]}
+  io.pedestal/pedestal.route              {:mvn/version "0.5.10"}
+  io.pedestal/pedestal.service            {:mvn/version "0.5.10"}
+  mount/mount                             {:mvn/version "0.1.17"}
+  org.clojure/clojure                     {:mvn/version "1.11.1"}
+  org.clojure/tools.analyzer.jvm          {:mvn/version "1.2.3"}
+  org.immutant/web                        {:mvn/version "2.1.10"}
+  org.xerial/sqlite-jdbc                  {:mvn/version "3.42.0.0"}
+  ring/ring-core                          {:mvn/version "1.8.0"}
+  rum/rum                                 {:mvn/version "0.11.4"}}
  :paths ["src" "resources"]
  :aliases
  {:dev     {:jvm-opts    ["-ea"]

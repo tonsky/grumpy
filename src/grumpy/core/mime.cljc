@@ -128,9 +128,9 @@
   (str/starts-with? mime-type "image/"))
 
 
-(defn type [picture]
-  (let [mime-type (or (:content-type picture)
-                      (mime-type (:url picture)))]
+(defn type [media]
+  (let [mime-type (or (:media/content-type media)
+                      (mime-type (:media/url media)))]
     (cond
       (video? mime-type) :mime.type/video
       (image? mime-type) :mime.type/image)))

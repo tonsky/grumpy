@@ -15,6 +15,15 @@
    :headers {"content-type" "text/plain"}})
 
 
+(defn moved-permanently
+  ([path]
+    {:status 301
+     :headers {"Location" path}})
+  ([path query]
+    {:status 301
+     :headers {"Location" (url/build path query)}}))
+
+
 (defn redirect
   ([path]
     { :status 302

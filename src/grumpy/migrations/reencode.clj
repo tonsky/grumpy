@@ -2,16 +2,18 @@
   (:require
    [clojure.string :as str]
    [clojure.java.io :as io]
+   [datascript.core :as d]
    [grumpy.core.log :as log]
    [grumpy.core.jobs :as jobs]
    [grumpy.core.posts :as posts]
+   [grumpy.db :as db]
    [grumpy.video :as video]))
 
 
 (defn -main [& args]
   (log/log "Converting videos...")
   (doseq [id (posts/post-ids)
-          :let [post (posts/load id)
+          :let [post (d/entity (db/db) [:post/id id])
                 pic  (:picture post)]
           :when (some? pic)
           :when (nil? (:picture-original post))

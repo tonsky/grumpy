@@ -27,11 +27,11 @@
 
 (defn convert-tg-media [doc]
   (coll/some-map
-    :crosspost.tg.media/file-id        (:file_id doc)
-    :crosspost.tg.media/file-unique-id (:file_unique_id doc)
-    :crosspost.tg.media/file-size      (:file_size doc)
-    :crosspost.tg.media/width          (:width doc)
-    :crosspost.tg.media/height         (:height doc)))
+    :crosspost.tg.media/file-id        (get doc "file_id")
+    :crosspost.tg.media/file-unique-id (get doc "file_unique_id")
+    :crosspost.tg.media/file-size      (get doc "file_size")
+    :crosspost.tg.media/width          (get doc "width")
+    :crosspost.tg.media/height         (get doc "height")))
 
 (defn convert-crosspost [crosspost]
   (coll/some-map
@@ -41,6 +41,19 @@
     :crosspost.tg/channel    (:telegram/channel crosspost)
     :crosspost.tg/message-id (:telegram/message_id crosspost)
     :crosspost.tg/media      (map convert-tg-media (:telegram/photo crosspost))))
+
+(defn convert-post [id post]
+  (let [year (time/year (:created post))]
+    (coll/some-map
+      :post/id         id
+      :post/old-id     (:id post)
+      :post/body       (:body post)
+      :post/author     (:author post)
+      :post/created    (:created post)
+      :post/updated    (:updated post)
+      :post/media      (convert-picture (:picture post) year id "")
+      :post/media-full (convert-picture (:picture-original post) year id "_full")            
+      :post/crosspost  (map convert-crosspost (:reposts post)))))
 
 (defn posts []
   (->>
@@ -53,21 +66,7 @@
 (defn db [posts]
   (d/db-with
     (d/empty-db db/schema)
-    (map
-      (fn [i post]
-        (let [year (time/year (:created post))]
-          (coll/some-map
-            :post/id         i
-            :post/old-id     (:id post)
-            :post/body       (:body post)
-            :post/author     (:author post)
-            :post/created    (:created post)
-            :post/updated    (:updated post)
-            :post/media      (convert-picture (:picture post) year i "")
-            :post/media-full (convert-picture (:picture-original post) year i "_full")            
-            :post/crosspost  (map convert-crosspost (:reposts post)))))                
-      (range) 
-      posts)))
+    (map convert-post (range) posts)))
 
 (defn migrate! []
   (let [posts (posts)
@@ -76,4 +75,26 @@
       (mount/start #'db/storage)
       (d/store db db/storage)
       (finally
-        (mount/stop #'db/storage)))))
+        (mount/stop #'db/storage)))
+    
+    (doseq [year (range 2017 2024)]
+      (.mkdirs (io/file "grumpy_data" (str year))))
+  
+    (doseq [d (d/datoms db :aevt :media/url)
+            :let [media (d/entity db (:e d))
+                  from  (str (:post/old-id (or (:post/_media media) (:post/_media-full media))) "/" (:media/old-url media))
+                  to    (:media/url media)]]
+      (java.nio.file.Files/move
+        (java.nio.file.Path/of "grumpy_data" (into-array String ["posts" from]))
+        (java.nio.file.Path/of "grumpy_data" (into-array String [to]))
+        (into-array java.nio.file.CopyOption ())))
+    
+    (doseq [file (reverse (file-seq (io/file "grumpy_data" "drafts")))]
+      (.delete ^File file))
+    
+    (doseq [file (reverse (file-seq (io/file "grumpy_data" "posts")))]
+      (.delete ^File file))))
+
+(comment
+  (.delete (io/file "grumpy_data/db.sqlite"))
+  (migrate!))

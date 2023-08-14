@@ -67,6 +67,9 @@
     (d/restore-conn storage)
     (d/create-conn schema {:storage storage})))
 
+(defn db []
+  @conn)
+
 (comment
   (mount/start #'storage #'conn)
   

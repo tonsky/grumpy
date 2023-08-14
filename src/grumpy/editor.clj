@@ -3,6 +3,7 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as str]
+   [datascript.core :as d]
    [io.pedestal.http.ring-middlewares :as middlewares]
    [grumpy.auth :as auth]
    [grumpy.core.config :as config]
@@ -18,6 +19,7 @@
    [grumpy.core.time :as time]
    [grumpy.core.transit :as transit]
    [grumpy.core.web :as web]
+   [grumpy.db :as db]
    [grumpy.telegram :as telegram]
    [grumpy.video :as video]
    [rum.core :as rum])
@@ -119,7 +121,7 @@
         draft-dir (io/file (str "grumpy_data/drafts/" post-id))]
     ;; clean up old post
     (when-not new?
-      (let [old (posts/load post-id)]
+      (let [old (d/entity (db/db) [:post/id post-id])]
         (.delete (io/file (str "grumpy_data/posts/" post-id "/post.edn")))
         (doseq [key   [:picture :picture-original]
                 :let  [pic (get old key)]

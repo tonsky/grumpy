@@ -1,14 +1,15 @@
 (ns grumpy.core.posts
-  (:refer-clojure :exclude [load])
   (:require
-   [clojure.java.io :as io]
-   [clojure.string :as str]
-   [grumpy.core.files :as files]
-   [grumpy.core.jobs :as jobs]
-   [grumpy.core.macros :as macros])
+    [clojure.java.io :as io]
+    [clojure.string :as str]
+    [datascript.core :as d]
+    [grumpy.core.files :as files]
+    [grumpy.core.jobs :as jobs]
+    [grumpy.core.macros :as macros]
+    [grumpy.db :as db])
   (:import
-   [java.io File]
-   [java.time Instant]))
+    [java.io File]
+    [java.time Instant]))
 
 
 (def ^:const encode-table "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")
@@ -21,26 +22,15 @@
     (if (== 0 len)
       (str/join list)
       (recur (bit-shift-right num 6)
-             (let [ch (nth encode-table (bit-and num 0x3F))]
-              (conj list ch))
-             (dec len)))))
-
-
-(defn load [post-id]
-  (let [path (str "grumpy_data/posts/" post-id "/post.edn")]
-    (some-> (io/file path)
-      (files/slurp)
-      (files/read-edn-string))))
+        (let [ch (nth encode-table (bit-and num 0x3F))]
+          (conj list ch))
+        (dec len)))))
 
 
 (defn post-ids []
-  (->>
-    (for [name (files/list-files "grumpy_data/posts")
-          :let [child (io/file "grumpy_data/posts" name)]
-          :when (.isDirectory child)]
-      name)
-    (sort)
-    (reverse)))
+  (->> (d/datoms (db/db) :avet :post/id)
+    (rseq)
+    (map :v)))
 
 
 (defn next-post-id [^Instant inst]
@@ -51,7 +41,7 @@
 
 (defn update! [post-id update-fn]
   (jobs/linearize post-id
-    (let [post  (load post-id)
+    (let [post  (d/entity (db/db) [:podb/id post-id])
           post' (update-fn post)
           file  (io/file "grumpy_data/posts" post-id "post.edn")]
       (spit file (pr-str post'))

@@ -70,10 +70,32 @@
 (defn db []
   @conn)
 
+(defn insert! [conn tempid tx]
+  (let [report (d/transact! conn tx)]
+    (d/pull (:db-after report) '[*] ((:tempids report) tempid))))
+
+(defmacro transform! [[db conn] & body]
+  `(d/transact! ~conn
+     [[:db.fn/call (fn [~db] ~@body)]]))
+
 (comment
+  (count (datascript.storage/-list-addresses storage))
+  
+  (max-id (db) :draft/id)
+  (count (db))
+  (d/reset-schema! conn schema)
+  (binding [datascript.util/*debug* true]
+    (d/collect-garbage storage))
+  
+  (count (d/restore storage))
+  
   (mount/start #'storage #'conn)
   
   (->> (d/datoms @conn :eavt)
     (drop 100)
     (take 10)
-    (mapv (juxt :e :a :v))))
+    (mapv (juxt :e :a :v)))
+  
+  (d/pull (db) '[:post/id :post/author :post/body {:post/media [*]}] [:post/id 1600])
+
+  )

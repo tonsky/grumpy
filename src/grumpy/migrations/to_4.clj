@@ -9,7 +9,8 @@
     [grumpy.db :as db]
     [mount.core :as mount])
   (:import
-    [java.io File]))
+    [java.io File]
+    [java.nio.file CopyOption Files Path StandardCopyOption]))
 
 (defn convert-picture [picture year i suffix]
   (when picture
@@ -63,10 +64,13 @@
     (sort-by :created)
     (vec)))
 
-(defn db [posts]
-  (d/db-with
-    (d/empty-db db/schema)
-    (map convert-post (range) posts)))
+(defn db
+  ([posts]
+   (db posts {}))
+  ([posts opts]
+   (-> (d/empty-db db/schema opts)
+     (d/db-with
+       (map convert-post (range) posts)))))
 
 (defn migrate! []
   (let [posts (posts)
@@ -82,19 +86,26 @@
   
     (doseq [d (d/datoms db :aevt :media/url)
             :let [media (d/entity db (:e d))
-                  from  (str (:post/old-id (or (:post/_media media) (:post/_media-full media))) "/" (:media/old-url media))
+                  post  (coll/single 
+                          (or
+                            (:post/_media media)
+                            (:post/_media-full media)))
+                  from  (str (:post/old-id post) "/" (:media/old-url media))
                   to    (:media/url media)]]
-      (java.nio.file.Files/move
-        (java.nio.file.Path/of "grumpy_data" (into-array String ["posts" from]))
-        (java.nio.file.Path/of "grumpy_data" (into-array String [to]))
-        (into-array java.nio.file.CopyOption ())))
+      (Files/copy
+        (Path/of "grumpy_data" (into-array String ["posts" from]))
+        (Path/of "grumpy_data" (into-array String [to]))
+        ^{:tag "[Ljava.nio.file.CopyOption;"} (into-array CopyOption [StandardCopyOption/COPY_ATTRIBUTES StandardCopyOption/REPLACE_EXISTING])))
     
-    (doseq [file (reverse (file-seq (io/file "grumpy_data" "drafts")))]
-      (.delete ^File file))
+    ; (doseq [file (reverse (file-seq (io/file "grumpy_data" "drafts")))]
+    ;   (.delete ^File file))
     
-    (doseq [file (reverse (file-seq (io/file "grumpy_data" "posts")))]
-      (.delete ^File file))))
+    ; (doseq [file (reverse (file-seq (io/file "grumpy_data" "posts")))]
+    ;   (.delete ^File file))
+    
+    ))
 
 (comment
   (.delete (io/file "grumpy_data/db.sqlite"))
-  (migrate!))
+  (migrate!)
+  (.exists (io/file "grumpy_data/posts/0OQVxoeuh_1.jpg")))

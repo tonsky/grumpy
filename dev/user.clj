@@ -21,19 +21,23 @@
   (mount/stop))
 
 (defn refresh []
-  (let [res (namespace/refresh)]
-    (when (not= res :ok)
-      (throw res))
-    :ok))
+  (let [max-addr @@(resolve 'datascript.storage/*max-addr)]
+    (let [res (namespace/refresh)]
+      (when-some [*max-addr (resolve 'datascript.storage/*max-addr)]
+        (vreset! @*max-addr max-addr))
+      (when (not= res :ok)
+        (throw res))
+      :ok)))
 
 (defn start []
   (mount/start-without
-    (resolve 'grumpy.figwheel/figwheel)))
+    #_(resolve 'grumpy.figwheel/figwheel)))
 
 (defn reload []
   (stop)
   (refresh)
-  (start))
+  (start)
+  :ready)
 
 (defn cljs-repl []
   (figwheel.main.api/cljs-repl "dev"))

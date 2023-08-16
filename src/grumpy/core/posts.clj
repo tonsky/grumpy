@@ -33,10 +33,11 @@
     (map :v)))
 
 
-(defn next-post-id [^Instant inst]
-  (str
-    (encode (quot (.toEpochMilli inst) 1000) 6)
-    (encode (rand-int (* 64 64 64)) 3)))
+(defn next-id [db]
+  (let [datoms (d/datoms db :avet :post/id)
+        max-id (when-not (empty? datoms)
+                 (:v (first (rseq datoms))))]
+    (inc (or max-id 0))))
 
 
 (defn update! [post-id update-fn]
@@ -50,4 +51,7 @@
 
 (defn delete! [post-id]
   (jobs/linearize post-id
-    (files/delete-dir (str "grumpy_data/posts/" post-id))))
+    (let [post (d/pull (db/db) '[*] [:post/id post-id])]
+      ;; TODO media
+      (d/transact db/conn
+        [[:db.fn/retractEntity (:db/id post)]]))))

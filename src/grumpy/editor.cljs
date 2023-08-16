@@ -41,7 +41,8 @@
 ;  :post/error            "..." }
 
 
-(defonce *post (atom nil))
+(defonce *post
+  (atom nil))
 
 
 (rum/defc avatar < rum/reactive
@@ -51,7 +52,7 @@
 
 (rum/defc editor [*post]
   [:.editor.relative.row
-   (avatar (rum/cursor *post :author))
+   (avatar (rum/cursor *post :post/author))
    [:.column.grow
     (editor.media/ui *post)
     (editor.body/ui *post)

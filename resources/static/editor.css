@@ -40,7 +40,7 @@ button.inline:active { position: relative; top: 1px; }
 
 .media { position: relative; }
 .media-wrap { width: max-content; position: relative; }
-.media-wrap > img { display: block; max-width: 550px; max-height: 500px; }
+.media-wrap > img, .media-wrap > video { display: block; max-width: 550px; max-height: 500px; }
 .media-delete { width: 32px; height: 32px; background-image: url(/static/editor/delete.svg); position: absolute; right: -46px; top: 0; }
 .media-delete:hover { background-position: -100% 0; }
 
@@ -48,7 +48,8 @@ button.inline:active { position: relative; top: 1px; }
 .failed-overlay { position: absolute; top: 0; right: 0; left: 0; bottom: 0; background: #CC3333DD; }
 .deleting-overlay { position: absolute; top: 0; right: 0; left: 0; bottom: 0; background: #FFFFFF99; }
   
-.status { background-color: #FFE5E5; color: #c33; padding: 4px 10px; }
+.status { background-color: #EEE; color: #000; padding: 4px 10px; }
+.status.error { background-color: #FFE5E5; }
 
 .textarea { position: relative; }
 .textarea > .input { height: 300px; }

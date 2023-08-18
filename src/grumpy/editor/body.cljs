@@ -1,11 +1,12 @@
 (ns grumpy.editor.body
   (:require
-   [grumpy.core.coll :as coll]
-   [grumpy.core.fetch :as fetch]
-   [grumpy.core.fragments :as fragments]
-   [grumpy.core.macros :refer [oget oset! cond+]]
-   [grumpy.core.transit :as transit]
-   [rum.core :as rum]))
+    [grumpy.core.coll :as coll]
+    [grumpy.core.fetch :as fetch]
+    [grumpy.core.fragments :as fragments]
+    [grumpy.core.macros :refer [oget oset! cond+]]
+    [grumpy.core.transit :as transit]
+    [grumpy.editor.state :as state]
+    [rum.core :as rum]))
 
 
 (defn on-mouse-down [*drag-state input e]
@@ -61,12 +62,12 @@
    [:.ring.cursor-pointer]])
 
 
-(rum/defc ui < rum/reactive [*post]
-  (let [disabled? (some? (fragments/subscribe *post :post/status))]
+(rum/defc ui < rum/reactive []
+  (let [disabled? (some? (fragments/subscribe state/*status :status))]
     [:.textarea
      [:.input {:class (when disabled? "disabled")}
       [:textarea {:disabled      disabled?
                   :placeholder   "Be grumpy here..."
-                  :default-value (or (fragments/subscribe *post :post/body) "")
-                  :on-change     #(swap! *post assoc :post/body (-> % (oget "currentTarget") (oget "value")))}]]
+                  :default-value (or (fragments/subscribe state/*post :post/body) "")
+                  :on-change     #(swap! state/*post assoc :post/body (-> % (oget "currentTarget") (oget "value")))}]]
      (handle)]))

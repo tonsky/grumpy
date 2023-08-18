@@ -12,11 +12,11 @@
     [java.io File]
     [java.nio.file CopyOption Files Path StandardCopyOption]))
 
-(defn convert-picture [picture year i suffix]
+(defn convert-picture [picture year id suffix]
   (when picture
     (let [{:keys [url content-type dimensions]} picture
-          ext            (last (str/split url #"\."))
-          new-url        (format "%d/%d_1%s.%s" year i suffix ext)
+          ext            (files/extension url)
+          new-url        (format "%d/%d_1%s.%s" year id suffix ext)
           [width height] dimensions]
       (coll/some-map
         :media/url          new-url

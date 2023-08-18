@@ -22,6 +22,12 @@
   (.format iso-formatter (LocalDateTime/ofInstant inst UTC)))
 
 
+(def ^:private ^DateTimeFormatter timestamp-formatter (DateTimeFormatter/ofPattern "yyMMddHHmmssSSS"))
+
+
+(defn format-timestamp-inst [^Instant inst]
+  (.format timestamp-formatter (LocalDateTime/ofInstant inst UTC)))
+
 (def ^:private ^DateTimeFormatter log-formatter (DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss.SSS"))
 
 

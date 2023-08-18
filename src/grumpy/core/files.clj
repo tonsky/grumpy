@@ -1,12 +1,13 @@
 (ns grumpy.core.files
   (:refer-clojure :exclude [slurp])
   (:require
-   [clojure.edn :as edn]
-   [clojure.java.io :as io]
-   [clojure.string :as str]
-   [grumpy.core.time :as time])
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]
+    [clojure.string :as str]
+    [grumpy.core.time :as time])
   (:import
-   [java.io File FilenameFilter]))
+    [java.io File FilenameFilter]
+    [java.nio.file Files CopyOption StandardCopyOption]))
 
 
 (defn slurp [source]
@@ -31,11 +32,11 @@
 (defn list-files
   ([dir] (seq (.list (io/file dir))))
   ([dir re]
-    (seq
-      (.list (io/file dir)
-        (proxy [FilenameFilter] []
-          (accept ^boolean [^File file ^String name]
-            (boolean (re-matches re name))))))))
+   (seq
+     (.list (io/file dir)
+       (proxy [FilenameFilter] []
+         (accept ^boolean [^File file ^String name]
+           (boolean (re-matches re name))))))))
 
 
 (defn copy-dir [^File from ^File to]
@@ -43,3 +44,12 @@
   (doseq [name (list-files from)
           :let [file (io/file from name)]]
     (io/copy file (io/file to name))))
+
+
+(defn move [^File from ^File to]
+  (.mkdirs (.getParentFile to))
+  (Files/move (.toPath from) (.toPath to) (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE])))
+
+
+(defn extension [name]
+  (second (re-matches #".*\.([^.]+)" name)))

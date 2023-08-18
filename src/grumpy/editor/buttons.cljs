@@ -1,65 +1,67 @@
 (ns grumpy.editor.buttons
   (:require
-   [clojure.string :as str]
-   [grumpy.core.coll :as coll]
-   [grumpy.core.fetch :as fetch]
-   [grumpy.core.fragments :as fragments]
-   [grumpy.core.macros :refer [oget oset! cond+]]
-   [grumpy.core.transit :as transit]
-   [rum.core :as rum]))
+    [clojure.string :as str]
+    [grumpy.core.coll :as coll]
+    [grumpy.core.fetch :as fetch]
+    [grumpy.core.fragments :as fragments]
+    [grumpy.core.macros :refer [oget oset! cond+]]
+    [grumpy.core.transit :as transit]
+    [grumpy.editor.state :as state]
+    [rum.core :as rum]))
 
 
-(defn to-publishing [*post]
-  (swap! *post assoc
-    :post/error nil
-    :post/status :post.status/publishing)
-  (let [post @*post]
-    (fetch/fetch! "POST" (oget js/location "pathname")
-      {:body post
-       
-       :success
-       (fn [payload]
-         (let [post' (transit/read-string payload)]
-           (oset! js/location "href" (str "/post/" (:post/id post')))))
-       
-       :error
-       (fn [error]
-         (let [error (str "Publising failed with " error)]
-           (swap! *post assoc
-             :post/status nil
-             :post/error  error)))})))
+(defn to-publishing []
+  (swap! state/*status assoc
+    :error nil
+    :status :publishing)
+  (fetch/fetch! "POST" (oget js/location "pathname")
+    {:body @state/*post
+     
+     :success
+     (fn [payload]
+       (let [post' (transit/read-string payload)]
+         (oset! js/location "href" (str "/post/" (:post/id post')))))
+     
+     :error
+     (fn [error]
+       (let [error (str "Publising failed with " error)]
+         (swap! state/*status assoc
+           :post/status nil
+           :post/error  error)))}))
 
 
-(defn ready? [*post]
+(defn ready? []
   (and
-    (= nil (fragments/subscribe *post :media/status))
-    (not (str/blank? (fragments/subscribe *post :post/body)))))
+    (nil? (fragments/subscribe state/*media-status :progress))
+    (nil? (fragments/subscribe state/*media-status :error))
+    (nil? (fragments/subscribe state/*status :status))
+    (not (str/blank? (fragments/subscribe state/*post :post/body)))))
 
 
-(rum/defc button-post < rum/reactive [*post]
-  (if (not= :post.status/publishing (fragments/subscribe *post :post/status))
+(rum/defc button-post < rum/reactive []
+  (if (some? (fragments/subscribe state/*status :status))
+    [:.post-post-loader.row.center.middle [:.loader.loading]]
     [:button.post-post.row
-     {:disabled (not (ready? *post))
-      :on-click (fn [_] (to-publishing *post))}
+     {:disabled (not (ready?))
+      :on-click (fn [_] (to-publishing))}
      [:img.button {:src "/static/editor/post_button.svg"}]
      [:img.hand {:src "/static/editor/post_hand.svg"}]
-     [:.label "POST"]]
-    [:.post-post-loader.row.center.middle [:.loader.loading]]))
+     [:.label "POST"]]))
 
 
-(rum/defc button-update < rum/reactive [*post]
-  (if (not= :post.status/publishing (fragments/subscribe *post :post/status))
+(rum/defc button-update < rum/reactive []
+  (if (some? (fragments/subscribe state/*status :status))
+    [:.post-btn-loader [:.loader.small.loading] "Update"]
     [:button.btn.post-update
-     {:disabled (not (ready? *post))
-      :on-click (fn [_] (to-publishing *post))}
-     "Update"]
-   [:.post-btn-loader [:.loader.small.loading] "Update"]))
+     {:disabled (not (ready?))
+      :on-click (fn [_] (to-publishing))}
+     "Update"]))
 
 
-(rum/defc ui < rum/reactive [*post]
+(rum/defc ui < rum/reactive []
   [:.column
-   (when-some [error (fragments/subscribe *post :post/error)]
+   (when-some [error (fragments/subscribe state/*status :error)]
      [:.status {:style {:z-index 1}} error])
-   (if (fragments/subscribe *post :post/id)
-     [:.row.right (button-update *post)]
-     [:.row.right (button-post *post)])])
+   (if (:post/id @state/*post)
+     [:.row.right (button-update)]
+     [:.row.right (button-post)])])

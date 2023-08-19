@@ -14,7 +14,7 @@
 (defn -main [& {:as args}]
   (migrations/migrate!)
   (when-some [host (get args "--host")]
-    (vswap! server/*opts assoc :host host))
+    (swap! server/*opts assoc :host host))
   (when-some [port (get args "--port")]
-    (vswap! server/*opts assoc :port (parse-long port)))
+    (swap! server/*opts assoc :port (parse-long port)))
   (mount/start))

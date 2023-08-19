@@ -5,7 +5,7 @@
   com.cognitect/transit-clj               {:mvn/version "1.0.333"}
   com.cognitect/transit-cljs              {:mvn/version "0.8.280"}
   compact-uuids/compact-uuids             {:mvn/version "0.2.1"}
-  datascript/datascript                   {:local/root "/Users/tonsky/ws/datascript"} #_{:mvn/version "1.5.2"}
+  datascript/datascript                   {:mvn/version "1.5.3"}
   io.github.tonsky/datascript-storage-sql {:mvn/version "0.1.0"}
   io.pedestal/pedestal.immutant           {:mvn/version "0.5.10" :exclusions [javax.servlet/javax.servlet-api]}
   io.pedestal/pedestal.route              {:mvn/version "0.5.10"}

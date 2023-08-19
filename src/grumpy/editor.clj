@@ -177,7 +177,7 @@
                     ;; kill old media-full
                     (when-some [media (:post/media-full before)]
                       (when (not= (-> body :post/media-full :media/url) (:media/url media))
-                        [[:db.fn/retractAttribute (:db/id before) :post/media]
+                        [[:db.fn/retractAttribute (:db/id before) :post/media-full]
                          [:db.fn/retractEntity    (:db/id media)]]))
                     ;; add new media-full
                     (when full-url
@@ -201,10 +201,10 @@
 
     post))
 
-(rum/defc edit-draft-page [post-id user]
+(rum/defc edit-page [post-id user]
   (let [db   (db/db)
         post (if post-id
-               (d/pull db '[:post/id :post/author :post/body {:post/media [*]}] [:post/id post-id])
+               (d/pull db '[:post/id :post/author :post/body {:post/media [*]} {:post/media-full [*]}] [:post/id post-id])
                {:post/author user
                 :post/body   ""})]
     (web/page {:title     (if post-id "New post" "Edit post")
@@ -224,7 +224,7 @@
      (fn [req]
        (let [user (auth/user req)]
          (web/html-response
-           (edit-draft-page nil user))))]
+           (edit-page nil user))))]
     
     [:post "/new"
      interceptors
@@ -239,7 +239,7 @@
      (fn [req]
        (let [post-id (-> (:path-params req) :post-id parse-long)]
          (web/html-response
-           (edit-draft-page post-id (auth/user req)))))]
+           (edit-page post-id (auth/user req)))))]
     
     [:post "/:post-id/edit"
      interceptors

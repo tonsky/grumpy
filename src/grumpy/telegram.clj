@@ -1,68 +1,81 @@
 (ns grumpy.telegram
   (:require
-   [clj-http.client :as http]
-   [clojure.string :as str]
-   [grumpy.core.coll :as coll]
-   [grumpy.core.config :as config]
-   [grumpy.core.fragments :as fragments]
-   [grumpy.core.log :as log]
-   [grumpy.core.mime :as mime]))
+    [clj-http.client :as http]
+    [grumpy.core.config :as config]
+    [grumpy.core.fragments :as fragments]
+    [grumpy.core.log :as log]
+    [grumpy.core.mime :as mime]
+    [grumpy.db :as db]))
 
 
-(def ^:dynamic token
+(def token
   (config/get-optional ::token))
 
 
-(def ^:dynamic channels
-  (or (config/get-optional ::channels)
-    #{"grumpy_chat" "whining_test"}))
+(def channel
+  (config/get-optional ::channel))
 
 
-(defn post! [channel url params]
-  (let [url'    (str "https://api.telegram.org/bot" token url)
-        params' (assoc params :chat_id channel)]
-    (try
-      (:body
-        (http/post url'
-          {:form-params  params'
-           :content-type :json
-           :as           :json-string-keys}))
-      (catch Exception e
-        (cond
-          (re-find #"Bad Request: message is not modified" (:body (ex-data e)))
-          (log/log "Telegram request failed:" url' (pr-str params'))
+(defn post!
+  ([url params]
+   (post! channel url params))
+  ([channel url params]
+   (let [url'    (str "https://api.telegram.org/bot" token url)
+         params' (assoc params :chat_id (str "@" channel))]
+     (try
+       (:body
+         (http/post url'
+           {:form-params  params'
+            :content-type :json
+            :as           :json-string-keys}))
+       (catch Exception e
+         (let [safe-url (str "https://api.telegram.org/bot<token>" url)]
+           (cond
+             (re-find #"Bad Request: message is not modified" (:body (ex-data e)))
+             (log/log "Telegram request failed:" safe-url (pr-str params'))
 
-          :else
-          (do
-            (log/log "Telegram request failed:" url' (pr-str params'))
-            (throw e)))))))
+             :else
+             (do
+               (log/log "Telegram request failed:" safe-url (pr-str params'))
+               (throw e)))))))))
 
 
-(defn post-picture!
-  ([post]
-    (reduce post-picture! post channels))
-  ([post channel]
-   (let [video? (= :mime.type/video (some-> post :picture mime/type))
-         key    (cond
-                  video? :picture
-                  (contains? post :picture-original) :picture-original
-                  (contains? post :picture) :picture
-                  :else nil)]
-     (cond
-       config/dev?  post
-       (nil? token) post
-       (nil? key)   post
-       :else
-       (let [picture (get post key)
-             url     (str (config/get :grumpy.server/hostname) "/post/" (:id post) "/" (:url picture))
-             resp    (case (mime/type picture)
-                       :mime.type/video (post! (str "@" channel) "/sendVideo" {:video url})
-                       :mime.type/image (post! (str "@" channel) "/sendPhoto" {:photo url}))]
-         (update post :reposts coll/conjv
-           { :type                :telegram/photo
-             :telegram/channel    channel
-             :telegram/message_id (get-in resp ["result" "message_id"])
-             :telegram/photo      (get-in resp ["result" "photo"]) }))))))
+(defn post-media! [post]
+  (when (and token channel (not config/dev?))
+    (let [video? (= :mime.type/video (-> post :post/media mime/type))
+          media  (or
+                   (when-not video?
+                     (:post/media-full post))
+                   (:post/media post))]
+      (when media
+        (let [url    (str config/hostname "/media/" (:media/url media))
+              resp   (if video?
+                       (post! "/sendVideo" {:video url})
+                       (post! "/sendPhoto" {:photo url}))]
+          (db/transact!
+            [[:db/add (:db/id post) :post/crosspost -1]
+             {:db/id                   -1
+              :crosspost/type          :tg/media
+              :crosspost.tg/channel    channel
+              :crosspost.tg/message-id (get-in resp ["result" "message_id"])}]))))))
+
+
+(defn update-media! [post]
+  (when (and token channel (not config/dev?))
+    (let [video? (= :mime.type/video (-> post :post/media mime/type))
+          media  (or
+                   (when-not video?
+                     (:post/media-full post))
+                   (:post/media post))]
+      (when media
+        (let [url (str config/hostname "/media/" (:media/url media))]
+          (doseq [crosspost (:post/crosspost post)
+                  :when (= :tg/media (:crosspost/type crosspost))
+                  :let [channel (:crosspost.tg/channel crosspost)
+                        body    {:message_id (:crosspost.tg/message-id crosspost)
+                                 :media      {:type  (if video? "video" "photo")
+                                              :media url}}]]
+            (post! channel "/editMessageMedia" body)))))))
 
 
 (defn format-user [user]
@@ -71,37 +84,27 @@
     (str "@" user)))
 
 
-(defn post-text!
-  ([post]
-   (reduce post-text! post channels))
-  ([post channel]
-   (cond
-     (nil? token) post
-     (str/blank? (:body post)) post
-     :else
-     (let [resp (post! (str "@" channel) "/sendMessage"
-                  {:text (str (format-user (:author post)) ": " (:body post))
-                   ; :parse_mode "Markdown"
-                   :disable_web_page_preview "true"})]
-       (update post :reposts coll/conjv
-         {:type                :telegram/text
-          :telegram/channel    channel
-          :telegram/message_id (get-in resp ["result" "message_id"]) })))))
+(defn post-text! [post]
+  (when (and token channel)
+    (let [text (str (format-user (:post/author post)) ": " (:post/body post))
+          body {:text text
+                :disable_web_page_preview "true"}
+          resp (post! "/sendMessage" body)]
+      (db/transact!
+        [[:db/add (:db/id post) :post/crosspost -1]
+         {:db/id                   -1
+          :crosspost/type          :tg/text
+          :crosspost.tg/channel    channel
+          :crosspost.tg/message-id (get-in resp ["result" "message_id"])}]))))
 
 
 (defn update-text! [post]
-  (when (some? token)
-    (doseq [repost (:reposts post)
-            :when  (= :telegram/text (:type repost))]
-      (post! (str "@" (:telegram/channel repost))
-        "/editMessageText"
-        { :message_id (:telegram/message_id repost)
-          :text       (str (format-user (:author post)) ": " (:body post))
-          ; :parse_mode "Markdown"
-          :disable_web_page_preview "true" })))
-  post)
-
-
-(comment
-  (http/post (str "https://api.telegram.org/bot" token "/getUpdates") {:form-params {} :content-type :json :as :json-string-keys})
-)
+  (when (and token channel)
+    (doseq [crosspost (:post/crosspost post)
+            :when (= :tg/text (:crosspost/type crosspost))
+            :let [channel (:crosspost.tg/channel crosspost)
+                  text    (str (format-user (:post/author post)) ": " (:post/body post))
+                  body    {:message_id (:crosspost.tg/message-id crosspost)
+                           :text text
+                           :disable_web_page_preview "true"}]]
+      (post! channel "/editMessageText" body))))

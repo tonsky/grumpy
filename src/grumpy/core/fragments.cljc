@@ -56,10 +56,6 @@
     (str/join)))
 
 
-(defn new? [post-id]
-  (str/starts-with? post-id "@"))
-
-
 (defn subscribe [*ref key]
   (rum/react (rum/cursor *ref key)))
 

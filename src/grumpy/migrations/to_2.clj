@@ -1,6 +1,5 @@
 (ns grumpy.migrations.to-2
   (:require
-   [clojure.edn :as edn]
    [grumpy.core.files :as files]
    [grumpy.core.log :as log]
    [grumpy.core.posts :as posts]))

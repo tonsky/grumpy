@@ -16,3 +16,4 @@ figwheel_server.log
 /.cpcache*
 .DS_Store
 script/cleanup.clj
+TODO.md

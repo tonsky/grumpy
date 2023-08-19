@@ -1,98 +1,73 @@
 (ns grumpy.editor.buttons
   (:require
-   [clojure.string :as str]
-   [grumpy.core.coll :as coll]
-   [grumpy.core.fetch :as fetch]
-   [grumpy.core.fragments :as fragments]
-   [grumpy.core.macros :refer [oget oset! cond+]]
-   [grumpy.core.transit :as transit]
-   [rum.core :as rum]))
+    [clojure.string :as str]
+    [grumpy.core.fetch :as fetch]
+    [grumpy.core.fragments :as fragments]
+    [grumpy.core.macros :refer [oget oset! cond+]]
+    [grumpy.core.transit :as transit]
+    [grumpy.editor.state :as state]
+    [rum.core :as rum]))
 
 
-(defn to-publishing [*post]
-  (swap! *post coll/replace #"post/.*"
-    :post/status :post.status/publishing)
-  (let [post @*post]
-    (fetch/post! (str "/draft/" (:id post) "/publish")
-      {:body    (or (:body/edited post) (:body post))
-       :success
-       (fn [payload]
-         (if (fragments/new? (:id post))
-           (oset! js/location "href" "/")
-           (let [post' (transit/read-transit-str payload)]
-             (oset! js/location "href" (str "/post/" (:id post'))))))
-       :error
-       (fn [error]
-         (let [error (str "Publising failed with " error)]
-           (swap! *post coll/replace #"post/.*" :post/error error)))})))
+(defn to-publishing []
+  (swap! state/*status assoc
+    :error nil
+    :status :publishing)
+  (fetch/fetch! "POST" (oget js/location "pathname")
+    {:body @state/*post
+     
+     :success
+     (fn [payload]
+       (let [post' (transit/read-string payload)]
+         (oset! js/location "href" (str "/" (:post/id post')))))
+     
+     :error
+     (fn [error]
+       (let [error (str "Publising failed with " error)]
+         (swap! state/*status assoc
+           :post/status nil
+           :post/error  error)))}))
 
 
-(defn to-deleting [*post]
-  (swap! *post coll/replace #"post/.*"
-    :post/status :post.status/deleting)
-  (let [post @*post]
-    (fetch/post! (str "/draft/" (:id post) "/delete")
-      {:success
-       (fn [_]
-         (if (fragments/new? (:id post))
-           (oset! js/location "href" "/")
-           (oset! js/location "href" (str "/post/" (:id post)))))
-       :error
-       (fn [error]
-         (let [error (str "Cancel failed with " error)]
-           (swap! *post coll/replace #"post/.*" :post/error error)))})))
-
-
-(defn ready? [*post]
+(defn ready? []
   (and
-    (= nil (fragments/subscribe *post :media/status))
-    (not 
-      (str/blank?
-        (or
-          (fragments/subscribe *post :body/edited)
-          (fragments/subscribe *post :body))))))
+    (nil? (fragments/subscribe state/*media-status :progress))
+    (nil? (fragments/subscribe state/*media-status :error))
+    (nil? (fragments/subscribe state/*status :status))
+    (not (str/blank? (fragments/subscribe state/*post :post/body)))))
 
 
-(rum/defc button-post < rum/reactive [*post]
-  (if (not= :post.status/publishing (fragments/subscribe *post :post/status))
+(rum/defc button-post < rum/reactive []
+  (if (some? (fragments/subscribe state/*status :status))
+    [:.post-post-loader.row.center.middle [:.loader.loading]]
     [:button.post-post.row
-     {:disabled (not (ready? *post))
-      :on-click (fn [_] (to-publishing *post))}
+     {:disabled (not (ready?))
+      :on-click (fn [_] (to-publishing))}
      [:img.button {:src "/static/editor/post_button.svg"}]
      [:img.hand {:src "/static/editor/post_hand.svg"}]
-     [:.label "POST"]]
-    [:.post-post-loader.row.center.middle [:.loader.loading]]))
+     [:.label "POST"]]))
 
 
-(rum/defc button-delete < rum/reactive [*post]
-  (if (not= :post.status/deleting (fragments/subscribe *post :post/status))
-    [:button.btn.self-middle.self-right
-     {:on-click (fn [_] (to-deleting *post))}
-     "Delete draft"]
-    [:.post-btn-loader [:.loader.small.loading] "Delete draft"]))
-
-
-(rum/defc button-update < rum/reactive [*post]
-  (if (not= :post.status/publishing (fragments/subscribe *post :post/status))
+(rum/defc button-update < rum/reactive []
+  (if (some? (fragments/subscribe state/*status :status))
+    [:.post-btn-loader [:.loader.small.loading] "Update"]
     [:button.btn.post-update
-     {:disabled (not (ready? *post))
-      :on-click (fn [_] (to-publishing *post))}
-     "Update"]
-   [:.post-btn-loader [:.loader.small.loading] "Update"]))
+     {:disabled (not (ready?))
+      :on-click (fn [_] (to-publishing))}
+     "Update"]))
 
+(rum/defc button-delete []
+  [:a
+   {:href (str "/" (:post/id @state/*post) "/delete")
+    :style {:color "#c33"}}
+   "[ Delete ]"])
 
-(rum/defc button-cancel < rum/reactive [*post]
-  (if (not= :post.status/deleting (fragments/subscribe *post :post/status))
-    [:button.btn.self-right
-     {:on-click (fn [_] (to-deleting *post))}
-     "Cancel edit"]
-    [:.post-btn-loader [:.loader.small.loading] "Cancel edit"]))
-
-
-(rum/defc ui < rum/reactive [*post]
+(rum/defc ui < rum/reactive []
   [:.column
-   (when-some [error (fragments/subscribe *post :post/error)]
+   (when-some [error (fragments/subscribe state/*status :error)]
      [:.status {:style {:z-index 1}} error])
-   (if (fragments/new? (fragments/subscribe *post :id))
-     [:.row.middle.space-between (button-delete *post) (button-post *post)]
-     [:.row.middle.space-between (button-cancel *post) (button-update *post)])])
+   (if (:post/id @state/*post)
+     [:.row.middle.space-between
+      (button-delete)
+      (button-update)]
+     [:.row.right (button-post)])])

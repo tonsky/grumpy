@@ -1,26 +1,29 @@
 (ns grumpy.core.transit
+  (:refer-clojure :exclude [read read-string write])
   (:require
    [cognitect.transit :as t])
   (:import
    [java.io ByteArrayInputStream ByteArrayOutputStream]
    [java.time Instant]
-   [com.cognitect.transit WriteHandler ReadHandler]))
- 
+   [com.cognitect.transit WriteHandler ReadHandler])) 
 
 (def ^:private reader-opts
   {:handlers
    (t/read-handler-map
      {"m" (reify ReadHandler
-            (fromRep [_ s] (Instant/ofEpochMilli (Long/parseLong s))))})})
+            (fromRep [_ s]
+              (cond-> s
+                (string? s) parse-long
+                true        Instant/ofEpochMilli)))})})
 
+(defn read [is type]
+  (t/read (t/reader is type reader-opts)))
 
-(defn read-transit [is]
-  (t/read (t/reader is :json reader-opts)))
+(defn read-bytes [^bytes bs type]
+  (read (ByteArrayInputStream. bs) type))
 
-
-(defn read-transit-str [^String s]
-  (read-transit (ByteArrayInputStream. (.getBytes s "UTF-8"))))
-
+(defn read-string [^String s]
+  (read-bytes (.getBytes s "UTF-8") :json))
 
 (def ^:private writer-opts
   {:handlers
@@ -31,16 +34,13 @@
                 (stringRep [this i] (str (.rep this i)))
                 (getVerboseHandler [_] nil))})})
 
+(defn write [o os type]
+  (t/write (t/writer os type writer-opts) o))
 
-(defn write-transit [o os]
-  (t/write (t/writer os :json writer-opts) o))
-
-
-(defn write-transit-bytes ^bytes [o]
+(defn write-bytes ^bytes [o type]
   (let [os (ByteArrayOutputStream.)]
-    (write-transit o os)
+    (write o os type)
     (.toByteArray os)))
     
-
-(defn write-transit-str [o]
-  (String. (write-transit-bytes o) "UTF-8"))
+(defn write-string [o]
+  (String. (write-bytes o :json) "UTF-8"))

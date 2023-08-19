@@ -15,6 +15,15 @@
    :headers {"content-type" "text/plain"}})
 
 
+(defn moved-permanently
+  ([path]
+    {:status 301
+     :headers {"Location" path}})
+  ([path query]
+    {:status 301
+     :headers {"Location" (url/build path query)}}))
+
+
 (defn redirect
   ([path]
     { :status 302
@@ -116,4 +125,4 @@
 (defn transit-response [payload]
   {:status  200
    :headers {"Content-Type" "application/transit+json; charset=utf-8"}
-   :body    (transit/write-transit-str payload)})
+   :body    (transit/write-string payload)})

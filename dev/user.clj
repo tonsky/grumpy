@@ -1,67 +1,68 @@
 (ns user
   (:require
-   [figwheel.main.api]
-   [compact-uuids.core :as uuid]
-   [grumpy.figwheel :as figwheel]
-   [grumpy.migrations :as migrations]
-   [com.stuartsierra.component :as component]
-   [clojure.tools.namespace.repl :as namespace]))
-
+    [clojure.tools.namespace.repl :as namespace]
+    [compact-uuids.core :as uuid]
+    [figwheel.main.api]
+    [grumpy.figwheel :as figwheel]
+    [grumpy.migrations :as migrations]
+    [mount.core :as mount]))
 
 (namespace/disable-reload!)
-(namespace/set-refresh-dirs "src" "dev")
 
+(namespace/set-refresh-dirs "src" "dev" "/Users/tonsky/ws/datascript/src")
 
 (defmethod print-method java.util.UUID [uuid ^java.io.Writer w]
   (.write w (str "#c/uuid \"" (uuid/str uuid) "\"")))
 
-(set! *data-readers* (assoc *data-readers* 'c/uuid #'uuid/read))
+(def lock
+  (Object.))
 
+(defn position []
+  (let [trace (->> (Thread/currentThread)
+                (.getStackTrace)
+                (seq))
+        el    ^StackTraceElement (nth trace 4)]
+    (str "[" (clojure.lang.Compiler/demunge (.getClassName el)) " " (.getFileName el) ":" (.getLineNumber el) "]")))
 
-(defonce *system (atom nil))
-(defonce *figwheel (atom nil))
+(defn p [form]
+  `(let [t# (System/currentTimeMillis)
+         res# ~form]
+     (locking lock
+       (println (str "#p" (position) " " '~form " => (" (- (System/currentTimeMillis) t#) " ms) " res#)))
+     res#))
 
+(set! *data-readers*
+  (assoc *data-readers* 'c/uuid #'uuid/read))
 
 (defn stop []
-  (some-> @*system (component/stop))
-  (reset! *system nil))
-
+  (mount/stop))
 
 (defn refresh []
-  (let [res (namespace/refresh)]
-    (when (not= res :ok)
-      (throw res))
-    :ok))
+  (let [max-addr @@(resolve 'datascript.storage/*max-addr)]
+    (let [res (namespace/refresh)]
+      (when-some [*max-addr (resolve 'datascript.storage/*max-addr)]
+        (vreset! @*max-addr max-addr))
+      (when (not= :ok res)
+        (throw res))
+      :ok)))
 
-
-(defn start 
-  ([] (start {}))
-  ([opts]
-    (let [opts' (merge-with merge {:server {:host "0.0.0.0"}} opts)]
-      (when-some [f (resolve 'grumpy.main/system)]
-        (when-some [system (f opts')]
-          (when-some [system' (component/start system)]
-            (reset! *system system')))))))
-
+(defn start []
+  (mount/start-without
+    #_(resolve 'grumpy.figwheel/figwheel)))
 
 (defn reload []
   (stop)
   (refresh)
-  (start))
-
+  (start)
+  :ready)
 
 (defn cljs-repl []
   (figwheel.main.api/cljs-repl "dev"))
 
-
-(reset! *figwheel
-  (component/start (figwheel/->Figwheel)))
-
-
 (migrations/migrate!)
+
 (reload)
 
-
+(println "[user] Socket REPL server on port 5555")
 (println "[user] Run (reload) for full system reload")
 (println "[user] Run (cljs-repl) for upgrading REPL to CLJS")
-(println "[user] Open http://localhost:8080/")

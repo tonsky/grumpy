@@ -6,6 +6,7 @@
     [grumpy.core.files :as files]
     [grumpy.core.jobs :as jobs]
     [grumpy.core.macros :as macros]
+    [grumpy.core.time :as time]
     [grumpy.db :as db])
   (:import
     [java.io File]
@@ -28,10 +29,11 @@
 
 
 (defn post-ids []
-  (->> (d/datoms (db/db) :avet :post/id)
-    (rseq)
-    (map :v)))
-
+  (let [db (db/db)]
+    (->> (d/datoms db :avet :post/id)
+      (rseq)
+      (remove #(d/find-datom db :eavt (:e %) :post/deleted?))
+      (map :v))))
 
 (defn next-id [db]
   (let [datoms (d/datoms db :avet :post/id)
@@ -51,7 +53,7 @@
 
 (defn delete! [post-id]
   (jobs/linearize post-id
-    (let [post (d/pull (db/db) '[*] [:post/id post-id])]
-      ;; TODO media
-      (d/transact db/conn
-        [[:db.fn/retractEntity (:db/id post)]]))))
+    (d/transact db/conn
+      [{:post/id       post-id
+        :post/updated  (time/now)
+        :post/deleted? true}])))

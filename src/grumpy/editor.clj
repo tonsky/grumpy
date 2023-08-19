@@ -249,6 +249,13 @@
              post    (publish! post-id body)]
          (log/log "Updated" (:post/id post))
          (web/transit-response post)))]
+    
+    [:get "/post/:post-id/delete"
+     interceptors
+     (fn [req]
+       (let [post-id (-> (:path-params req) :post-id parse-long)]
+         (posts/delete! post-id)
+         (web/redirect "/")))]
 
     [:get "/media/uploads/*path"
      (fn [{{:keys [path]} :path-params}]

@@ -17,6 +17,7 @@
    :post/created         {#_:db.type/instant
                           :db/index true}
    :post/updated         {#_:db.type/instant}
+   :post/deleted?        {#_:db.type/boolean}
    :post/media           {:db/valueType   :db.type/ref
                           :db/isComponent true}
    :post/media-full      {:db/valueType   :db.type/ref
@@ -97,5 +98,8 @@
     (mapv (juxt :e :a :v)))
   
   (d/pull (db) '[:post/id :post/author :post/body {:post/media [*]}] [:post/id 1600])
+  
+  (->> (d/datoms (db) :aevt :post/deleted?)
+    (map #(:post/id (d/entity (db) (:e %)))))
 
   )

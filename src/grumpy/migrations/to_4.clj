@@ -70,7 +70,7 @@
   ([posts opts]
    (-> (d/empty-db db/schema opts)
      (d/db-with
-       (map convert-post (range) posts)))))
+       (map convert-post (range 1 Long/MAX_VALUE) posts)))))
 
 (defn migrate! []
   (let [posts (posts)

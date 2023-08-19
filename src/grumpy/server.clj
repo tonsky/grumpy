@@ -115,7 +115,12 @@
     [:get "/post/:post-id"
      (fn [{{:keys [post-id]} :path-params}]
        (if (re-matches #"\d+" post-id)
-         (web/html-response (post-page (parse-long post-id)))
+         (let [post-id (parse-long post-id)
+               post    (d/entity (db/db) [:post/id post-id])]
+           (if (:post/deleted? post)
+             {:status 404
+              :body   "Deleted"}
+             (web/html-response (post-page post-id))))
          (let [id' (-> (db/db)
                      (d/entity [:post/old-id post-id])
                      :post/id)]
@@ -130,7 +135,8 @@
                post-ids (->> (posts/post-ids)
                           (drop-while #(not= % post-id))
                           (drop 1)
-                          (take page-size))]
+                          (take page-size)
+                          (remove :post/deleted?))]
            {:status  200
             :headers {"Content-Type" "text/html; charset=utf-8"}
             :body    (rum/render-static-markup (posts-fragment post-ids))})))]
@@ -138,9 +144,12 @@
     [:get "/"
      (when config/dev? auth/populate-session)
      (fn [_]
-       (let [post-ids  (posts/post-ids)
-             first-ids (take (+ page-size (rem (count post-ids) page-size)) post-ids)]
-         (web/html-response (index-page first-ids))))]
+       (let [db    (db/db)
+             ids   (posts/post-ids)
+             cnt   (or (first ids) 0)
+             until (- cnt (+ page-size (rem cnt page-size)))
+             ids   (take-while #(> % until) ids)]
+         (web/html-response (index-page ids))))]
 
     [:get "/static/*path" 
      (when-not config/dev?

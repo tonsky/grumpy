@@ -74,8 +74,8 @@
          (str "<span class=\"post_author\">" (:post/author post) ": </span>" (:post/body post)))}}]
     [:p.post_meta
      (time/format-date (:post/created post))
-     " // " [:a {:href (str "/post/" (:post/id post))} "Hyperlink"]
-     [:a.post_meta_edit {:href (str "/post/" (:post/id post) "/edit")} "Edit"]]]])
+     " // " [:a {:href (str "/" (:post/id post))} "Permalink"]
+     [:a.post_meta_edit {:href (str "/" (:post/id post) "/edit")} "Edit"]]]])
 
 (rum/defc index-page [post-ids]
   (web/page {:page :index :scripts ["loader.js"]}
@@ -114,17 +114,17 @@
     
     [:get "/post/:post-id"
      (fn [{{:keys [post-id]} :path-params}]
-       (if (re-matches #"\d+" post-id)
-         (let [post-id (parse-long post-id)
-               post    (d/entity (db/db) [:post/id post-id])]
-           (if (:post/deleted? post)
-             {:status 404
-              :body   "Deleted"}
-             (web/html-response (post-page post-id))))
-         (let [id' (-> (db/db)
-                     (d/entity [:post/old-id post-id])
-                     :post/id)]
-           (web/moved-permanently (str "/post/" id')))))]
+       (let [post (d/entity (db/db) [:post/old-id post-id])]
+         (web/moved-permanently (str "/" (:post/id post)))))]
+    
+    [:get "/:post-id"
+     (fn [{{:keys [post-id]} :path-params}]
+       (let [post-id (parse-long post-id)
+             post    (d/entity (db/db) [:post/id post-id])]
+         (if (:post/deleted? post)
+           {:status 404
+            :body   "Deleted"}
+           (web/html-response (post-page post-id)))))]
 
     [:get "/after/:post-id"
      (fn [{{:keys [post-id]} :path-params}]

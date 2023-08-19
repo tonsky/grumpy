@@ -39,7 +39,9 @@
          [:author {} [:name {} (:user author)]])
        (for [post posts
              :let [author     (fragments/author-by :user (:post/author post))
-                   url        (str hostname "/post/" (or (:post/old-id post) (:post/id post)))
+                   url        (if-some [old-id (:post/old-id post)]
+                                (str hostname "/post/" (:post/old-id post))
+                                (str hostname "/" (:post/id post)))
                    media      (:post/media post)
                    media-url  (when media
                                 (if-some [old-url (:media/old-url media)]
@@ -106,4 +108,4 @@
       [:urlset {:xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"}
        [:url {} [:loc {} hostname]]
        (for [id post-ids]
-         [:url {} [:loc {} (format "%s/post/%s" hostname id)]])])))
+         [:url {} [:loc {} (format "%s/%s" hostname id)]])])))

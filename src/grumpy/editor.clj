@@ -234,14 +234,14 @@
          (log/log "Published" (:post/id post))
          (web/transit-response post)))]
 
-    [:get "/post/:post-id/edit"
+    [:get "/:post-id/edit"
      interceptors
      (fn [req]
        (let [post-id (-> (:path-params req) :post-id parse-long)]
          (web/html-response
            (edit-draft-page post-id (auth/user req)))))]
     
-    [:post "/post/:post-id/edit"
+    [:post "/:post-id/edit"
      interceptors
      (fn [req]
        (let [post-id (-> (:path-params req) :post-id parse-long)
@@ -250,7 +250,7 @@
          (log/log "Updated" (:post/id post))
          (web/transit-response post)))]
     
-    [:get "/post/:post-id/delete"
+    [:get "/:post-id/delete"
      interceptors
      (fn [req]
        (let [post-id (-> (:path-params req) :post-id parse-long)]

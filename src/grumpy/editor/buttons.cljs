@@ -20,7 +20,7 @@
      :success
      (fn [payload]
        (let [post' (transit/read-string payload)]
-         (oset! js/location "href" (str "/post/" (:post/id post')))))
+         (oset! js/location "href" (str "/" (:post/id post')))))
      
      :error
      (fn [error]

@@ -1,10 +1,7 @@
 (ns grumpy.editor.body
   (:require
-    [grumpy.core.coll :as coll]
-    [grumpy.core.fetch :as fetch]
     [grumpy.core.fragments :as fragments]
     [grumpy.core.macros :refer [oget oset! cond+]]
-    [grumpy.core.transit :as transit]
     [grumpy.editor.state :as state]
     [rum.core :as rum]))
 

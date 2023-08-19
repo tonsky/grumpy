@@ -7,7 +7,6 @@
    [grumpy.core.config :as config]
    [grumpy.core.files :as files]
    [grumpy.core.fragments :as fragments]
-   [grumpy.core.jobs :as jobs]
    [grumpy.core.posts :as posts]
    [grumpy.core.routes :as routes]
    [grumpy.core.time :as time]

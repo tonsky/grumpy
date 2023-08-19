@@ -1,7 +1,6 @@
 (ns grumpy.migrations.to-4
   (:require
     [clojure.java.io :as io]
-    [clojure.string :as str]
     [datascript.core :as d]
     [grumpy.core.coll :as coll]
     [grumpy.core.files :as files]
@@ -77,10 +76,9 @@
   
     (doseq [d (d/datoms db :aevt :media/url)
             :let [media (d/entity db (:e d))
-                  post  (coll/single 
-                          (or
-                            (:post/_media media)
-                            (:post/_media-full media)))
+                  post  (or
+                          (:post/_media media)
+                          (:post/_media-full media))
                   from  (str (:post/old-id post) "/" (:media/old-url media))
                   to    (:media/url media)]]
       (Files/copy
@@ -98,5 +96,4 @@
 
 (comment
   (.delete (io/file "grumpy_data/db.sqlite"))
-  (migrate!)
-  (.exists (io/file "grumpy_data/posts/0OQVxoeuh_1.jpg")))
+  (migrate!))

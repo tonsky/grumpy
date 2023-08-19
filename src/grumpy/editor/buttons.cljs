@@ -1,7 +1,6 @@
 (ns grumpy.editor.buttons
   (:require
     [clojure.string :as str]
-    [grumpy.core.coll :as coll]
     [grumpy.core.fetch :as fetch]
     [grumpy.core.fragments :as fragments]
     [grumpy.core.macros :refer [oget oset! cond+]]

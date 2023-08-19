@@ -1,7 +1,6 @@
 (ns ^:figwheel-hooks grumpy.editor.media
   (:require
     [cljs-drag-n-drop.core :as dnd]
-    [grumpy.core.coll :as coll]
     [grumpy.core.fetch :as fetch]
     [grumpy.core.fragments :as fragments]
     [grumpy.core.macros :refer [oget oset! js-fn cond+]]

@@ -1,12 +1,7 @@
 (ns ^:figwheel-hooks grumpy.editor
   (:require
     [cljs.reader :as edn]
-    [clojure.string :as str]
-    [grumpy.core.coll :as coll]
-    [grumpy.core.fetch :as fetch]
     [grumpy.core.fragments :as fragments]
-    [grumpy.core.macros :refer [oget oset! js-fn cond+]]
-    [grumpy.core.transit :as transit]
     [grumpy.editor.body :as editor.body]
     [grumpy.editor.buttons :as editor.buttons]
     [grumpy.editor.media :as editor.media]

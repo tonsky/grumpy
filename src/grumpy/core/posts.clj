@@ -3,9 +3,7 @@
     [clojure.java.io :as io]
     [clojure.string :as str]
     [datascript.core :as d]
-    [grumpy.core.files :as files]
     [grumpy.core.jobs :as jobs]
-    [grumpy.core.macros :as macros]
     [grumpy.core.time :as time]
     [grumpy.db :as db])
   (:import

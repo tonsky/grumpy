@@ -4,7 +4,6 @@
     [grumpy.core.config :as config]
     [grumpy.core.fragments :as fragments]
     [grumpy.core.mime :as mime]
-    [grumpy.core.posts :as posts]
     [grumpy.core.time :as time]
     [grumpy.core.xml :as xml]
     [grumpy.db :as db]

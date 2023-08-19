@@ -1,9 +1,6 @@
 (ns grumpy.telegram
   (:require
     [clj-http.client :as http]
-    [clojure.string :as str]
-    [datascript.core :as d]
-    [grumpy.core.coll :as coll]
     [grumpy.core.config :as config]
     [grumpy.core.fragments :as fragments]
     [grumpy.core.log :as log]
@@ -11,13 +8,12 @@
     [grumpy.db :as db]))
 
 
-(def ^:dynamic token
+(def token
   (config/get-optional ::token))
 
 
-(def ^:dynamic channel
-  (or (config/get-optional ::channel)
-    "grumpy_test"))
+(def channel
+  (config/get-optional ::channel))
 
 
 (defn post!
@@ -45,26 +41,27 @@
 
 
 (defn post-media! [post]
-  (let [video? (= :mime.type/video (-> post :post/media mime/type))
-        media  (or
-                 (when-not video?
-                   (:post/media-full post))
-                 (:post/media post))]
-    (when media
-      (let [url    (str config/hostname "/media/" (:media/url media))
-            resp   (if video?
-                     (post! "/sendVideo" {:video url})
-                     (post! "/sendPhoto" {:photo url}))]
-        (db/transact!
-          [[:db/add (:db/id post) :post/crosspost -1]
-           {:db/id                   -1
-            :crosspost/type          :tg/media
-            :crosspost.tg/channel    channel
-            :crosspost.tg/message-id (get-in resp ["result" "message_id"])}])))))
+  (when (and token channel (not config/dev?))
+    (let [video? (= :mime.type/video (-> post :post/media mime/type))
+          media  (or
+                   (when-not video?
+                     (:post/media-full post))
+                   (:post/media post))]
+      (when media
+        (let [url    (str config/hostname "/media/" (:media/url media))
+              resp   (if video?
+                       (post! "/sendVideo" {:video url})
+                       (post! "/sendPhoto" {:photo url}))]
+          (db/transact!
+            [[:db/add (:db/id post) :post/crosspost -1]
+             {:db/id                   -1
+              :crosspost/type          :tg/media
+              :crosspost.tg/channel    channel
+              :crosspost.tg/message-id (get-in resp ["result" "message_id"])}]))))))
 
 
 (defn update-media! [post]
-  (when token
+  (when (and token channel (not config/dev?))
     (let [video? (= :mime.type/video (-> post :post/media mime/type))
           media  (or
                    (when-not video?
@@ -88,7 +85,7 @@
 
 
 (defn post-text! [post]
-  (when token
+  (when (and token channel)
     (let [text (str (format-user (:post/author post)) ": " (:post/body post))
           body {:text text
                 :disable_web_page_preview "true"}
@@ -102,7 +99,7 @@
 
 
 (defn update-text! [post]
-  (when token
+  (when (and token channel)
     (doseq [crosspost (:post/crosspost post)
             :when (= :tg/text (:crosspost/type crosspost))
             :let [channel (:crosspost.tg/channel crosspost)

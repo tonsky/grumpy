@@ -57,11 +57,18 @@
       :on-click (fn [_] (to-publishing))}
      "Update"]))
 
+(rum/defc button-delete []
+  [:a
+   {:href (str "/" (:post/id @state/*post) "/delete")
+    :style {:color "#c33"}}
+   "[ Delete ]"])
 
 (rum/defc ui < rum/reactive []
   [:.column
    (when-some [error (fragments/subscribe state/*status :error)]
      [:.status {:style {:z-index 1}} error])
    (if (:post/id @state/*post)
-     [:.row.right (button-update)]
+     [:.row.middle.space-between
+      (button-delete)
+      (button-update)]
      [:.row.right (button-post)])])

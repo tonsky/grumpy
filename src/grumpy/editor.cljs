@@ -9,7 +9,6 @@
     [grumpy.core.transit :as transit]
     [grumpy.editor.body :as editor.body]
     [grumpy.editor.buttons :as editor.buttons]
-    [grumpy.editor.debug :as editor.debug]
     [grumpy.editor.media :as editor.media]
     [grumpy.editor.state :as state]
     [rum.core :as rum]))
@@ -35,10 +34,8 @@
 
 (defn ^:after-load ^:export refresh []
   (let [mount (js/document.querySelector ".mount")
-        comp  (if (editor.debug/debug?)
-                (editor.debug/ui editor)
-                (do
-                  (when (nil? @state/*post)
-                    (reset! state/*post (-> (.getAttribute mount "data") (edn/read-string))))
-                  (editor state/*post)))]
+        comp  (do
+                (when (nil? @state/*post)
+                  (reset! state/*post (-> (.getAttribute mount "data") (edn/read-string))))
+                (editor state/*post))]
     (rum/mount comp mount)))

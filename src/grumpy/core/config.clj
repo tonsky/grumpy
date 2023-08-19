@@ -62,9 +62,9 @@
       (set key (value-fn)))))
 
 
-;; force default value
-(get :grumpy.server/hostname (constantly "https://grumpy.website"))
+(def hostname
+  (get :grumpy.server/hostname (constantly "https://grumpy.website")))
 
 
 (def ^:dynamic dev?
-  (= "http://localhost:8080" (get :grumpy.server/hostname)))
+  (= "http://localhost:8080" hostname))

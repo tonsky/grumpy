@@ -42,7 +42,7 @@
     (let [res (namespace/refresh)]
       (when-some [*max-addr (resolve 'datascript.storage/*max-addr)]
         (vreset! @*max-addr max-addr))
-      (when (not= res :ok)
+      (when (not= :ok res)
         (throw res))
       :ok)))
 

@@ -2,6 +2,7 @@
   (:require
     [datascript.core :as d]
     [datascript.storage.sql.core :as storage-sql]
+    [grumpy.core.log :as log]
     [grumpy.core.transit :as transit]
     [mount.core :as mount])
   (:import
@@ -35,19 +36,7 @@
                           :db/isComponent true}
    :crosspost/type          {#_:db.type/keyword} ;; :tg/media :tg/text
    :crosspost.tg/channel    {#_:db.type/string}
-   :crosspost.tg/message-id {#_:db.type/string}
-   :crosspost.tg/media      {:db/valueType   :db.type/ref
-                             :db/cardinality :db.cardinality/many
-                             :db/isComponent true}
-   :crosspost.tg.media/file-id        {#_:db.type/string}
-   :crosspost.tg.media/file-unique-id {#_:db.type/string}
-   :crosspost.tg.media/file-size      {#_:db.type/string}
-   :crosspost.tg.media/width          {#_:db.type/string}
-   :crosspost.tg.media/height         {#_:db.type/string}
-   :crosspost.tg.media/mime-type      {#_:db.type/string}
-   :crosspost.tg.media/duration       {#_:db.type/long}
-   :crosspost.tg.media/thumbnail      {:db/valueType :db.type/ref
-                                       :db/isComponent true}})
+   :crosspost.tg/message-id {#_:db.type/string}})
 
 (defn make-storage [path]
   (let [conn (DriverManager/getConnection (str "jdbc:sqlite:" path))]
@@ -71,13 +60,9 @@
 (defn db []
   @conn)
 
-(defn insert! [conn tempid tx]
-  (let [report (d/transact! conn tx)]
-    (d/pull (:db-after report) '[*] ((:tempids report) tempid))))
-
-(defmacro transform! [[db conn] & body]
-  `(d/transact! ~conn
-     [[:db.fn/call (fn [~db] ~@body)]]))
+(defn transact! [tx]
+  (log/log (str "Transacting\n" (with-out-str (clojure.pprint/pprint tx))))
+    (d/transact! conn tx))
 
 (comment
   (count (datascript.storage/-list-addresses storage))

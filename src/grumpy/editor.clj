@@ -183,23 +183,20 @@
                     (when full-url
                       [full'
                        [:db/add -1 :post/media -3]]))
-        _         (log/log (str "Transacting\n"
-                             (with-out-str (clojure.pprint/pprint tx))))
-        report    (d/transact! db/conn tx)
+        report    (db/transact! tx)
         post      (d/pull (:db-after report) '[*] (get (:tempids report) -1))]
     
-
     ;; notify telegram
-    ; (if new?
-    ;   (jobs/try-async "telegram/post-picture!"
-    ;     #(posts/update! post-id' telegram/post-picture!)
-    ;     {:after (fn [_]
-    ;               (jobs/try-async "telegram/post-text!"
-    ;                 #(posts/update! post-id' telegram/post-text!)))})
-    ;   (jobs/try-async "telegram/update-text!"
-    ;     #(telegram/update-text! post)))
+    (if new?
+      (jobs/try-async
+        (telegram/post-media! post)
+        (telegram/post-text! post))
+      (jobs/try-async
+        (telegram/update-media! post)
+        (telegram/update-text! post)))
 
     post))
+
 
 (rum/defc edit-page [post-id user]
   (let [db   (db/db)

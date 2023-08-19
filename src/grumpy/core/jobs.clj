@@ -10,8 +10,9 @@
 (defonce ^:dynamic current-agent-id nil)
 
 
-(defn try-async
-  ([name f] (try-async name f {}))
+(defn try-async-impl
+  ([name f]
+   (try-async-impl name f {}))
   ([name f {:keys [after retries interval-ms]
             :or {after       identity
                  retries     5
@@ -24,7 +25,7 @@
               (let [[success? res] (try
                                     [true (f)]
                                     (catch Exception e
-                                      (log/log "[" name "] Try #" i" failed" (pr-str (ex-data e)))
+                                      (log/log "[" name "] Try #" i "failed" (pr-str (ex-data e)))
                                       (.printStackTrace e)
                                       [false nil]))]
                 (if success?
@@ -36,6 +37,15 @@
           (catch Exception e
             (log/log "[" name "] Something went wrong" (pr-str (ex-data e)))
             (.printStackTrace e)))))))
+
+
+(defmacro try-async [& forms]
+  (when-some [form (first forms)]
+    `(try-async-impl ~(str form)
+       (fn [] ~form)
+       {:after
+        (fn [_#]
+          (try-async ~@(next forms)))})))
 
 
 (defn sh [& args]

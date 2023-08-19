@@ -26,22 +26,13 @@
         :media/width        width
         :media/height       height))))
 
-(defn convert-tg-media [doc]
-  (coll/some-map
-    :crosspost.tg.media/file-id        (get doc "file_id")
-    :crosspost.tg.media/file-unique-id (get doc "file_unique_id")
-    :crosspost.tg.media/file-size      (get doc "file_size")
-    :crosspost.tg.media/width          (get doc "width")
-    :crosspost.tg.media/height         (get doc "height")))
-
 (defn convert-crosspost [crosspost]
   (coll/some-map
     :crosspost/type          (case (:type crosspost)
                                :telegram/photo :tg/media
                                :telegram/text  :tg/text)
     :crosspost.tg/channel    (:telegram/channel crosspost)
-    :crosspost.tg/message-id (:telegram/message_id crosspost)
-    :crosspost.tg/media      (map convert-tg-media (:telegram/photo crosspost))))
+    :crosspost.tg/message-id (:telegram/message_id crosspost)))
 
 (defn convert-post [id post]
   (let [year (time/year (:created post))]

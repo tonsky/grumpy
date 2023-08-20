@@ -46,7 +46,7 @@
                                 (if-some [old-url (:media/old-url media)]
                                   (str url "/" old-url)
                                   (str hostname "/media/" (:media/url media))))
-                   media-mime (some-> media mime/type)]]
+                   media-mime (:media/content-type media)]]
          [:entry {}
           [:title {} (format "%s is being grumpy" (:post/author post))]
           [:link {:rel  "alternate"
@@ -64,7 +64,7 @@
            (rum/render-static-markup
              (when media
                [:p {}
-                (case media-mime
+                (case (some-> media mime/type)
                   :mime.type/video
                   [:video
                    {:autoplay    "autoplay"
@@ -98,8 +98,8 @@
            (fragments/format-text
              (str
                (rum/render-static-markup
-                 [:strong {} (format "%s: " (:author post))])
-               (:body post)))]])])))
+                 [:strong {} (format "%s: " (:post/author post))])
+               (:post/body post)))]])])))
 
 (defn sitemap [post-ids]
   (let [hostname (config/get :grumpy.server/hostname)]

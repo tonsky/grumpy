@@ -99,16 +99,14 @@
       [:body.anonymous
         [:header
           (case page
-            :index [:h1.title title [:a.title_new { :href "/new" } "+"]]
-            :post  [:h1.title [:a {:href "/"} title ]]
-                   [:h1.title [:a.title_back {:href "/"} "◄"] title])
+            :index        [:h1.title title [:a.title_new { :href "/new" } "+"]]
+            (:page :post) [:h1.title [:a {:href "/"} title ]]
+            #_:else       [:h1.title [:a.title_back {:href "/"} "◄"] title])
           (when subtitle?
             [:p.subtitle
               [:span.icon_rotate {:on-click "body_rotate()"}]
               [:span.subtitle-text " "]])]
         children
-        (when (= page :index)
-          [:.loader-block.row.center [:.loader]])
         [:footer
           (interpose ", "
             (for [author fragments/authors]

@@ -23,7 +23,10 @@
     [java.io IOException]))
 
 (def page-size
-  (or (config/get-optional ::page-size) 5))
+  (or (config/get-optional ::page-size) 10))
+
+(def paginator-size
+  (or (config/get-optional ::page-size) 8))
 
 (rum/defc post [post]
   [:.post
@@ -77,11 +80,65 @@
      " // " [:a {:href (str "/" (:post/id post))} "Permalink"]
      [:a.post_meta_edit {:href (str "/" (:post/id post) "/edit")} "Edit"]]]])
 
-(rum/defc index-page [post-ids]
-  (web/page {:page :index
-             :scripts ["loader.js"]}
-    (let [db (db/db)]
-      (map #(post (d/entity db [:post/id %])) post-ids))))
+(defn pages [db page]
+  (let [db             (db/db)
+        max-id         (posts/max-id db)
+        total-pages    (-> max-id (- 1) (quot page-size) (+ 1))
+        max-page       (dec total-pages) ;; / page always includes two last pages
+        page           (if (neg? page) (- max-page (inc page)) page)
+        half-paginator (quot paginator-size 2)
+        pages          (cond
+                         (< (- max-page page) (+ 2 half-paginator))
+                         (take (+ 2 paginator-size) (range max-page 0 -1))
+                         
+                         (< (- page 1) half-paginator)
+                         (range (min paginator-size max-page) 0 -1)
+                         
+                         :else
+                         (let [from (-> page (+ half-paginator) dec)
+                               till (- from paginator-size)]
+                           (range from till -1)))]
+    [:.pages
+     [:.pages_title
+      "Pages: "]
+     [:.pages_inner
+       (when (< (first pages) max-page)
+         (list
+           [:a {:href "/"} max-page]
+           [:span "..."]))
+       (for [p pages]
+         (if (= p page)
+           [:span.selected (str p)]
+           [:a {:href (if (= max-page p) "/" (str "/page/" p))} (str p)]))
+       (when (> (last pages) 1)
+         [:span "..."])]]))
+
+
+(rum/defc index-page []
+  (let [db    (db/db)
+        ids   (posts/post-ids)
+        cnt   (or (first ids) 0)
+        until (- cnt (+ page-size (rem cnt page-size)))
+        ids   (take-while #(> % until) ids)]
+    (web/page {:page :index}
+      (list
+        (map #(post (d/entity db [:post/id %])) ids)
+        (pages db -1)))))
+
+
+(rum/defc page-page [page]
+  (let [db   (db/db)
+        from (inc (* page-size (dec page)))
+        till (* page-size page)
+        ids  (->> (d/seek-datoms db :avet :post/id from)
+               (map :v)
+               (take-while #(<= % till))
+               (reverse))]
+    (web/page {:page :page}
+      (list
+        (map #(post (d/entity db [:post/id %])) ids)
+        (pages db page)))))
+
 
 (rum/defc posts-fragment [post-ids]
   (let [db (db/db)]
@@ -145,12 +202,13 @@
     [:get "/"
      (when config/dev? auth/populate-session)
      (fn [_]
-       (let [db    (db/db)
-             ids   (posts/post-ids)
-             cnt   (or (first ids) 0)
-             until (- cnt (+ page-size (rem cnt page-size)))
-             ids   (take-while #(> % until) ids)]
-         (web/html-response (index-page ids))))]
+       (web/html-response (index-page)))]
+    
+    [:get "/page/:page"
+     (when config/dev? auth/populate-session)
+     (fn [req]
+       (let [page (-> req :path-params :page parse-long)]
+         (web/html-response (page-page page))))]
 
     [:get "/static/*path" 
      (when-not config/dev?

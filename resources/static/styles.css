@@ -73,22 +73,25 @@ button.playing:hover { background-position: -100% -100%; }
 button.fullscreen { background-position: 0 -200%; }
 button.fullscreen:hover { background-position: -100% -200%; }
 
+/* PAGES */
+
+.pages { display: flex; justify-content: flex-start; border-top: 1px solid currentColor; padding: 0.5em 0; }
+.pages_title { width: 70px; padding: 0.5em 0; }
+@media (max-width: 399px) {
+  .pages_title { display: none; }
+}
+.pages_inner { width: 100%; display: flex; flex-wrap: wrap; }
+.pages a, .pages span { text-align: center; padding: 0.5em 0.5em; }
+.pages span.selected { font-weight: bold; }
+
 /* FOOTER */
 @keyframes rotating {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
 
-.loader-block { margin: 0 0 3em 0; text-align: center; }
-.loader { width: 76px; height: 76px; border: 2px solid #000; border-radius: 50%; background-image: url("/static/favicons/apple-touch-icon-152x152.png"); background-size: 100%; }
-.loader.loading { animation: rotating 1s ease-in-out infinite; }
-.loader.error { cursor: pointer; border-color: red; }
-.loader.error:hover { position: relative; top: -1px; }
-.loader.small { width: 38px; height: 38px; border-width: 1.5px; }
-
 footer {
   padding: 1em 0 1em;
-  margin-top: 2em;
   border-top: 1px solid currentColor;
 }
 

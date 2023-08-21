@@ -33,11 +33,15 @@
       (remove #(d/find-datom db :eavt (:e %) :post/deleted?))
       (map :v))))
 
+
+(defn max-id [db]
+  (let [datoms (d/datoms db :avet :post/id)]
+    (when-not (empty? datoms)
+     (:v (first (rseq datoms))))))
+
+
 (defn next-id [db]
-  (let [datoms (d/datoms db :avet :post/id)
-        max-id (when-not (empty? datoms)
-                 (:v (first (rseq datoms))))]
-    (inc (or max-id 0))))
+  (inc (or (max-id db) 0)))
 
 
 (defn update! [post-id update-fn]

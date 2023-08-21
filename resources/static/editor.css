@@ -25,6 +25,8 @@ button.inline:active { position: relative; top: 1px; }
 
 /* EDIT POST */
 
+.mount { margin-bottom: 2em; }
+
 .upload,
 .dragging { background: #f5f5f0; color: #3d3d3d; display: flex; justify-content: center; align-items: center; }
 

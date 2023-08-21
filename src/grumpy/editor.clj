@@ -114,6 +114,18 @@
         updates (convert-media! full mime-type)]
     updates))
 
+(defn media-url [year post-id version full? ext]
+  (str
+    year
+    "/"
+    post-id
+    (when (> version 1)
+      (str "v" version))
+    (when full?
+      "_full")
+    "."
+    ext))
+
 (defn publish! [post-id body]
   (let [now       (time/now)
         db        (db/db)
@@ -127,8 +139,7 @@
         url-fn    #(when-some [media (% body)]
                      (let [url (:media/url media)]
                        (when (str/starts-with? (:media/url media) "uploads/")
-                         (format "%d/%d_%d.%s" year post-id version (files/extension url)))))
-        
+                         (media-url year post-id version (= :post/media-full %) (files/extension url)))))
         media-url (url-fn :post/media)        
         media'    (when media-url
                     (files/move
@@ -177,7 +188,7 @@
                     ;; add new media-full
                     (when full-url
                       [full'
-                       [:db/add -1 :post/media -3]]))
+                       [:db/add -1 :post/media-full -3]]))
         report    (db/transact! tx)
         post      (d/pull (:db-after report) '[*] (get (:tempids report) -1))]
     

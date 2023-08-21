@@ -78,7 +78,8 @@
      [:a.post_meta_edit {:href (str "/" (:post/id post) "/edit")} "Edit"]]]])
 
 (rum/defc index-page [post-ids]
-  (web/page {:page :index :scripts ["loader.js"]}
+  (web/page {:page :index
+             :scripts ["loader.js"]}
     (let [db (db/db)]
       (map #(post (d/entity db [:post/id %])) post-ids))))
 

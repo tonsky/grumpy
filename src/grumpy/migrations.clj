@@ -1,23 +1,21 @@
 (ns grumpy.migrations
   (:require
     [grumpy.core.config :as config]
-    [grumpy.core.log :as log]
-    [grumpy.migrations.to-2 :as migrations.to-2]
-    [grumpy.migrations.to-3 :as migrations.to-3]
-    [grumpy.migrations.to-4 :as migrations.to-4]))
+    [grumpy.core.log :as log]))
 
 
-(defn maybe-migrate-to [version f]
+(defn maybe-migrate-to [version sym]
   (when (< (config/get :grumpy.db/version (constantly 1)) version)
     (log/log "Migrating DB to version" version)
-    (f)
+    ((requiring-resolve sym))
     (config/set :grumpy.db/version version)))
 
 
 (defn migrate! []
-  (maybe-migrate-to 2 migrations.to-2/migrate!)
-  (maybe-migrate-to 3 migrations.to-3/migrate!)
-  (maybe-migrate-to 4 migrations.to-4/migrate!))
+  (maybe-migrate-to 2 'grumpy.migrations.to-2/migrate!)
+  (maybe-migrate-to 3 'grumpy.migrations.to-3/migrate!)
+  (maybe-migrate-to 4 'grumpy.migrations.to-4/migrate!)
+  (maybe-migrate-to 5 'grumpy.migrations.to-5/migrate!))
 
 
 (defn -main [& args]

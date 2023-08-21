@@ -3,6 +3,7 @@
     [clojure.java.io :as io]
     [clojure.string :as str]
     [datascript.core :as d]
+    [grumpy.core.config :as config]
     [grumpy.core.jobs :as jobs]
     [grumpy.core.time :as time]
     [grumpy.db :as db])
@@ -38,6 +39,10 @@
   (let [datoms (d/datoms db :avet :post/id)]
     (when-not (empty? datoms)
      (:v (first (rseq datoms))))))
+
+
+(defn total-pages [db]
+  (-> (max-id db) (- 1) (quot config/page-size) (+ 1)))
 
 
 (defn next-id [db]

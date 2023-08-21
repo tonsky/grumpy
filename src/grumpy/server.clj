@@ -22,11 +22,10 @@
   (:import
     [java.io IOException]))
 
-(def page-size
-  (or (config/get-optional ::page-size) 10))
 
 (def paginator-size
-  (or (config/get-optional ::page-size) 8))
+  8)
+
 
 (rum/defc post [post]
   [:.post
@@ -82,10 +81,9 @@
 
 (defn pages [db page]
   (let [db             (db/db)
-        max-id         (posts/max-id db)
-        total-pages    (-> max-id (- 1) (quot page-size) (+ 1))
+        total-pages    (posts/total-pages db)
         max-page       (dec total-pages) ;; / page always includes two last pages
-        page           (if (neg? page) (- max-page (inc page)) page)
+        page           (if (neg? page) (- max-page (inc page)) page) ;; -1 for index
         half-paginator (quot paginator-size 2)
         pages          (cond
                          (< (- max-page page) (+ 2 half-paginator))
@@ -102,24 +100,26 @@
      [:.pages_title
       "Pages: "]
      [:.pages_inner
-       (when (< (first pages) max-page)
-         (list
-           [:a {:href "/"} max-page]
-           [:span "..."]))
-       (for [p pages]
-         (if (= p page)
-           [:span.selected (str p)]
-           [:a {:href (if (= max-page p) "/" (str "/page/" p))} (str p)]))
-       (when (> (last pages) 1)
-         [:span "..."])]]))
+      (when (< (first pages) max-page)
+        (list
+          [:a {:href "/"} max-page]
+          [:span "..."]))
+      (for [p pages]
+        (if (= p page)
+          [:span.selected (str p)]
+          [:a {:href (if (= max-page p) "/" (str "/page/" p))} (str p)]))
+      (when (> (last pages) 1)
+        [:span "..."])]]))
 
 
 (rum/defc index-page []
-  (let [db    (db/db)
-        ids   (posts/post-ids)
-        cnt   (or (first ids) 0)
-        until (- cnt (+ page-size (rem cnt page-size)))
-        ids   (take-while #(> % until) ids)]
+  (let [db          (db/db)
+        total-pages (posts/total-pages db)
+        from        (inc (* config/page-size (- total-pages 2))) ;; / always shows last two pages: 1 incomplete + 1 complete
+        till        (* config/page-size total-pages)
+        ids         (->> (d/index-range db :post/id from till)
+                      (rseq)
+                      (map :v))]
     (web/page {:page :index}
       (list
         (map #(post (d/entity db [:post/id %])) ids)
@@ -127,17 +127,21 @@
 
 
 (rum/defc page-page [page]
-  (let [db   (db/db)
-        from (inc (* page-size (dec page)))
-        till (* page-size page)
-        ids  (->> (d/seek-datoms db :avet :post/id from)
-               (map :v)
-               (take-while #(<= % till))
-               (reverse))]
-    (web/page {:page :page}
-      (list
-        (map #(post (d/entity db [:post/id %])) ids)
-        (pages db page)))))
+  (let [db          (db/db)
+        total-pages (posts/total-pages db)]
+    (if (<= 1 page total-pages)
+      (let [from (inc (* config/page-size (dec page)))
+            till (* config/page-size page)
+            ids  (->> (d/index-range db :post/id from till)
+                   (rseq)
+                   (map :v))]
+        (web/html-response
+          (web/page {:page :page}
+            (list
+              (map #(post (d/entity db [:post/id %])) ids)
+              (pages db page)))))
+      {:status 404
+       :body   "Not found"})))
 
 
 (rum/defc posts-fragment [post-ids]
@@ -179,25 +183,17 @@
      (fn [{{:keys [post-id]} :path-params}]
        (let [post-id (parse-long post-id)
              post    (d/entity (db/db) [:post/id post-id])]
-         (if (:post/deleted? post)
+         (cond
+           (nil? post)
+           {:status 404
+            :body   "Not found"}
+           
+           (:post/deleted? post)
            {:status 404
             :body   "Deleted"}
+           
+           :else
            (web/html-response (post-page post-id)))))]
-
-    [:get "/after/:post-id"
-     (fn [{{:keys [post-id]} :path-params}]
-       (when config/dev? (Thread/sleep 200))
-       (if (and config/dev? (< (rand) 0.5))
-         {:status 500}
-         (let [post-id  (parse-long post-id)
-               post-ids (->> (posts/post-ids)
-                          (drop-while #(not= % post-id))
-                          (drop 1)
-                          (take page-size)
-                          (remove :post/deleted?))]
-           {:status  200
-            :headers {"Content-Type" "text/html; charset=utf-8"}
-            :body    (rum/render-static-markup (posts-fragment post-ids))})))]
 
     [:get "/"
      (when config/dev? auth/populate-session)
@@ -208,7 +204,7 @@
      (when config/dev? auth/populate-session)
      (fn [req]
        (let [page (-> req :path-params :page parse-long)]
-         (web/html-response (page-page page))))]
+         (page-page page)))]
 
     [:get "/static/*path" 
      (when-not config/dev?

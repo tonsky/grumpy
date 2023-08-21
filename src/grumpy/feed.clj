@@ -4,6 +4,7 @@
     [grumpy.core.config :as config]
     [grumpy.core.fragments :as fragments]
     [grumpy.core.mime :as mime]
+    [grumpy.core.posts :as posts]
     [grumpy.core.time :as time]
     [grumpy.core.xml :as xml]
     [grumpy.db :as db]
@@ -102,9 +103,12 @@
                (:post/body post)))]])])))
 
 (defn sitemap [post-ids]
-  (let [hostname (config/get :grumpy.server/hostname)]
+  (let [hostname (config/get :grumpy.server/hostname)
+        db       (db/db)]
     (xml/emit
       [:urlset {:xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"}
        [:url {} [:loc {} hostname]]
        (for [id post-ids]
-         [:url {} [:loc {} (format "%s/%s" hostname id)]])])))
+         [:url {} [:loc {} (format "%s/%s" hostname id)]])
+       (for [page (range (dec (posts/total-pages db)) 0 -1)]
+         [:url {} [:loc {} (format "%s/page/%s" hostname page)]])])))

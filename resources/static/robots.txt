@@ -1,9 +1,8 @@
 User-agent: *
 
 Disallow: /new
-Disallow: /post/*/edit
-Disallow: /after/*
-Disallow: /send-email
+Disallow: /*/edit
+Disallow: /*/delete
 Disallow: /logout
 Disallow: /authenticate
 Disallow: /forbidden

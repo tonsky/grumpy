@@ -1,13 +1,14 @@
 (ns grumpy.core.web
   (:require
-   [clojure.java.io :as io]
-   [grumpy.core.config :as config]
-   [grumpy.core.files :as files]
-   [grumpy.core.fragments :as fragments]
-   [grumpy.core.transit :as transit]
-   [grumpy.core.url :as url]
-   [ring.util.response :as response]
-   [rum.core :as rum]))
+    [clojure.java.io :as io]
+    [grumpy.core.coll :as coll]
+    [grumpy.core.config :as config]
+    [grumpy.core.files :as files]
+    [grumpy.core.fragments :as fragments]
+    [grumpy.core.transit :as transit]
+    [grumpy.core.url :as url]
+    [ring.util.response :as response]
+    [rum.core :as rum]))
 
 
 (def empty-success-response
@@ -17,20 +18,20 @@
 
 (defn moved-permanently
   ([path]
-    {:status 301
-     :headers {"Location" path}})
+   {:status 301
+    :headers {"Location" path}})
   ([path query]
-    {:status 301
-     :headers {"Location" (url/build path query)}}))
+   {:status 301
+    :headers {"Location" (url/build path query)}}))
 
 
 (defn redirect
   ([path]
-    { :status 302
-      :headers { "Location" path } })
+   { :status 302
+    :headers { "Location" path } })
   ([path query]
-    { :status 302
-      :headers { "Location" (url/build path query) }}))
+   { :status 302
+    :headers { "Location" (url/build path query) }}))
 
 
 (def resource
@@ -73,45 +74,59 @@
           [:style { :type "text/css" :dangerouslySetInnerHTML { :__html content }}])))))
 
 
+(defn menu [page]
+  [:.menu
+   (for [[id sub-ids url title] [[:index       #{:page :post} "/"          "Home"]
+                                 [:search      #{}            "/search"    "Search"]
+                                 #_[:subscribe #{}            "/subscribe" "How to Subscribe"]
+                                 #_[:suggest   #{}            "/suggest"   "Suggest"]
+                                 #_[:about     #{}            "/about"     "About"]]]
+     (cond
+       (= page id)    [:span.no-select.selected [:span title]]
+       (sub-ids page) [:a.no-select.selected {:href url} [:span title]]
+       :else          [:a.no-select {:href url} [:span title]]))])
+
+
 (rum/defc page [opts & children]
   (let [{:keys [title page subtitle? styles scripts]
          :or {title     "Grumpy Website"
               page      :other
               subtitle? true}} opts]
     [:html
-      [:head
-        [:meta {:http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
-        [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
-        [:link {:href "/feed.xml" :rel "alternate" :title "Grumpy Website" :type "application/atom+xml"}]
+     [:head
+      [:meta {:http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
+      [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
+      [:link {:href "/feed.xml" :rel "alternate" :title "Grumpy Website" :type "application/atom+xml"}]
 
-        [:link {:href "/static/favicons/apple-touch-icon-152x152.png" :rel "apple-touch-icon-precomposed" :sizes "152x152"}]
-        [:link {:href "/static/favicons/favicon-196x196.png" :rel "icon" :sizes "196x196"}]
-        [:link {:href "/static/favicons/favicon-32x32.png" :rel "icon" :sizes "32x32"}]
-        [:link {:rel "preload" :href "/static/favicons/apple-touch-icon-152x152.png" :as "image"}]
+      [:link {:href "/static/favicons/apple-touch-icon-152x152.png" :rel "apple-touch-icon-precomposed" :sizes "152x152"}]
+      [:link {:href "/static/favicons/favicon-196x196.png" :rel "icon" :sizes "196x196"}]
+      [:link {:href "/static/favicons/favicon-32x32.png" :rel "icon" :sizes "32x32"}]
+      [:link {:rel "preload" :href "/static/favicons/apple-touch-icon-152x152.png" :as "image"}]
 
-        [:title title]
-        (style "styles.css")
-        (for [css styles]
-          (style css))
-        [:script {:dangerouslySetInnerHTML { :__html (resource "scripts.js") }}]
-        (for [script scripts]
-          [:script {:dangerouslySetInnerHTML { :__html (resource script) }}])]
-      [:body.anonymous
-        [:header
-          (case page
-            :index        [:h1.title title [:a.title_new { :href "/new" } "+"]]
-            (:page :post) [:h1.title [:a {:href "/"} title ]]
-            #_:else       [:h1.title [:a.title_back {:href "/"} "◄"] title])
-          (when subtitle?
-            [:p.subtitle
-              [:span.icon_rotate {:on-click "body_rotate()"}]
-              [:span.subtitle-text " "]])]
-        children
-        [:footer
-          (interpose ", "
-            (for [author fragments/authors]
-              [:a { :href (:url author) } (:name author)]))
-          " & contributors. 2018–2222. All fights retarded."]]]))
+      [:title title]
+      (style "styles.css")
+      (for [css styles]
+        (style css))
+      [:script {:dangerouslySetInnerHTML { :__html (resource "scripts.js") }}]
+      (for [script scripts]
+        [:script {:dangerouslySetInnerHTML { :__html (resource script) }}])]
+     [:body.anonymous
+      [:header
+       (case page
+         :index [:h1.title title [:a.title_new { :href "/new" } "+"]]
+         :edit  [:h1.title [:a.title_back {:href "/"} "◄"] title]
+         #_else [:h1.title [:a {:href "/"} title ]])
+       (when subtitle?
+         [:p.subtitle
+          [:span.icon_rotate {:on-click "body_rotate()"}]
+          [:span.subtitle-text " "]])
+       (menu page)]
+      children
+      [:footer
+       (interpose ", "
+         (for [author fragments/authors]
+           [:a { :href (:url author) } (:name author)]))
+       " & contributors. 2018–2222. All fights retarded."]]]))
 
 
 (defn html-response [component]

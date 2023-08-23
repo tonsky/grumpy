@@ -15,6 +15,7 @@
     [grumpy.core.time :as time]
     [grumpy.core.web :as web]
     [grumpy.db :as db]
+    [grumpy.search :as search]
     [grumpy.telegram :as telegram]
     [grumpy.video :as video]
     [ring.util.response :as response]
@@ -192,6 +193,9 @@
         report    (db/transact! tx)
         post      (d/pull (:db-after report) '[*] (get (:tempids report) -1))]
     
+    ;; update search
+    (search/index [post])
+    
     ;; notify telegram
     (if new?
       (jobs/try-async
@@ -210,7 +214,8 @@
                (d/pull db '[:post/id :post/author :post/body {:post/media [*]} {:post/media-full [*]}] [:post/id post-id])
                {:post/author user
                 :post/body   ""})]
-    (web/page {:title     (if post-id "New post" "Edit post")
+    (web/page {:page      :edit
+               :title     (if post-id "New post" "Edit post")
                :styles    ["editor.css"]
                :subtitle? false}
       [:.mount {:data (pr-str post)}] ;; TODO transit?

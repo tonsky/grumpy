@@ -69,5 +69,6 @@
 (def page-size
   (or (get-optional :grumpy.server/page-size) 10))
 
+
 (def ^:dynamic dev?
   (= "http://localhost:8080" hostname))

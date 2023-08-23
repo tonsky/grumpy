@@ -1,6 +1,7 @@
 (ns grumpy.server
   (:require
     [clojure.stacktrace :as stacktrace]
+    [clojure.string :as str]
     [datascript.core :as d]
     [grumpy.auth :as auth]
     [grumpy.core.config :as config]
@@ -14,6 +15,7 @@
     [grumpy.db :as db]
     [grumpy.feed :as feed]
     [grumpy.editor :as editor]
+    [grumpy.search :as search]
     [io.pedestal.interceptor :as interceptor]
     [io.pedestal.http :as http]
     [mount.core :as mount]
@@ -26,58 +28,6 @@
 (def paginator-size
   8)
 
-
-(rum/defc post [post]
-  [:.post
-   {:data-id (:post/id post)}
-   [:.post_side
-    [:img.post_avatar {:src (fragments/avatar-url (:post/author post))}]]
-   [:.post_content
-    (when-some [media (:post/media post)]
-      (let [src  (str "/media/" (:media/url media))
-            href (if-some [full (:post/media-full post)]
-                   (str "/media/" (:media/url full))
-                   src)]
-        (case (mime/type media)
-          :mime.type/video
-          [:.post_video_outer
-           [:video.post_video
-            {:autoplay true
-             :muted true
-             :loop true
-             :preload "auto"
-             :playsinline true
-             :onplay "toggle_video(this.parentNode, true);" }
-            [:source
-             {:type (mime/mime-type (:media/url media))
-              :src src}]]
-           [:.controls
-            [:button.paused {:onclick "toggle_video(this.parentNode.parentNode);"}]
-            [:button.fullscreen {:onclick "toggle_video_fullscreen(this.parentNode.parentNode);"}]]]
-          :mime.type/image
-          (or
-            (when-some [w (:media/width media)]
-              (when-some [h (:media/height media)]
-                (let [[w' h'] (fragments/fit w h 550 500)]
-                  [:div {:style {:max-width w'}}
-                   [:a.post_img.post_img-fix
-                    { :href href
-                     :target "_blank"
-                     :style {:padding-bottom (-> (/ h w) (* 100) (double) (str "%"))}}
-                    [:img {:src src}]]])))
-            [:a.post_img.post_img-flex 
-             {:href href
-              :target "_blank"}
-             [:img {:src src}]]))))
-    [:.post_body
-     {:dangerouslySetInnerHTML
-      {:__html
-       (fragments/format-text
-         (str "<span class=\"post_author\">" (:post/author post) ": </span>" (:post/body post)))}}]
-    [:p.post_meta
-     (time/format-date (:post/created post))
-     " // " [:a {:href (str "/" (:post/id post))} "Permalink"]
-     [:a.post_meta_edit {:href (str "/" (:post/id post) "/edit")} "Edit"]]]])
 
 (defn pages [db page]
   (let [db             (db/db)
@@ -122,7 +72,7 @@
                       (map :v))]
     (web/page {:page :index}
       (list
-        (map #(post (d/entity db [:post/id %])) ids)
+        (map #(fragments/post (d/entity db [:post/id %])) ids)
         (pages db -1)))))
 
 
@@ -138,19 +88,16 @@
         (web/html-response
           (web/page {:page :page}
             (list
-              (map #(post (d/entity db [:post/id %])) ids)
+              (map #(fragments/post (d/entity db [:post/id %])) ids)
               (pages db page)))))
       {:status 404
        :body   "Not found"})))
 
 
-(rum/defc posts-fragment [post-ids]
-  (let [db (db/db)]
-    (map #(post (d/entity db [:post/id %])) post-ids)))
-
 (rum/defc post-page [post-id]
   (web/page {:page :post}
-    (post (d/entity (db/db) [:post/id post-id]))))
+    (fragments/post (d/entity (db/db) [:post/id post-id]))))
+
 
 (def no-cache
   (interceptor/interceptor
@@ -205,6 +152,12 @@
      (fn [req]
        (let [page (-> req :path-params :page parse-long)]
          (page-page page)))]
+    
+    [:get "/search"
+     (when config/dev? auth/populate-session)
+     (fn [req]
+       (web/html-response
+         (search/search-page (:query-params req))))]
 
     [:get "/static/*path" 
      (when-not config/dev?

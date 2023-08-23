@@ -38,17 +38,18 @@
   (mount/stop))
 
 (defn refresh []
-  (let [max-addr @@(resolve 'datascript.storage/*max-addr)]
-    (let [res (namespace/refresh)]
-      (when-some [*max-addr (resolve 'datascript.storage/*max-addr)]
-        (vreset! @*max-addr max-addr))
-      (when (not= :ok res)
-        (throw res))
-      :ok)))
+  (let [max-addr @@(requiring-resolve 'datascript.storage/*max-addr)
+        _   (set! *warn-on-reflection* true)
+        res (namespace/refresh)]
+    (when-some [*max-addr (requiring-resolve 'datascript.storage/*max-addr)]
+      (vreset! @*max-addr max-addr))
+    (when (not= :ok res)
+      (throw res))
+    :ok))
 
 (defn start []
   (mount/start-without
-    #_(resolve 'grumpy.figwheel/figwheel)))
+    (resolve 'grumpy.figwheel/figwheel)))
 
 (defn reload []
   (stop)

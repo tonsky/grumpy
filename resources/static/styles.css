@@ -2,6 +2,7 @@
 
 :root {
   --body-bg: #FFF;
+  --body-fg: #000;
 }
 
 body {
@@ -21,17 +22,17 @@ body {
 
 /* HEADER */
 
-header { margin-bottom: 2em; }
+header { margin-bottom: 2em; display: flex; flex-direction: column; }
 
-.title { margin-bottom: 0; }
+.title { margin-bottom: 10px; }
 .title_back { position: absolute; margin-left: -1em; text-decoration: none; }
 .title_back:hover { text-decoration: underline; }
 
-.title_new { padding: 10px; margin: -10px 0 0 0; float: right; text-decoration: none; color: #c3c; }
+.title_new { padding: 10px; margin: -10px; float: right; text-decoration: none; color: #c3c; }
 .title_new:hover { color: #d4d; }
 body.anonymous .title_new { display: none; }
 
-.subtitle { margin-left: 0.09em;
+.subtitle { margin: 0 0 10px 0.09em;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -40,6 +41,10 @@ body.anonymous .title_new { display: none; }
   user-select: none; }
 .subtitle > span { cursor: pointer; }
 
+.menu { display: flex; border-bottom: 1px solid currentColor; padding: 0 5px; }
+.menu > span, .menu > a { padding: 0.5em 1em; display: inline-block; }
+.menu > .selected { border-top: 1px solid var(--body-fg); border-left: 1px solid var(--body-fg); border-right: 1px solid var(--body-fg); background: var(--body-bg); position: relative; top: 1px; }
+.menu > .selected > span { position: relative; top: -1px; }
 
 /* POST */
 
@@ -83,6 +88,17 @@ button.fullscreen:hover { background-position: -100% -200%; }
 .pages_inner { width: 100%; display: flex; flex-wrap: wrap; }
 .pages a, .pages span { text-align: center; padding: 0.5em 0.5em; }
 .pages span.selected { font-weight: bold; }
+
+/* SEARCH */
+
+form.search { margin: 0 0 2em 0; }
+form.search > span { margin-right: 0; width: 70px; }
+.search-results em { font-style: normal; background-color: #F4E3B4; padding: 0 1px; margin: 0 -1px; }
+.no-results { margin: 2em 0 2em 70px; }
+
+@media (prefers-color-scheme: dark) {
+  .search-results em { background-color: #F7941F; }
+}
 
 /* FOOTER */
 @keyframes rotating {
@@ -136,6 +152,7 @@ button, .no-select { user-select: none; -webkit-user-select: none; }
 @media (prefers-color-scheme: dark) {
   :root {
     --body-bg: #2b2c2d;
+    --body-fg: #FFF;
   }
 
   body { color: #FFF; }
@@ -144,3 +161,32 @@ button, .no-select { user-select: none; -webkit-user-select: none; }
   .title_new, .post_meta_edit { color: #e9e; }
   .icon_rotate { background-image: url("/static/rotate_dark.svg"); }
 } 
+
+/* FORMS */
+
+textarea,
+input[type=text], 
+input[type=search], 
+button { font: inherit; outline: none; }
+
+.input { height: 36px; }
+.input { position: relative; border: 0px solid #d5d1c9; }
+.input:before { border-top: 1px solid #808080; border-right: 1px solid #D5D1C9; border-bottom: 1px solid #E5E1D9; border-left: 1px solid #808080; content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 0; }
+.input:after { border-top: 1px solid #3d3d3d; border-right: 1px solid #D5D1C9; border-bottom: 1px solid #E5E1D9; border-left: 1px solid #3d3d3d; content: ''; position: absolute; top: 1px; right: 1px; bottom: 1px; left: 1px; z-index: 1; background: #FFF; }
+.input.disabled:after { background: #f5f5f0; }
+.input > textarea,
+.input > input[type=text],
+.input > input[type=search] { min-width: 100px; padding: 6px 6px 4px; background: transparent; border: none; height: 100%; width: 100%; margin: 0; position: absolute; z-index: 2; }
+
+button { border: none; padding: 0; }
+
+.btn { height: 36px; padding: 1px 30px 0; background: #D5D1C9; color: black; position: relative; border: 1px solid #000; }
+.btn:before { border-top: 1px solid #FFF; border-left: 1px solid #FFF; border-right: 1px solid #3d3d3d; border-bottom: 1px solid #3d3d3d; content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0; }
+.btn:after { border-top: 1px solid #D5D1C9; border-left: 1px solid #D5D1C9; border-right: 1px solid #808080; border-bottom: 1px solid #808080; content: ''; position: absolute; top: 1px; right: 1px; bottom: 1px; left: 1px; }
+.btn:not([disabled]):active { padding: 7px 29px 4px 31px; }
+.btn:not([disabled]):active:before, .btn:not([disabled]):active:after { border: none; }
+
+.btn[disabled] { color: #808080; text-shadow: 1px 1px 0 #FFF; border-color: #FFF; }
+
+button.inline { background: none; color: #00F; border-bottom: 1px dotted #00F; cursor: pointer; }
+button.inline:active { position: relative; top: 1px; }

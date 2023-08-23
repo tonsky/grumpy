@@ -28,9 +28,7 @@ header { margin-bottom: 2em; display: flex; flex-direction: column; }
 .title_back { position: absolute; margin-left: -1em; text-decoration: none; }
 .title_back:hover { text-decoration: underline; }
 
-.title_new { padding: 10px; margin: -10px; float: right; text-decoration: none; color: #c3c; }
-.title_new:hover { color: #d4d; }
-body.anonymous .title_new { display: none; }
+body.anonymous #menu_page_edit { display: none; }
 
 .subtitle { margin: 0 0 10px 0.09em;
   -webkit-touch-callout: none;

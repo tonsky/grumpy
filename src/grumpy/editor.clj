@@ -214,16 +214,17 @@
                (d/pull db '[:post/id :post/author :post/body {:post/media [*]} {:post/media-full [*]}] [:post/id post-id])
                {:post/author user
                 :post/body   ""})]
-    (web/page {:page      :edit
-               :title     (if post-id "New post" "Edit post")
-               :styles    ["editor.css"]
-               :subtitle? false}
+    (web/page {:page   (if post-id :edit :new)
+               :title  (if post-id "Edit post" "New post")
+               :styles ["editor.css"]}
       [:.mount {:data (pr-str post)}] ;; TODO transit?
       [:script {:src (str "/" (web/checksum-resource "static/editor.js"))}]
       [:script {:dangerouslySetInnerHTML {:__html "grumpy.editor.refresh();"}}])))
 
+
 (def ^:private interceptors
   [auth/populate-session auth/require-user])
+
 
 (def routes
   (routes/expand

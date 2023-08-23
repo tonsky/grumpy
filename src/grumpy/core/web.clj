@@ -74,23 +74,31 @@
           [:style { :type "text/css" :dangerouslySetInnerHTML { :__html content }}])))))
 
 
-(defn menu [page]
+(defn menu [current]
   [:.menu
-   (for [[id sub-ids url title] [[:index       #{:page :post} "/"          "Home"]
-                                 [:search      #{}            "/search"    "Search"]
-                                 #_[:subscribe #{}            "/subscribe" "How to Subscribe"]
-                                 #_[:suggest   #{}            "/suggest"   "Suggest"]
-                                 #_[:about     #{}            "/about"     "About"]]]
+   (for [[page subpages url title] [[:index     #{:page :post} "/"          "Home"]
+                                    [:search    #{}            "/search"    "Search"]
+                                    #_[:subscribe #{}            "/subscribe" "How to Subscribe"]
+                                    #_[:suggest   #{}            "/suggest"   "Suggest"]
+                                    #_[:about     #{}            "/about"     "About"]
+                                    (if (= :edit current)
+                                      [:edit      #{}            nil       "Edit post"]
+                                      [:new       #{}            "/new"    "New post"])]
+         :let [id (str "menu_page_" (name page))]]
      (cond
-       (= page id)    [:span.no-select.selected [:span title]]
-       (sub-ids page) [:a.no-select.selected {:href url} [:span title]]
-       :else          [:a.no-select {:href url} [:span title]]))])
+       (= current page)
+       [:span.no-select.selected {:id id} [:span title]]
+       
+       (subpages current)
+       [:a.no-select.selected {:id id :href url} [:span title]]
+       
+       :else
+       [:a.no-select {:id id :href url} [:span title]]))])
 
 
 (rum/defc page [opts & children]
   (let [{:keys [title page subtitle? styles scripts]
-         :or {title     "Grumpy Website"
-              page      :other
+         :or {page      :other
               subtitle? true}} opts]
     [:html
      [:head
@@ -113,9 +121,8 @@
      [:body.anonymous
       [:header
        (case page
-         :index [:h1.title title [:a.title_new { :href "/new" } "+"]]
-         :edit  [:h1.title [:a.title_back {:href "/"} "◄"] title]
-         #_else [:h1.title [:a {:href "/"} title ]])
+         :index [:h1.title "Grumpy Website"]
+         #_else [:h1.title [:a {:href "/"} "Grumpy Website"]])
        (when subtitle?
          [:p.subtitle
           [:span.icon_rotate {:on-click "body_rotate()"}]

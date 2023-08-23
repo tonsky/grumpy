@@ -98,7 +98,8 @@
 
 (rum/defc page [opts & children]
   (let [{:keys [title page subtitle? styles scripts]
-         :or {page      :other
+         :or {title     "Grumpy Website"
+              page      :other
               subtitle? true}} opts]
     [:html
      [:head

@@ -18,8 +18,11 @@
      
      :success
      (fn [payload]
-       (let [post' (transit/read-string payload)]
-         (oset! js/location "href" (str "/" (:post/id post')))))
+       (let [post' (transit/read-string payload)
+             loc   (if (:post/id @state/*post)
+                     (str "/" (:post/id post'))
+                     "/")]
+         (oset! js/location "href" loc)))
      
      :error
      (fn [error]

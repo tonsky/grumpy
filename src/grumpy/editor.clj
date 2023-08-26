@@ -17,6 +17,7 @@
     [grumpy.db :as db]
     [grumpy.search :as search]
     [grumpy.telegram :as telegram]
+    [grumpy.mastodon :as mastodon]
     [grumpy.video :as video]
     [ring.util.response :as response]
     [rum.core :as rum])
@@ -204,6 +205,9 @@
       (jobs/try-async
         (telegram/update-media! post)
         (telegram/update-text! post)))
+    
+    ;; notify mastodon
+    (mastodon/crosspost! post)
 
     post))
 

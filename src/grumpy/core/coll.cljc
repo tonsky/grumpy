@@ -54,6 +54,15 @@
       (partition 2 kvs))))
 
 
+(defn some-vec [& xs]
+  (persistent!
+    (reduce
+      (fn [v x]
+        (cond-> v
+          (some? x) (conj! x)))
+      (transient [])
+      xs)))
+
 (defn single [xs]
   (assert (nil? (seq (next xs))) (str "Expected no more than 1 element, got: " (count xs)))
   (first xs))

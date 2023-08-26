@@ -64,7 +64,7 @@
   (.truncatedTo (Instant/now) ChronoUnit/MILLIS))
 
 
-(defn age [^Instant inst]
+(defn since [^Instant inst]
   (-> (Duration/between inst (now))
     (.toMillis)))
 

@@ -5,6 +5,7 @@
     [grumpy.core.fragments :as fragments]
     [grumpy.core.log :as log]
     [grumpy.core.mime :as mime]
+    [grumpy.core.posts :as posts]
     [grumpy.db :as db]))
 
 
@@ -43,10 +44,7 @@
 (defn post-media! [post]
   (when (and token channel (not config/dev?))
     (let [video? (= :mime.type/video (-> post :post/media mime/type))
-          media  (or
-                   (when-not video?
-                     (:post/media-full post))
-                   (:post/media post))]
+          media  (posts/crosspost-media post)]
       (when media
         (let [url    (str config/hostname "/media/" (:media/url media))
               resp   (if video?
@@ -63,10 +61,7 @@
 (defn update-media! [post]
   (when (and token channel (not config/dev?))
     (let [video? (= :mime.type/video (-> post :post/media mime/type))
-          media  (or
-                   (when-not video?
-                     (:post/media-full post))
-                   (:post/media post))]
+          media  (posts/crosspost-media post)]
       (when media
         (let [url (str config/hostname "/media/" (:media/url media))]
           (doseq [crosspost (:post/crosspost post)

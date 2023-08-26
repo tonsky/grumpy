@@ -60,7 +60,7 @@
 (defn get-token [handle]
   (when-some [token (get @*tokens handle)]
     (let [created (:created token)]
-      (when (<= (time/age created) token-ttl-ms)
+      (when (<= (time/since created) token-ttl-ms)
         (:value token)))))
 
 

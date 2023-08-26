@@ -5,6 +5,7 @@
     [datascript.core :as d]
     [grumpy.core.config :as config]
     [grumpy.core.jobs :as jobs]
+    [grumpy.core.mime :as mime]
     [grumpy.core.time :as time]
     [grumpy.db :as db])
   (:import
@@ -12,7 +13,8 @@
     [java.time Instant]))
 
 
-(def ^:const encode-table "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")
+(def ^:const encode-table
+  "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")
 
 
 (defn encode [num len]
@@ -38,7 +40,7 @@
 (defn max-id [db]
   (let [datoms (d/datoms db :avet :post/id)]
     (when-not (empty? datoms)
-     (:v (first (rseq datoms))))))
+      (:v (first (rseq datoms))))))
 
 
 (defn total-pages [db]
@@ -64,3 +66,11 @@
       [{:post/id       post-id
         :post/updated  (time/now)
         :post/deleted? true}])))
+
+
+(defn crosspost-media [post]
+  (let [video? (= :mime.type/video (-> post :post/media mime/type))]
+    (or
+      (when-not video?
+        (:post/media-full post))
+      (:post/media post))))

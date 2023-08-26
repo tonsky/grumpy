@@ -34,9 +34,12 @@
    :post/crosspost       {:db/valueType   :db.type/ref
                           :db/cardinality :db.cardinality/many
                           :db/isComponent true}
-   :crosspost/type          {#_:db.type/keyword} ;; :tg/media :tg/text
+   :crosspost/type          {#_:db.type/keyword} ;; :tg/media :tg/text :mstd
    :crosspost.tg/channel    {#_:db.type/string}
-   :crosspost.tg/message-id {#_:db.type/string}})
+   :crosspost.tg/message-id {#_:db.type/string}
+   :crosspost.mstd/media-id {#_:db.type/string}
+   :crosspost.mstd/ids      {#_:db.type/tuple}
+   })
 
 (defn make-storage [path]
   (let [conn (DriverManager/getConnection (str "jdbc:sqlite:" path))]

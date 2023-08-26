@@ -106,6 +106,7 @@
       [:meta {:http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
       [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
       [:link {:href "/feed.xml" :rel "alternate" :title "Grumpy Website" :type "application/atom+xml"}]
+      [:list {:rel "me" :href "https://mastodon.online/@grumpy_website"}]
 
       [:link {:href "/static/favicons/apple-touch-icon-152x152.png" :rel "apple-touch-icon-precomposed" :sizes "152x152"}]
       [:link {:href "/static/favicons/favicon-196x196.png" :rel "icon" :sizes "196x196"}]

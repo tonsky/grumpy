@@ -3,6 +3,7 @@
     [clojure.string :as str]
     [grumpy.core.mime :as mime]
     #?(:clj [grumpy.core.time :as time])
+    [grumpy.core.url :as url]
     [rum.core :as rum]))
 
 
@@ -43,6 +44,10 @@
     [(int x) (int y)]))
 
 
+(defn strip-tags [s]
+  (str/replace s #"</?[a-z]+>" ""))
+
+
 (defn format-text [text]
   (->> (str/split text #"[\r\n]+")
     (map
@@ -51,11 +56,13 @@
           ;; highlight links
           (str/replace paragraph #"https?://(?:www\.)?([^\s]+[^\s.,!?:;'\"()\[\]{}*])"
             (fn [[href path]]
-              (let [href          (str/replace href #"</?em>" "")
-                    norm-path     (re-find #"[^#]+" path)
+              (let [norm-path     (re-find #"[^#]+" path)
                     without-slash (str/replace norm-path #"/$" "")]
-                (str "<a href=\"" href "\" target=\"_blank\">" without-slash "</a>"))))
-          (str/replace paragraph #"(?<=[> ])@(?:<em>)?([A-Za-z0-9_]+)(?:</em>)?" "<a href=\"/search?q=@$1\">$0</a>")
+                (str "<a href=\"" (strip-tags href) "\" target=\"_blank\">" without-slash "</a>"))))
+          (str/replace paragraph #"(?<=^|[> ])([@#])([A-Za-z0-9_\-</>]+)"
+            (fn [[_ sym text]]
+              (let [href (url/build "/search" {:q (str sym (strip-tags text))})]
+                (str "<a href=\"" href "\">" sym text "</a>"))))
           (str "<p>" paragraph "</p>"))))
     (str/join)))
 

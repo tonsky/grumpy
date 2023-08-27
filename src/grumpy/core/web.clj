@@ -111,7 +111,7 @@
       [:link {:href "/static/favicons/apple-touch-icon-152x152.png" :rel "apple-touch-icon-precomposed" :sizes "152x152"}]
       [:link {:href "/static/favicons/favicon-196x196.png" :rel "icon" :sizes "196x196"}]
       [:link {:href "/static/favicons/favicon-32x32.png" :rel "icon" :sizes "32x32"}]
-      [:link {:rel "preload" :href "/static/favicons/apple-touch-icon-152x152.png" :as "image"}]
+      #_[:link {:rel "preload" :href "/static/favicons/apple-touch-icon-152x152.png" :as "image"}]
 
       [:title title]
       (style "styles.css")

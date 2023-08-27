@@ -101,7 +101,7 @@
                    (let [[w' h'] (fit w h 550 500)]
                      [:div {:style {:max-width w'}}
                       [:a.post_img.post_img-fix
-                       { :href href
+                       {:href href
                         :target "_blank"
                         :style {:padding-bottom (-> (/ h w) (* 100) (double) (str "%"))}}
                        [:img {:src src}]]])))

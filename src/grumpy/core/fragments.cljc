@@ -54,6 +54,7 @@
               (let [norm-path     (re-find #"[^#]+" path)
                     without-slash (str/replace norm-path #"/$" "")]
                 (str "<a href=\"" href "\" target=\"_blank\">" without-slash "</a>"))))
+          (str/replace paragraph #"(?<=[ ])@[A-Za-z0-9_]+" "<a href=\"/search?q=$0\">$0</a>")
           (str "<p>" paragraph "</p>"))))
     (str/join)))
 

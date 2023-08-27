@@ -9,7 +9,7 @@
 
 (namespace/disable-reload!)
 
-(namespace/set-refresh-dirs "src" "dev" "/Users/tonsky/ws/datascript/src")
+(namespace/set-refresh-dirs "src" "dev")
 
 (defmethod print-method java.util.UUID [uuid ^java.io.Writer w]
   (.write w (str "#c/uuid \"" (uuid/str uuid) "\"")))

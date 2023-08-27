@@ -99,6 +99,84 @@
     (fragments/post (d/entity (db/db) [:post/id post-id]))))
 
 
+(rum/defc subscribe-page []
+  (web/page {:page :subscribe}
+    [:.page
+     [:p "You can subscribe to Grumpy Website updates in multiple ways:"]
+     [:ul
+      [:li "Via RSS: " [:a {:href "https://grumpy.website/feed.xml"} "https://grumpy.website/feed.xml"]]
+      [:li "Via Mastodon: " [:a {:href "https://mastodon.online/@grumpy_website"} "@grumpy_website@mastodon.online"]]
+      [:li "Via Telegram Channel: " [:a {:href "https://t.me/whining"} "@whining"] " (posts only)"]
+      [:li "Via Telegram Group: " [:a {:href "https://t.me/grumpy_chat"} "@grumpy_chat"] " (posts + discussions, mostly in Russian)"]]]))
+
+
+(rum/defc suggest-page []
+  (web/page {:page :suggest}
+    [:.page
+     [:p "You can suggest a post to Grumpy Website in multiple ways:"]
+     [:ul
+      [:li "Via email: " [:a {:href "mailto:grumpy@tonsky.me"} "grumpy@tonsky.me"]]
+      [:li "Via Telegram DM: " [:a {:href "https://t.me/nikitonsky"} "@nikitonsky"]]
+      [:li "Via Telegram Group: " [:a {:href "https://t.me/grumpy_chat"} "@grumpy_chat"]]]
+     [:p "Please send:"]
+     [:ul
+      [:li "Single picture or video, maybe with comment what’s wrong"]
+      [:li "Your (nick)name, or if you want to stay anonymous"]]
+     [:p "Contribution guidlines:"]
+     [:ul
+      [:li "We do not guarantee that every submission will be published"]
+      [:li "Publishing might take a while"]
+      [:li "We will write our own text, but mention who sent the picture"]
+      [:li "We prefer to focus on bad trends/intentionally bad decisions, not just funny bugs"]]
+     [:p "If that works for you, we’ll be happy to take in your suggestions!"]]))
+
+
+(def *contributors
+  (atom nil))
+
+
+(defn contributors [db]
+  (->> (d/datoms db :aevt :post/body)
+    (map :v)
+    (keep #(re-find #"(?<=(?:^|[> ])@)[A-Za-z0-9_]+" %))
+    (map #(vector (str/lower-case %) %))
+    (into {})
+    (#(dissoc % "nikitonsky" "dmitriid" "mamutnespit" "igrishaev" "mention" "firacode"))
+    (vals)
+    (sort-by str/lower-case)))
+
+
+(defn cached-contributors []
+  (let [db (db/db)
+        [cached-db cached-contrib] @*contributors]
+    (if (identical? db cached-db)
+      cached-contrib
+      (second (reset! *contributors [db (contributors db)])))))
+
+
+(rum/defc about-page []
+  (web/page {:page :about}
+    [:.page
+     [:p "Grumpy Website is a world-leading media conglomerate of renowned experts in UIs, UX and TVs."]
+     [:p "We’ve been reporting on infinite scrolls, cookie banners and unnecessary modal dialogs since 2017."]
+     [:h2 "Creators and authors:"]
+     [:ul
+      [:li [:a {:href "https://mastodon.online/@nikitonsky"} "Nikita Prokopov"]]
+      [:li [:a {:href "https://twitter.com/freetonik"} "Rakhim Davletkaliyev"]]
+      [:li [:a {:href "https://twitter.com/dmitriid"} "Dmitrii Dimandt"]]
+      [:li [:a {:href "https://grishaev.me/"} "Ivan Grishaev"]]]
+     [:h2 "With contributions from:"]
+     [:ul
+      (for [who (cached-contributors)]
+        [:li [:a {:href (str "/search?q=@" who)} who]])]]))
+
+
+(comment
+  (->> (d/datoms (db/db) :aevt :post/author)
+    (map :v)
+    (frequencies)))
+
+
 (def no-cache
   (interceptor/interceptor
     {:name  ::no-cache
@@ -158,6 +236,24 @@
      (fn [req]
        (web/html-response
          (search/search-page (:query-params req))))]
+    
+    [:get "/subscribe"
+     (when config/dev? auth/populate-session)
+     (fn [req]
+       (web/html-response
+         (subscribe-page)))]
+    
+    [:get "/suggest"
+     (when config/dev? auth/populate-session)
+     (fn [req]
+       (web/html-response
+         (suggest-page)))]
+    
+    [:get "/about"
+     (when config/dev? auth/populate-session)
+     (fn [req]
+       (web/html-response
+         (about-page)))]
 
     [:get "/static/*path" 
      (when-not config/dev?

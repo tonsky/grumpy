@@ -207,7 +207,8 @@
         (telegram/update-text! post)))
     
     ;; notify mastodon
-    (mastodon/crosspost! post)
+    (if new?
+      (mastodon/crosspost! post))
 
     post))
 

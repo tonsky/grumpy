@@ -78,9 +78,9 @@
   [:.menu
    (for [[page subpages url title] [[:index     #{:page :post} "/"          "Home"]
                                     [:search    #{}            "/search"    "Search"]
-                                    #_[:subscribe #{}            "/subscribe" "How to Subscribe"]
-                                    #_[:suggest   #{}            "/suggest"   "Suggest"]
-                                    #_[:about     #{}            "/about"     "About"]
+                                    [:subscribe #{}            "/subscribe" "How to Subscribe"]
+                                    [:suggest   #{}            "/suggest"   "Suggest a Post"]
+                                    [:about     #{}            "/about"     "About"]
                                     (if (= :edit current)
                                       [:edit      #{}            nil       "Edit post"]
                                       [:new       #{}            "/new"    "New post"])]
@@ -135,7 +135,7 @@
        (interpose ", "
          (for [author fragments/authors]
            [:a { :href (:url author) } (:name author)]))
-       " & contributors. 2018–2222. All fights retarded."]]]))
+       " & contributors. 2017–2222. All fights retarded."]]]))
 
 
 (defn html-response [component]

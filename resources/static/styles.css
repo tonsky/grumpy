@@ -39,10 +39,14 @@ body.anonymous #menu_page_new, body.anonymous #menu_page_edit { display: none; }
   user-select: none; }
 .subtitle > span { cursor: pointer; }
 
-.menu { display: flex; border-bottom: 1px solid currentColor; padding: 0 5px; }
-.menu > span, .menu > a { padding: 0.5em 1em; display: inline-block; }
-.menu > .selected { border-top: 1px solid var(--body-fg); border-left: 1px solid var(--body-fg); border-right: 1px solid var(--body-fg); background: var(--body-bg); position: relative; top: 1px; }
+.menu { display: flex; border-bottom: 1px solid currentColor; gap: 1em; }
+.menu > span, .menu > a { padding: 0.5em 0; display: block; }
+.menu > .selected { padding-left: 1em; padding-right: 1em; border-top: 1px solid var(--body-fg); border-left: 1px solid var(--body-fg); border-right: 1px solid var(--body-fg); background: var(--body-bg); position: relative; top: 1px; }
 .menu > .selected > span { position: relative; top: -1px; }
+
+/* PAGE */
+
+.page { margin-bottom: 2em; }
 
 /* POST */
 

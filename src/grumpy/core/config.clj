@@ -1,11 +1,12 @@
 (ns grumpy.core.config
-  (:refer-clojure :exclude [get load set])
+  (:refer-clojure
+    :exclude [get load set])
   (:require
-   [clojure.edn :as edn]
-   [clojure.java.io :as io]
-   [clojure.pprint :as pprint])
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]
+    [clojure.pprint :as pprint])
   (:import
-   [java.io File Writer]))
+    [java.io File Writer]))
 
 
 (defn- write-bytes ^String [^bytes bytes]
@@ -28,8 +29,12 @@
       (edn/read-string {:readers {'bytes read-bytes}} (slurp file)))))
 
 
-(defmethod pprint/simple-dispatch (Class/forName "[B") [bytes] (pprint-bytes bytes *out*))
-(defmethod print-method (Class/forName "[B") [bytes wrt] (pprint-bytes bytes wrt))
+(defmethod pprint/simple-dispatch (Class/forName "[B") [bytes]
+  (pprint-bytes bytes *out*))
+
+
+(defmethod print-method (Class/forName "[B") [bytes wrt]
+  (pprint-bytes bytes wrt))
 
 
 (defn- store! [config]
@@ -40,7 +45,8 @@
   config)
 
 
-(def *config (agent (load)))
+(def *config
+  (agent (load)))
 
 
 (defn set [key value]
@@ -56,10 +62,10 @@
 
 (defn get
   ([key]
-    (get key #(throw (ex-info (str "Please specify " key " in grumpy_data/config.edn") {:key key}))))
+   (get key #(throw (ex-info (str "Please specify " key " in grumpy_data/config.edn") {:key key}))))
   ([key value-fn]
-    (or (get-optional key)
-      (set key (value-fn)))))
+   (or (get-optional key)
+     (set key (value-fn)))))
 
 
 (def hostname

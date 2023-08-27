@@ -12,7 +12,7 @@
     :telegram/user "nikitonsky" 
     :telegram/user-chat "232806939"
     :name  "Nikita Prokopov"
-    :url   "https://twitter.com/nikitonsky"}
+    :url   "https://mastodon.online/@nikitonsky"}
    {:user  "dmitriid"
     :telegram/user "mamutnespit"
     :telegram/user-chat "303519462"
@@ -48,23 +48,24 @@
   (str/replace s #"</?[a-z]+>" ""))
 
 
-(defn format-text [text]
-  (->> (str/split text #"[\r\n]+")
-    (map
-      (fn [paragraph]
-        (as-> paragraph paragraph
-          ;; highlight links
-          (str/replace paragraph #"https?://(?:www\.)?([^\s]+[^\s.,!?:;'\"()\[\]{}*])"
-            (fn [[href path]]
-              (let [norm-path     (re-find #"[^#]+" path)
-                    without-slash (str/replace norm-path #"/$" "")]
-                (str "<a href=\"" (strip-tags href) "\" target=\"_blank\">" without-slash "</a>"))))
-          (str/replace paragraph #"(?<=^|[> ])([@#])([A-Za-z0-9_\-</>]+)"
-            (fn [[_ sym text]]
-              (let [href (url/build "/search" {:q (str sym (strip-tags text))})]
-                (str "<a href=\"" href "\">" sym text "</a>"))))
-          (str "<p>" paragraph "</p>"))))
-    (str/join)))
+#?(:clj
+   (defn format-text [text]
+     (->> (str/split text #"[\r\n]+")
+       (map
+         (fn [paragraph]
+           (as-> paragraph paragraph
+             ;; highlight links
+             (str/replace paragraph #"https?://(?:www\.)?([^\s]+[^\s.,!?:;'\"()\[\]{}*])"
+               (fn [[href path]]
+                 (let [norm-path     (re-find #"[^#]+" path)
+                       without-slash (str/replace norm-path #"/$" "")]
+                   (str "<a href=\"" (strip-tags href) "\" target=\"_blank\">" without-slash "</a>"))))
+             (str/replace paragraph #"(?<=^|[> ])([@#])([A-Za-z0-9_\-</>]+)"
+               (fn [[_ sym text]]
+                 (let [href (url/build "/search" {:q (str sym (strip-tags text))})]
+                   (str "<a href=\"" href "\">" sym text "</a>"))))
+             (str "<p>" paragraph "</p>"))))
+       (str/join))))
 
 
 (defn subscribe [*ref key]

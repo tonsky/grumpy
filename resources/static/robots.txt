@@ -3,6 +3,7 @@ User-agent: *
 Disallow: /new
 Disallow: /*/edit
 Disallow: /*/delete
+Disallow: /search
 Disallow: /logout
 Disallow: /authenticate
 Disallow: /forbidden

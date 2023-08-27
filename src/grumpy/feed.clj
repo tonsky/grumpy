@@ -108,6 +108,9 @@
     (xml/emit
       [:urlset {:xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"}
        [:url {} [:loc {} hostname]]
+       [:url {} [:loc {} (str hostname "/subscribe")]]
+       [:url {} [:loc {} (str hostname "/suggest")]]
+       [:url {} [:loc {} (str hostname "/about")]]
        (for [id post-ids]
          [:url {} [:loc {} (format "%s/%s" hostname id)]])
        (for [page (range (dec (posts/total-pages db)) 0 -1)]

@@ -76,24 +76,24 @@
 
 (defn menu [current]
   [:.menu
-   (for [[page subpages url title] [[:index     #{:page :post} "/"          "Home"]
-                                    [:search    #{}            "/search"    "Search"]
-                                    [:subscribe #{}            "/subscribe" "How to Subscribe"]
-                                    [:suggest   #{}            "/suggest"   "Suggest a Post"]
-                                    [:about     #{}            "/about"     "About"]
+   (for [[page subpages url title] [[:index     #{:page :post} "/"          [:span "Home"]]
+                                    [:search    #{}            "/search"    [:span "Search"]]
+                                    [:subscribe #{}            "/subscribe" [:span [:span.wide "How to "] "Subscribe"]]
+                                    [:suggest   #{}            "/suggest"   [:span "Suggest" [:span.wide " a Post"]]]
+                                    [:about     #{}            "/about"     [:span "About"]]
                                     (if (= :edit current)
-                                      [:edit      #{}            nil       "Edit post"]
-                                      [:new       #{}            "/new"    "New post"])]
+                                      [:edit      #{}            nil       [:span "Edit"]]
+                                      [:new       #{}            "/new"    [:span "+"]])]
          :let [id (str "menu_page_" (name page))]]
      (cond
        (= current page)
-       [:span.no-select.selected {:id id} [:span title]]
+       [:span.no-select.selected {:id id} title]
        
        (subpages current)
-       [:a.no-select.selected {:id id :href url} [:span title]]
+       [:a.no-select.selected {:id id :href url} title]
        
        :else
-       [:a.no-select {:id id :href url} [:span title]]))])
+       [:a.no-select {:id id :href url} title]))])
 
 
 (rum/defc page [opts & children]

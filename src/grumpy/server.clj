@@ -171,12 +171,6 @@
         [:li [:a {:href (str "/search?q=@" who)} who]])]]))
 
 
-(comment
-  (->> (d/datoms (db/db) :aevt :post/author)
-    (map :v)
-    (frequencies)))
-
-
 (def no-cache
   (interceptor/interceptor
     {:name  ::no-cache

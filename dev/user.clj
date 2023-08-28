@@ -43,6 +43,10 @@
         res (namespace/refresh)]
     (when-some [*max-addr (requiring-resolve 'datascript.storage/*max-addr)]
       (vreset! @*max-addr max-addr))
+    
+    (when-some [*opts @(requiring-resolve 'grumpy.server/*opts)]
+      (swap! *opts assoc :host "0.0.0.0"))
+    
     (when (not= :ok res)
       (throw res))
     :ok))

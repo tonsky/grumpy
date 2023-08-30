@@ -10,9 +10,9 @@
   org.apache.lucene/lucene-core           {:mvn/version "9.7.0"}
   org.apache.lucene/lucene-queryparser    {:mvn/version "9.7.0"}
   org.apache.lucene/lucene-highlighter    {:mvn/version "9.7.0"}
-  io.pedestal/pedestal.immutant           {:mvn/version "0.5.10" :exclusions [javax.servlet/javax.servlet-api]}
-  io.pedestal/pedestal.route              {:mvn/version "0.5.10"}
-  io.pedestal/pedestal.service            {:mvn/version "0.5.10"}
+  io.pedestal/pedestal.immutant           {:mvn/version "0.6.0" :exclusions [javax.servlet/javax.servlet-api]}
+  io.pedestal/pedestal.route              {:mvn/version "0.6.0"}
+  io.pedestal/pedestal.service            {:mvn/version "0.6.0"}
   mount/mount                             {:mvn/version "0.1.17"}
   org.clojure/clojure                     {:mvn/version "1.11.1"}
   org.clojure/tools.analyzer.jvm          {:mvn/version "1.2.3"}

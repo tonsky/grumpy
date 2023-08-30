@@ -2,10 +2,18 @@
   (:import
    [java.time Instant Duration LocalDate LocalDateTime ZoneId]
    [java.time.format DateTimeFormatter]
-   [java.time.temporal ChronoUnit]))
+   [java.time.temporal ChronoUnit TemporalAccessor]))
 
 
-(def ^:private ^ZoneId UTC (ZoneId/of "UTC"))
+(def ^ZoneId UTC (ZoneId/of "UTC"))
+
+
+(defn ^DateTimeFormatter formatter [pattern]
+  (DateTimeFormatter/ofPattern pattern))  
+
+
+(defn format [^TemporalAccessor time pattern]
+  (.format (formatter pattern) time))
 
 
 (def ^:private ^DateTimeFormatter date-formatter (DateTimeFormatter/ofPattern "MMMM d, yyyy"))
@@ -64,6 +72,10 @@
   (.truncatedTo (Instant/now) ChronoUnit/MILLIS))
 
 
+(defn utc-now ^LocalDateTime []
+  (LocalDateTime/now UTC))
+
+   
 (defn since [^Instant inst]
   (-> (Duration/between inst (now))
     (.toMillis)))

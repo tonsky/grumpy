@@ -16,6 +16,7 @@
     [grumpy.feed :as feed]
     [grumpy.editor :as editor]
     [grumpy.search :as search]
+    [grumpy.stats :as stats]
     [io.pedestal.interceptor :as interceptor]
     [io.pedestal.http :as http]
     [mount.core :as mount]
@@ -243,6 +244,18 @@
        (web/html-response
          (suggest-page)))]
     
+    [:get "/stats"
+     [auth/populate-session auth/require-user]
+     (fn [req]
+       (web/redirect
+         (time/format (time/utc-now) "'/stats/'yyyy-MM")))]
+    
+    [:get "/stats/:month"
+     [auth/populate-session auth/require-user]
+     (fn [req]
+       (web/html-response
+         (stats/page (-> req :path-params :month))))]
+    
     [:get "/about"
      (when config/dev? auth/populate-session)
      (fn [req]
@@ -317,7 +330,7 @@
            ::http/port   port
            ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
         (http/default-interceptors)
-        (update ::http/interceptors conj no-cache)
+        (update ::http/interceptors conj no-cache stats/interceptor)
         (http/create-server)
         (http/start))))
   :stop

@@ -28,7 +28,9 @@ header { margin-bottom: 2em; display: flex; flex-direction: column; }
 .title_back { position: absolute; margin-left: -1em; text-decoration: none; }
 .title_back:hover { text-decoration: underline; }
 
-body.anonymous #menu_page_new, body.anonymous #menu_page_edit { display: none; }
+body.anonymous #menu_page_new,
+body.anonymous #menu_page_edit,
+body.anonymous #menu_page_stats { display: none; }
 
 .subtitle { margin: 0 0 10px 0.09em;
   -webkit-touch-callout: none;

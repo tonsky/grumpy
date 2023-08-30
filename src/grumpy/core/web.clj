@@ -65,25 +65,29 @@
           (str res "?checksum=" (str buffer)))))))
 
 
+(defn inline-styles [content]
+  [:style {:type "text/css" :dangerouslySetInnerHTML {:__html content}}])
+
+
 (def style
   (memoize
     (fn [name]
       (if config/dev?
         [:link { :rel "stylesheet" :type "text/css" :href (str "/static/" name) }]
-        (let [content (slurp (io/resource (str "static/" name)))]
-          [:style { :type "text/css" :dangerouslySetInnerHTML { :__html content }}])))))
+        (inline-styles (slurp (io/resource (str "static/" name))))))))
 
 
 (defn menu [current]
   [:.menu
    (for [[page subpages url title] [[:index     #{:page :post} "/"          [:span "Home"]]
                                     [:search    #{}            "/search"    [:span "Search"]]
-                                    [:subscribe #{}            "/subscribe" [:span [:span.wide "How to "] "Subscribe"]]
-                                    [:suggest   #{}            "/suggest"   [:span "Suggest" [:span.wide " a Post"]]]
+                                    [:subscribe #{}            "/subscribe" [:span "Subscribe"]]
+                                    [:suggest   #{}            "/suggest"   [:span "Suggest"]]
                                     [:about     #{}            "/about"     [:span "About"]]
                                     (if (= :edit current)
                                       [:edit      #{}            nil       [:span "Edit"]]
-                                      [:new       #{}            "/new"    [:span "+"]])]
+                                      [:new       #{}            "/new"    [:span "+"]])
+                                    [:stats     #{}            "/stats"    [:span "Stats"]]]
          :let [id (str "menu_page_" (name page))]]
      (cond
        (= current page)

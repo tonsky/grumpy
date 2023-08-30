@@ -40,15 +40,17 @@
 (defn refresh []
   (let [max-addr @@(requiring-resolve 'datascript.storage/*max-addr)
         _   (set! *warn-on-reflection* true)
-        res (namespace/refresh)]
+        res (namespace/refresh)]    
+    (when (not= :ok res)
+      (.printStackTrace ^Throwable res)
+      (throw res))
+    
     (when-some [*max-addr (requiring-resolve 'datascript.storage/*max-addr)]
       (vreset! @*max-addr max-addr))
     
     (when-some [*opts @(requiring-resolve 'grumpy.server/*opts)]
       (swap! *opts assoc :host "0.0.0.0"))
     
-    (when (not= :ok res)
-      (throw res))
     :ok))
 
 (defn start []

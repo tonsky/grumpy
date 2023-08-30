@@ -1,4 +1,6 @@
 (ns grumpy.core.time
+  (:refer-clojure :exclude
+    [format])
   (:import
    [java.time Instant Duration LocalDate LocalDateTime ZoneId]
    [java.time.format DateTimeFormatter]

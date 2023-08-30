@@ -2,13 +2,16 @@
   (:require
     [clojure.string :as str]
     [clojure.java.io :as io]
+    [grumpy.auth :as auth]
     [grumpy.core.coll :as coll]
     [grumpy.core.log :as log]
+    [grumpy.core.routes :as routes]
     [grumpy.core.time :as time]
     [grumpy.core.web :as web]
     [io.pedestal.interceptor :as interceptor]
     [rum.core :as rum])
   (:import
+    [java.io File]
     [java.time LocalDateTime Instant]
     [java.time.format DateTimeFormatter]
     [java.time.temporal TemporalQuery TemporalAccessor]))
@@ -67,7 +70,8 @@
              ip         (:remote-addr req)
              user-agent (get (:headers req) "user-agent")
              referrer   (get (:headers req) "referer")]
-         #_(log/log
+         (locking log/lock
+           (println
              (str
                (.format date-formatter time) "\t"
                (.format time-formatter time) "\t"
@@ -75,7 +79,7 @@
                query      "\t"
                ip         "\t"
                user-agent "\t"
-               referrer))
+               referrer)))
          ctx))}))
 
 
@@ -106,18 +110,15 @@
   (->> rs (map (apply juxt keys)) distinct count))
 
 
-(defn table [names rows]
+(defn table [rows]
   (let [max (reduce max 0 (map second rows))]
     [:table
-     [:thead
-      (map #(vector :th %) names)
-      [:th "Graph"]]
      [:tbody
       (for [[name count] rows]
         [:tr
          [:td.name {:title name} name]
          [:td.val count]
-         (let [width (-> count (/ max) (* 100) int (str "%"))]
+         (let [width (-> count (/ max) (* 100) float (str "%"))]
            [:td.bar [:div {:style {:width width}}]])])]]))
 
 
@@ -129,7 +130,12 @@
         split (->> ["-" "/" "feed-id:" "(" ":" ";"]
                 (keep #(str/index-of s %))
                 (reduce min (count s)))]
-    (-> s (subs 0 split) str/trim)))
+    (-> s
+      (subs 0 split)
+      str/trim
+      (str/replace #"^Mozilla$" "Unknown/Browser-based")
+      (str/replace #"RSS Reader" ""))))
+
 
 (defn count-subscribers [rs]
   (or (some->> rs
@@ -141,39 +147,82 @@
     (count-uniques [:ip] rs))) 
 
 
+(defn compact [limit rs]
+  (let [[big small] (split-with (fn [[_ cnt]] (> cnt limit)) rs)]
+    (concat
+      big
+      [["Others" (reduce + 0 (map second small))]])))
+  
+
 (rum/defc page [month]
-  (let [lines (with-open [rdr (io/reader (io/file "grumpy_data/stats" (str month ".csv")))]
-                (->> (line-seq rdr)
-                  (next)
-                  (map parse-line)
-                  (doall)))]
+  (let [lines  (with-open [rdr (io/reader (io/file "grumpy_data/stats" (str month ".csv")))]
+                 (->> (line-seq rdr)
+                   (next)
+                   (map parse-line)
+                   (doall)))
+        months (->> (file-seq (io/file "grumpy_data/stats"))
+                 (keep #(second (re-matches #"(\d{4}-\d{2}).csv" (.getName ^File %))))
+                 (sort))]
     (web/page {:page :stats}
       (list
         (web/inline-styles
           ".name { overflow-x: hidden; max-width: 300px; text-overflow: ellipsis; white-space: nowrap; }
            .val  { text-align: right; font-feature-settings: \"tnum\"; }
+           .name, .val { padding-right: 1em; }
            .bar  { width: 100%; }
-           .bar > div { background-color: #CCC; height: 1em; }")
-        [:h1 "RSS Readers"]
+           .bar > div { background-color: #CCC; height: 11px; }")
         [:p
-         (let [readers (->> lines
-                         (filter #(= "/feed.xml" (:path %)))
-                         (group #(rss-user-agent %) count-subscribers)
-                         (sort-by second)
-                         (reverse))
-               [big small] (split-with (fn [[_ cnt]] (> cnt 10)) readers)]
-           (table ["Reader" "Count"]
-             (concat
-               big
-               #_small
-               [["Others" (reduce + 0 (map second small))]])))]
+         "Month: "
+         [:select
+          {:on-change (str "location.href = '/stats/' + this.value;")}
+          (for [m months]
+            [:option {:value    m
+                      :selected (= month m)} m])]]
+        
+        [:h1 "Popular posts"]
+        [:p
+         (let [url-fn (fn [{:keys [path]}]
+                        [:a {:href path} path])]
+           (table
+             (->> lines
+               (filter #(re-matches #"^(/post/[a-zA-Z0-9_\-]+|/[0-9]+)$" (:path %)))
+               (group url-fn #(count-uniques [:ip :user-agent] %))
+               (sort-by second)
+               (reverse)
+               (compact 50))))]
+        
         [:h1 "Unique visitors"]
         [:p
-         (table ["Date" "Visits"]
+         (table
            (->> lines
              (filter #(re-matches #"^(/|/post/[a-zA-Z0-9_\-]+|/[0-9]+)$" (:path %)))
              (group :date #(count-uniques [:ip :user-agent] %))
-             (sort-by first)))]))))
+             (sort-by first)))]
+        
+        [:h1 "RSS Readers"]
+        [:p
+         (table
+           (->> lines
+             (filter #(= "/feed.xml" (:path %)))
+             (group #(rss-user-agent %) count-subscribers)
+             (sort-by second)
+             (reverse)
+             (compact 50)))]
+        ))))
+
+(def routes
+  (routes/expand
+    [:get "/stats"
+     [auth/populate-session auth/require-user]
+     (fn [req]
+       (web/redirect
+         (time/format (time/utc-now) "'/stats/'yyyy-MM")))]
+    
+    [:get "/stats/:month"
+     [auth/populate-session auth/require-user]
+     (fn [req]
+       (web/html-response
+         (page (-> req :path-params :month))))]))
 
 
 (defn convert-nginx [from to]

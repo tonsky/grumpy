@@ -18,6 +18,9 @@
     [grumpy.search :as search]
     [grumpy.stats :as stats]
     [io.pedestal.interceptor :as interceptor]
+    [io.pedestal.http.ring-middlewares :as middleware]
+    [io.pedestal.http.route :as route]
+    [io.pedestal.http.secure-headers :as secure-headers]
     [io.pedestal.http :as http]
     [mount.core :as mount]
     [ring.util.response :as response]
@@ -244,18 +247,6 @@
        (web/html-response
          (suggest-page)))]
     
-    [:get "/stats"
-     [auth/populate-session auth/require-user]
-     (fn [req]
-       (web/redirect
-         (time/format (time/utc-now) "'/stats/'yyyy-MM")))]
-    
-    [:get "/stats/:month"
-     [auth/populate-session auth/require-user]
-     (fn [req]
-       (web/html-response
-         (stats/page (-> req :path-params :month))))]
-    
     [:get "/about"
      (when config/dev? auth/populate-session)
      (fn [req]
@@ -318,19 +309,34 @@
     {:host "localhost"
      :port 8080}))
 
+
+(defn interceptors []
+  (let [routes (routes/sort (concat
+                              routes
+                              auth/routes
+                              editor/routes
+                              stats/routes))]
+    [http/not-found
+     (middleware/content-type {:mime-types {}})
+     route/query-params
+     (secure-headers/secure-headers
+       {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"})
+     stats/interceptor
+     (middleware/head)
+     (route/router routes :linear-search)
+     route/path-params-decoder
+     no-cache]))
+
+
 (mount/defstate server
   :start
   (with-redefs [io.pedestal.http.impl.servlet-interceptor/stylobate stylobate]
     (let [{:keys [host port]} @*opts]
       (log/log "[server] Starting web server at" (str host ":" port))
-      (-> {::http/routes (routes/sort (concat routes auth/routes editor/routes))
-           ::http/router :linear-search
-           ::http/type   :immutant
-           ::http/host   host
-           ::http/port   port
-           ::http/secure-headers {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"}}
-        (http/default-interceptors)
-        (update ::http/interceptors conj no-cache stats/interceptor)
+      (-> {::http/type         :immutant
+           ::http/host         host
+           ::http/port         port
+           ::http/interceptors (interceptors)}
         (http/create-server)
         (http/start))))
   :stop

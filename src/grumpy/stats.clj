@@ -42,7 +42,9 @@
         new?       (not (.exists file))
         path       (:uri req)
         query      (:query-string req)
-        ip         (:remote-addr req)
+        ip         (or
+                     (get (:headers req) "x-forwarded-for")
+                     (:remote-addr req))
         user-agent (get (:headers req) "user-agent")
         referrer   (get (:headers req) "referer")]
     (with-open [wrt (io/writer file :append true)]

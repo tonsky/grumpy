@@ -17,12 +17,8 @@
     [java.time.temporal TemporalQuery TemporalAccessor]))
 
 
-(def ^DateTimeFormatter instant-formatter
-  (DateTimeFormatter/ofPattern "dd/MMM/yyyy:HH:mm:ss X"))
-
-
-(defn parse-instant [s]
-  (LocalDateTime/parse s instant-formatter))
+(def ^DateTimeFormatter month-formatter
+  (DateTimeFormatter/ofPattern "yyyy-MM"))
 
 
 (def ^DateTimeFormatter date-formatter
@@ -33,29 +29,35 @@
   (DateTimeFormatter/ofPattern "HH:mm:ss"))
 
 
-(defn parse-line-nginx [line]
-  (let [[ip _ user time request status bytes referrer user-agent]
-        (->> line
-          (re-seq #"-|\"-\"|\"([^\"]+)\"|\[([^\]]+)\]|([^\"\[\] ]+)")
-          (map next)
-          (map (fn [[a b c]] (or a b c))))
-        [method url protocol] (str/split request #"\s+")]
-    (when url
-      (let [[_ path query fragment] (re-matches #"([^?#]+)(?:\?([^#]+)?)?(?:#(.+)?)?" url)]
-        {:ip         ip
-         :user       user
-         :time       (parse-instant time)
-         :request    request
-         :method     method
-         :url        url
-         :path       path
-         :query      query
-         :fragment   fragment
-         :protocol   protocol
-         :status     (some-> status parse-long)
-         :bytes      (some-> bytes parse-long)
-         :referrer   referrer
-         :user-agent user-agent}))))
+(def log-agent
+  (agent nil))
+
+
+(defn log [_ req]
+  (let [time       (LocalDateTime/now time/UTC)
+        dir        (io/file "grumpy_data/stats")
+        _          (.mkdirs dir)
+        month      (.format month-formatter time)
+        file       (io/file dir (str month ".csv"))
+        new?       (not (.exists file))
+        path       (:uri req)
+        query      (:query-string req)
+        ip         (:remote-addr req)
+        user-agent (get (:headers req) "user-agent")
+        referrer   (get (:headers req) "referer")]
+    (with-open [wrt (io/writer file :append true)]
+      (when new?
+        (.write wrt (str "date\ttime\tpath\tquery\tip\tuser-agent\treferrer\n")))
+      (.write wrt
+        (str
+          (.format date-formatter time) "\t"
+          (.format time-formatter time) "\t"
+          path       "\t"
+          query      "\t"
+          ip         "\t"
+          user-agent "\t"
+          referrer   "\n")))
+    nil))
 
 
 (def interceptor
@@ -63,24 +65,8 @@
     {:name ::access-log
      :enter
      (fn [ctx]
-       (let [time       (LocalDateTime/now time/UTC)
-             req        (:request ctx)
-             path       (:uri req)
-             query      (:query-string req)
-             ip         (:remote-addr req)
-             user-agent (get (:headers req) "user-agent")
-             referrer   (get (:headers req) "referer")]
-         (locking log/lock
-           (println
-             (str
-               (.format date-formatter time) "\t"
-               (.format time-formatter time) "\t"
-               path       "\t"
-               query      "\t"
-               ip         "\t"
-               user-agent "\t"
-               referrer)))
-         ctx))}))
+       (send log-agent log (:request ctx))
+       ctx)}))
 
 
 (defn parse-line [line]
@@ -111,7 +97,7 @@
 
 
 (defn table [rows]
-  (let [max (reduce max 0 (map second rows))]
+  (let [max (reduce max 1 (map second rows))]
     [:table
      [:tbody
       (for [[name count] rows]
@@ -225,24 +211,58 @@
          (page (-> req :path-params :month))))]))
 
 
-(defn convert-nginx [from to]
-  (with-open [rdr (io/reader (io/file from))
-              wrt (io/writer (io/file to))]
-    (.write wrt "date\ttime\tpath\tquery\tip\tuser-agent\treferrer\n")
-    (doseq [:let [lines (keep parse-line-nginx (line-seq rdr))]
-            {:keys [time path query fragment ip user-agent referrer status]} lines
-            :when (= 200 status)]
-      (.write wrt
-        (str
-          (.format date-formatter time) "\t"
-          (.format time-formatter time) "\t"
-          path       "\t"
-          query      "\t"
-          ip         "\t"
-          user-agent "\t"
-          referrer   "\n")))))
-
 (comment
+  (def ^DateTimeFormatter instant-formatter
+    (DateTimeFormatter/ofPattern "dd/MMM/yyyy:HH:mm:ss X"))
+
+
+  (defn parse-instant [s]
+    (LocalDateTime/parse s instant-formatter))
+
+
+  (defn parse-line-nginx [line]
+    (let [[ip _ user time request status bytes referrer user-agent]
+          (->> line
+            (re-seq #"-|\"-\"|\"([^\"]+)\"|\[([^\]]+)\]|([^\"\[\] ]+)")
+            (map next)
+            (map (fn [[a b c]] (or a b c))))
+          [method url protocol] (str/split request #"\s+")]
+      (when url
+        (let [[_ path query fragment] (re-matches #"([^?#]+)(?:\?([^#]+)?)?(?:#(.+)?)?" url)]
+          {:ip         ip
+           :user       user
+           :time       (parse-instant time)
+           :request    request
+           :method     method
+           :url        url
+           :path       path
+           :query      query
+           :fragment   fragment
+           :protocol   protocol
+           :status     (some-> status parse-long)
+           :bytes      (some-> bytes parse-long)
+           :referrer   referrer
+           :user-agent user-agent}))))
+
+  
+  (defn convert-nginx [from to]
+    (with-open [rdr (io/reader (io/file from))
+                wrt (io/writer (io/file to))]
+      (.write wrt "date\ttime\tpath\tquery\tip\tuser-agent\treferrer\n")
+      (doseq [:let [lines (keep parse-line-nginx (line-seq rdr))]
+              {:keys [time path query fragment ip user-agent referrer status]} lines
+              :when (= 200 status)]
+        (.write wrt
+          (str
+            (.format date-formatter time) "\t"
+            (.format time-formatter time) "\t"
+            path       "\t"
+            query      "\t"
+            ip         "\t"
+            user-agent "\t"
+            referrer   "\n")))))
+
+  
   (convert-nginx "grumpy_data/stats/grumpy_access.log" "grumpy_data/stats/2023-08.csv")
   (convert-nginx "grumpy_data/stats/grumpy_access.log.1" "grumpy_data/stats/2023-07.csv")
   (convert-nginx "grumpy_data/stats/grumpy_access.log.2" "grumpy_data/stats/2023-06.csv")
@@ -251,9 +271,5 @@
   (convert-nginx "grumpy_data/stats/grumpy_access.log.5" "grumpy_data/stats/2023-03.csv")
   (convert-nginx "grumpy_data/stats/grumpy_access.log.6" "grumpy_data/stats/2023-02.csv")
   (convert-nginx "grumpy_data/stats/grumpy_access.log.7" "grumpy_data/stats/2023-01.csv")
-  (convert-nginx "grumpy_data/stats/grumpy_access.log.8" "grumpy_data/stats/2022-12.csv")
-    
-  (def lines
-    (with-open [rdr (io/reader (io/file "grumpy_data/stats/grumpy_access.log"))]
-      (mapv parse-line-nginx (line-seq rdr)))))
+  (convert-nginx "grumpy_data/stats/grumpy_access.log.8" "grumpy_data/stats/2022-12.csv"))
   

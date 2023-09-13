@@ -19,10 +19,10 @@
 
 (defn post!
   ([url params]
-   (post! channel url params))
-  ([channel url params]
+   (post! (str "@" channel) url params))
+  ([chat-id url params]
    (let [url'    (str "https://api.telegram.org/bot" token url)
-         params' (assoc params :chat_id (str "@" channel))]
+         params' (assoc params :chat_id chat-id)]
      (try
        (:body
          (http/post url'
@@ -70,7 +70,7 @@
                         body    {:message_id (:crosspost.tg/message-id crosspost)
                                  :media      {:type  (if video? "video" "photo")
                                               :media url}}]]
-            (post! channel "/editMessageMedia" body)))))))
+            (post! (str "@" channel) "/editMessageMedia" body)))))))
 
 
 (defn format-user [user]
@@ -102,4 +102,4 @@
                   body    {:message_id (:crosspost.tg/message-id crosspost)
                            :text text
                            :disable_web_page_preview "true"}]]
-      (post! channel "/editMessageText" body))))
+      (post! (str "@" channel) "/editMessageText" body))))

@@ -61,7 +61,7 @@
           [:published {} (time/format-iso-inst (:post/created post))]
           [:updated {} (time/format-iso-inst (:post/updated post))]
           [:author {} [:name {} (:post/author post)]]
-          [:content {:type "text/html"}
+          [:content {:type "html"}
            (rum/render-static-markup
              (when media
                [:p {}

@@ -6,7 +6,7 @@
     [grumpy.core.transit :as transit]
     [mount.core :as mount])
   (:import
-    [java.sql DriverManager]))
+    [org.sqlite SQLiteDataSource]))
 
 (def schema
   {:post/id              {#_:db.type/long
@@ -38,12 +38,13 @@
    :crosspost.tg/channel    {#_:db.type/string}
    :crosspost.tg/message-id {#_:db.type/string}
    :crosspost.mstd/media-id {#_:db.type/string}
-   :crosspost.mstd/ids      {#_:db.type/tuple}
-   })
+   :crosspost.mstd/ids      {#_:db.type/tuple}})
 
 (defn make-storage [path]
-  (let [conn (DriverManager/getConnection (str "jdbc:sqlite:" path))]
-    (storage-sql/make conn
+  (let [datasource (storage-sql/pool 
+                     (doto (SQLiteDataSource.)
+                       (.setUrl "jdbc:sqlite:grumpy_data/db.sqlite")))]
+    (storage-sql/make datasource
       {:dbtype       :sqlite
        :freeze-bytes #(transit/write-bytes % :msgpack)
        :thaw-bytes   #(transit/read-bytes % :msgpack)})))
@@ -65,7 +66,7 @@
 
 (defn transact! [tx]
   (log/log (str "Transacting\n" (with-out-str (clojure.pprint/pprint tx))))
-    (d/transact! conn tx))
+  (d/transact! conn tx))
 
 (comment
   (count (datascript.storage/-list-addresses storage))

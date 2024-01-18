@@ -62,7 +62,8 @@ var subtitles =
     'Click here to update to the latest version',
     'This page was reloaded due to inactivity or something',
     'Something went wrong',
-    'Was this article helpful?'],
+    'Was this article helpful?',
+    'I\'m sorry but I cannot fulfill this request it goes against OpenAl use policy'],
   subtitle_el,
   subtitle_idx = subtitles.length;
 

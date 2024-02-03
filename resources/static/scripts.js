@@ -64,7 +64,8 @@ var subtitles =
     'Something went wrong',
     'Was this article helpful?',
     'I\'m sorry but I cannot fulfill this request. It goes against OpenAI use policy',
-    'The disk wasn\'t ejected because one or more programs may be using it'],
+    'The disk wasn\'t ejected because one or more programs may be using it',
+    'Installation in progress. Do not close this dialog'],
   subtitle_el,
   subtitle_idx = subtitles.length;
 

@@ -44,6 +44,7 @@
        "-r"           "30" ; fps
        "-profile:v"   "main"
        "-level:v"     "3.1"
+       "-pix_fmt"     "yuv420p"
        "-y"           ; override existing
        "-loglevel"    "warning"
        "-hide_banner"

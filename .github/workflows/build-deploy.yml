@@ -13,32 +13,24 @@ on:
 
 jobs:  
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - run: |
-          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> $GITHUB_ENV
-          echo "$JAVA_HOME_17_X64/bin" >> $GITHUB_PATH
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> $GITHUB_ENV
+          echo "$JAVA_HOME_21_X64/bin" >> $GITHUB_PATH
 
       - name: Setup Clojure
-        uses: DeLaGuardo/setup-clojure@10.0
+        uses: DeLaGuardo/setup-clojure@13.1
         with:
-          cli: 1.11.1.1200
-
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-clojure-${{ hashFiles('deps.edn') }}
-          restore-keys: |
-            ${{ runner.os }}-clojure
+          cli: latest
 
       - name: Package
         run: ./script/package.sh
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: jar
           path: 'target/*.jar'

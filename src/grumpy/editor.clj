@@ -1,28 +1,29 @@
 (ns grumpy.editor
   (:require
-    [clojure.edn :as edn]
-    [clojure.java.io :as io]
-    [clojure.string :as str]
-    [datascript.core :as d]
-    [grumpy.auth :as auth]
-    [grumpy.core.files :as files]
-    [grumpy.core.jobs :as jobs]
-    [grumpy.core.log :as log]
-    [grumpy.core.macros :refer [cond+]]
-    [grumpy.core.mime :as mime]
-    [grumpy.core.posts :as posts]
-    [grumpy.core.routes :as routes]
-    [grumpy.core.time :as time]
-    [grumpy.core.web :as web]
-    [grumpy.db :as db]
-    [grumpy.search :as search]
-    [grumpy.telegram :as telegram]
-    [grumpy.mastodon :as mastodon]
-    [grumpy.video :as video]
-    [ring.util.response :as response]
-    [rum.core :as rum])
+   [cheshire.core :as json]
+   [clojure.edn :as edn]
+   [clojure.java.io :as io]
+   [clojure.string :as str]
+   [datascript.core :as d]
+   [grumpy.auth :as auth]
+   [grumpy.core.files :as files]
+   [grumpy.core.jobs :as jobs]
+   [grumpy.core.log :as log]
+   [grumpy.core.macros :refer [cond+]]
+   [grumpy.core.mime :as mime]
+   [grumpy.core.posts :as posts]
+   [grumpy.core.routes :as routes]
+   [grumpy.core.time :as time]
+   [grumpy.core.web :as web]
+   [grumpy.db :as db]
+   [grumpy.search :as search]
+   [grumpy.telegram :as telegram]
+   [grumpy.mastodon :as mastodon]
+   [grumpy.video :as video]
+   [ring.util.response :as response]
+   [rum.core :as rum])
   (:import
-    [java.io File InputStream]))
+   [java.io File InputStream]))
 
 (defn image-dimensions [^File file]
   (let [out   (:out (jobs/sh "convert" (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
@@ -58,7 +59,7 @@
         :media/content-type "video/mp4"
         :media/width        w'
         :media/height       h'}
-       :post/media-full 
+       :post/media-full
        {:media/url          (str dir full-name)
         :media/content-type mime-type
         :media/width        w
@@ -134,7 +135,7 @@
         new?      (nil? post-id)
         post-id   (if new? (posts/next-id db) post-id)
         before    (d/entity db [:post/id post-id])
-        
+
         ;; move media
         year      (time/year (time/now))
         version   (-> before :post/media :media/version (or 0) (inc))
@@ -142,7 +143,7 @@
                      (let [url (:media/url media)]
                        (when (str/starts-with? (:media/url media) "uploads/")
                          (media-url year post-id version (= :post/media-full %) (files/extension url)))))
-        media-url (url-fn :post/media)        
+        media-url (url-fn :post/media)
         media'    (when media-url
                     (files/move
                       (io/file "grumpy_data" (-> body :post/media :media/url))
@@ -179,7 +180,7 @@
                         [[:db.fn/retractAttribute (:db/id before) :post/media]
                          [:db.fn/retractEntity    (:db/id media)]]))
                     ;; add new media
-                    (when media-url                        
+                    (when media-url
                       [media'
                        [:db/add -1 :post/media -2]])
                     ;; kill old media-full
@@ -193,10 +194,10 @@
                        [:db/add -1 :post/media-full -3]]))
         report    (db/transact! tx)
         post      (d/pull (:db-after report) '[*] (get (:tempids report) -1))]
-    
+
     ;; update search
     (search/index [post])
-    
+
     ;; notify telegram
     (if new?
       (jobs/try-async
@@ -205,7 +206,7 @@
       (jobs/try-async
         (telegram/update-media! post)
         (telegram/update-text! post)))
-    
+
     ;; notify mastodon
     (if new?
       (mastodon/crosspost! post))
@@ -222,9 +223,13 @@
     (web/page {:page   (if post-id :edit :new)
                :title  (if post-id "Edit post" "New post")
                :styles ["editor.css"]}
-      [:.mount {:data (pr-str post)}] ;; TODO transit?
+      [:.mount {:data (json/generate-string post)}]
+      [:script {:src "https://unpkg.com/preact@10.27.2/dist/preact.umd.js"}]
+      [:script {:src "https://unpkg.com/preact@10.27.2/hooks/dist/hooks.umd.js"}]
+      [:script {:src "https://unpkg.com/@preact/signals-core@1.12.1/dist/signals-core.min.js"}]
+      [:script {:src "https://unpkg.com/@preact/signals@2.3.2/dist/signals.min.js"}]
       [:script {:src (str "/" (web/checksum-resource "static/editor.js"))}]
-      [:script {:dangerouslySetInnerHTML {:__html "grumpy.editor.refresh();"}}])))
+      [:script {:dangerouslySetInnerHTML {:__html "refresh();"}}])))
 
 
 (def ^:private interceptors
@@ -239,14 +244,14 @@
        (let [user (auth/user req)]
          (web/html-response
            (edit-page nil user))))]
-    
+
     [:post "/new"
      interceptors
      (fn [req]
-       (let [body (-> req :body slurp edn/read-string)
+       (let [body (-> req :body slurp (json/parse-string true))
              post (publish! nil body)]
          (log/log "Published" (:post/id post))
-         (web/transit-response post)))]
+         (web/json-response post)))]
 
     [:get "/:post-id/edit"
      interceptors
@@ -254,16 +259,16 @@
        (let [post-id (-> (:path-params req) :post-id parse-long)]
          (web/html-response
            (edit-page post-id (auth/user req)))))]
-    
+
     [:post "/:post-id/edit"
      interceptors
      (fn [req]
        (let [post-id (-> (:path-params req) :post-id parse-long)
-             body    (-> req :body slurp edn/read-string)
+             body    (-> req :body slurp (json/parse-string true))
              post    (publish! post-id body)]
          (log/log "Updated" (:post/id post))
-         (web/transit-response post)))]
-    
+         (web/json-response post)))]
+
     [:get "/:post-id/delete"
      interceptors
      (fn [req]
@@ -274,7 +279,7 @@
     [:get "/media/uploads/*path"
      (fn [{{:keys [path]} :path-params}]
        (response/file-response (str "grumpy_data/uploads/" path)))]
-    
+
     [:post "/media/uploads"
      interceptors
      (fn [{{:strs [content-type]} :headers
@@ -289,4 +294,4 @@
            (if (:post/media-full updates)
              (log/log (str "Converted " (-> updates :post/media-full :media/url) " to " (:media/url media)))
              (log/log (str "Uploaded " content-type " to " (:media/url media)))))
-         (web/transit-response updates)))]))
+         (web/json-response updates)))]))

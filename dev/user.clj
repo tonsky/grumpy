@@ -2,8 +2,6 @@
   (:require
     [clojure.tools.namespace.repl :as namespace]
     [compact-uuids.core :as uuid]
-    [figwheel.main.api]
-    [grumpy.figwheel :as figwheel]
     [grumpy.migrations :as migrations]
     [mount.core :as mount]))
 
@@ -54,8 +52,7 @@
     :ok))
 
 (defn start []
-  (mount/start-without
-    (resolve 'grumpy.figwheel/figwheel)))
+  (mount/start))
 
 (defn reload []
   (stop)
@@ -63,13 +60,9 @@
   (start)
   :ready)
 
-(defn cljs-repl []
-  (figwheel.main.api/cljs-repl "dev"))
-
 (migrations/migrate!)
 
 (reload)
 
 (println "[user] Socket REPL server on port 5555")
 (println "[user] Run (reload) for full system reload")
-(println "[user] Run (cljs-repl) for upgrading REPL to CLJS")

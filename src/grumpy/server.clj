@@ -73,6 +73,7 @@
         till        (* config/page-size total-pages)
         ids         (->> (d/index-range db :post/id from till)
                       (rseq)
+                      (remove #(d/find-datom db :eavt (:e %) :post/deleted?))
                       (map :v))]
     (web/page {:page :index}
       (list
@@ -320,7 +321,7 @@
      (middleware/content-type {:mime-types {}})
      route/query-params
      (secure-headers/secure-headers
-       {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"})
+       {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
      stats/interceptor
      (middleware/head)
      (route/router routes :linear-search)

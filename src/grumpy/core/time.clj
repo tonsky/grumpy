@@ -1,6 +1,8 @@
 (ns grumpy.core.time
   (:refer-clojure :exclude
-    [format])
+   [format])
+  (:require
+   [cheshire.generate :as chesire-generate])
   (:import
    [java.time Instant Duration LocalDate LocalDateTime ZoneId]
    [java.time.format DateTimeFormatter]
@@ -85,3 +87,6 @@
 
 (defn year [^Instant inst]
   (some-> inst (.atZone UTC) (.getYear)))
+
+(chesire-generate/add-encoder java.time.Instant
+  chesire-generate/encode-str)

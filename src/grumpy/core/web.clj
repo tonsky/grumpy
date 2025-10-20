@@ -1,14 +1,15 @@
 (ns grumpy.core.web
   (:require
-    [clojure.java.io :as io]
-    [grumpy.core.coll :as coll]
-    [grumpy.core.config :as config]
-    [grumpy.core.files :as files]
-    [grumpy.core.fragments :as fragments]
-    [grumpy.core.transit :as transit]
-    [grumpy.core.url :as url]
-    [ring.util.response :as response]
-    [rum.core :as rum]))
+   [cheshire.core :as json]
+   [clojure.java.io :as io]
+   [grumpy.core.coll :as coll]
+   [grumpy.core.config :as config]
+   [grumpy.core.files :as files]
+   [grumpy.core.fragments :as fragments]
+   [grumpy.core.transit :as transit]
+   [grumpy.core.url :as url]
+   [ring.util.response :as response]
+   [rum.core :as rum]))
 
 
 (def empty-success-response
@@ -148,7 +149,7 @@
    :body    (str "<!DOCTYPE html>\n" (rum/render-static-markup component))})
 
 
-(defn transit-response [payload]
+(defn json-response [payload]
   {:status  200
-   :headers {"Content-Type" "application/transit+json; charset=utf-8"}
-   :body    (transit/write-string payload)})
+   :headers {"Content-Type" "application/json; charset=utf-8"}
+   :body    (json/generate-string payload)})

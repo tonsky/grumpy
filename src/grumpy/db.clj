@@ -61,6 +61,12 @@
     (d/restore-conn storage)
     (d/create-conn schema {:storage storage})))
 
+(defn before-ns-unload []
+  (mount/stop #'conn #'storage))
+
+(defn after-ns-reload []
+  (mount/start #'storage #'conn))
+
 (defn db []
   @conn)
 

@@ -50,6 +50,11 @@
   :stop
   (.close ^IndexWriter writer))
 
+(defn before-ns-unload []
+  (mount/stop #'writer))
+
+(defn after-ns-reload []
+  (mount/start #'writer))
 
 (defn index
   ([posts]

@@ -2,4 +2,4 @@
 set -o errexit -o nounset -o pipefail -o xtrace
 cd "`dirname $0`/.."
 
-clojure -A:package -M -m grumpy.package
+clojure -M:package -m grumpy.package

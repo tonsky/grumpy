@@ -17,7 +17,9 @@
       nil)))
 
 
-(def readers {'inst time/parse-iso-inst})
+(def readers
+  {'inst time/parse-iso-inst
+   'instant time/parse-iso-inst})
 
 
 (defn read-edn-string [s]

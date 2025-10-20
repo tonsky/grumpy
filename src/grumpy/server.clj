@@ -344,3 +344,9 @@
   (do
     (log/log "[server] Stopping web server")
     (http/stop server)))
+
+(defn before-ns-unload []
+  (mount/stop #'server))
+
+(defn after-ns-reload []
+  (mount/start #'server))

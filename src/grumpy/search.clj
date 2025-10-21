@@ -1,39 +1,35 @@
 (ns grumpy.search
   (:require
-    [clojure.string :as str]
-    [datascript.core :as d]
-    [grumpy.core.config :as config]
-    [grumpy.core.fragments :as fragments]
-    [grumpy.core.log :as log]
-    [grumpy.core.url :as url]
-    [grumpy.core.web :as web]
-    [grumpy.db :as db]
-    [mount.core :as mount]
-    [rum.core :as rum])
+   [clojure.string :as str]
+   [datascript.core :as d]
+   [grumpy.core.config :as config]
+   [grumpy.core.fragments :as fragments]
+   [grumpy.core.log :as log]
+   [grumpy.core.url :as url]
+   [grumpy.core.web :as web]
+   [grumpy.db :as db]
+   [mount.core :as mount]
+   [rum.core :as rum])
   (:import
-    [java.nio.file Path]
-    [java.time Instant]
-    [org.apache.lucene.analysis Analyzer]
-    [org.apache.lucene.analysis.standard StandardAnalyzer]
-    [org.apache.lucene.analysis.tokenattributes OffsetAttribute CharTermAttribute]
-    [org.apache.lucene.document Document Field$Store LongField LongPoint TextField]
-    [org.apache.lucene.index DirectoryReader IndexWriter IndexWriterConfig IndexWriterConfig$OpenMode Term]
-    [org.apache.lucene.queryparser.classic QueryParser QueryParser$Operator]
-    [org.apache.lucene.search IndexSearcher ScoreDoc Query]
-    [org.apache.lucene.search.highlight Highlighter QueryScorer SimpleHTMLFormatter TokenSources TokenGroup]
-    [org.apache.lucene.store Directory FSDirectory]))
-
+   [java.nio.file Path]
+   [java.time Instant]
+   [org.apache.lucene.analysis Analyzer]
+   [org.apache.lucene.analysis.standard StandardAnalyzer]
+   [org.apache.lucene.analysis.tokenattributes OffsetAttribute CharTermAttribute]
+   [org.apache.lucene.document Document Field$Store LongField LongPoint TextField]
+   [org.apache.lucene.index DirectoryReader IndexWriter IndexWriterConfig IndexWriterConfig$OpenMode Term]
+   [org.apache.lucene.queryparser.classic QueryParser QueryParser$Operator]
+   [org.apache.lucene.search IndexSearcher ScoreDoc Query]
+   [org.apache.lucene.search.highlight Highlighter QueryScorer SimpleHTMLFormatter TokenSources TokenGroup]
+   [org.apache.lucene.store Directory FSDirectory]))
 
 (def paginator-size
   12)
 
-
 (declare index)
-
 
 (def path
   (Path/of "grumpy_data/lucene" (into-array String [])))
-
 
 (mount/defstate writer
   :start
@@ -72,12 +68,10 @@
      (.commit writer)
      (log/log "Indexed" (count posts) "posts in" (- (System/currentTimeMillis) t) "ms"))))
 
-
 (defn parse-query ^Query [q analyzer]
   (let [parser (doto (QueryParser. "body" analyzer)
                  (.setDefaultOperator QueryParser$Operator/AND))]
     (.parse parser q)))
-
 
 (defn search
   ([s]
@@ -100,7 +94,6 @@
                    (lazy-seq
                      (->> (search s {:limit total}) :ids (drop limit)))))}))))
 
-
 (defn highlight [^String body ^String q]
   (let [analyzer    (StandardAnalyzer.)
         query       (parse-query q analyzer)
@@ -108,7 +101,6 @@
         highlighter (Highlighter. formatter (QueryScorer. query))
         tokens      (TokenSources/getTokenStream "body" nil body analyzer -1)]
     (first (.getBestFragments highlighter tokens body 1000))))
-
 
 (rum/defc form [q]
   [:form.search.row.middle
@@ -125,7 +117,6 @@
              :placeholder    "Your query here"
              :value          q}]]
    [:button.btn "Find"]])
-
 
 (rum/defc paginator [path query page total]
   (let [half-paginator (quot paginator-size 2)
@@ -156,28 +147,27 @@
       (when (< (last pages) last-page)
         [:span "..."])]]))
 
-
-(rum/defc search-page [{:keys [q page]
+(rum/defc search-page [{:strs [q page]
                         :or {q "", page "1"}}]
   (web/page {:page :search}
     (list
       (form q)
       (let [q (str/replace q #"[!*?]" "")]
-      (when-not (str/blank? q)
-        (let [{:keys [total ids]} (search q)
-              page (parse-long page)
-              ids  (->> ids
-                     (drop (* config/page-size (dec page)))
-                     (take config/page-size))]
-          (if (empty? ids)
-            [:div.no-results
-             "No results"]
-            (let [db (db/db)]
-              (list
-                [:.search-results 
-                 (for [id ids
-                       :let [post  (d/pull db '[*] [:post/id id])
-                             post' (update post :post/body highlight q)]]
-                   (fragments/post post'))]
-                (paginator "/search" {:q q} page total))))))))))
+        (when-not (str/blank? q)
+          (let [{:keys [total ids]} (search q)
+                page (parse-long page)
+                ids  (->> ids
+                       (drop (* config/page-size (dec page)))
+                       (take config/page-size))]
+            (if (empty? ids)
+              [:div.no-results
+               "No results"]
+              (let [db (db/db)]
+                (list
+                  [:.search-results
+                   (for [id ids
+                         :let [post  (d/pull db '[*] [:post/id id])
+                               post' (update post :post/body highlight q)]]
+                     (fragments/post post'))]
+                  (paginator "/search" {:q q} page total))))))))))
 

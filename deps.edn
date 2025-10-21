@@ -3,17 +3,15 @@
   clj-http/clj-http                       {:mvn/version "3.13.1"}
   com.cognitect/transit-clj               {:mvn/version "1.0.333"}
   datascript/datascript                   {:mvn/version "1.7.8"}
+  http-kit/http-kit                       {:mvn/version "2.8.0"}
+  io.github.tonsky/clj-simple-router      {:mvn/version "0.1.2"}
   io.github.tonsky/clojure-plus           {:mvn/version "1.7.0"}
   io.github.tonsky/datascript-storage-sql {:mvn/version "2.1.0"}
-  io.pedestal/pedestal.immutant           {:mvn/version "0.6.0" :exclusions [javax.servlet/javax.servlet-api]}
-  io.pedestal/pedestal.route              {:mvn/version "0.6.0"}
-  io.pedestal/pedestal.service            {:mvn/version "0.6.0"}
   mount/mount                             {:mvn/version "0.1.23"}
   org.apache.lucene/lucene-core           {:mvn/version "9.7.0"}
   org.apache.lucene/lucene-queryparser    {:mvn/version "9.7.0"}
   org.apache.lucene/lucene-highlighter    {:mvn/version "9.7.0"}
   org.clojure/clojure                     {:mvn/version "1.12.3"}
-  org.immutant/web                        {:mvn/version "2.1.10"}
   org.xerial/sqlite-jdbc                  {:mvn/version "3.50.3.0"}
   ring/ring-core                          {:mvn/version "1.15.3"}
   rum/rum                                 {:mvn/version "0.11.4"}}

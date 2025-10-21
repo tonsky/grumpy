@@ -1,37 +1,31 @@
 (ns grumpy.server
   (:require
-    [clojure.stacktrace :as stacktrace]
-    [clojure.string :as str]
-    [datascript.core :as d]
-    [grumpy.auth :as auth]
-    [grumpy.core.config :as config]
-    [grumpy.core.fragments :as fragments]
-    [grumpy.core.log :as log]
-    [grumpy.core.mime :as mime]
-    [grumpy.core.posts :as posts]
-    [grumpy.core.routes :as routes]
-    [grumpy.core.time :as time]
-    [grumpy.core.web :as web]
-    [grumpy.db :as db]
-    [grumpy.feed :as feed]
-    [grumpy.editor :as editor]
-    [grumpy.search :as search]
-    [grumpy.stats :as stats]
-    [io.pedestal.interceptor :as interceptor]
-    [io.pedestal.http.ring-middlewares :as middleware]
-    [io.pedestal.http.route :as route]
-    [io.pedestal.http.secure-headers :as secure-headers]
-    [io.pedestal.http :as http]
-    [mount.core :as mount]
-    [ring.util.response :as response]
-    [rum.core :as rum])
-  (:import
-    [java.io IOException]))
-
+   [clj-simple-router.core :as router]
+   [clojure.string :as str]
+   [datascript.core :as d]
+   [grumpy.auth :as auth]
+   [grumpy.core.config :as config]
+   [grumpy.core.fragments :as fragments]
+   [grumpy.core.log :as log]
+   [grumpy.core.mime :as mime]
+   [grumpy.core.posts :as posts]
+   [grumpy.core.time :as time]
+   [grumpy.core.web :as web]
+   [grumpy.db :as db]
+   [grumpy.feed :as feed]
+   [grumpy.editor :as editor]
+   [grumpy.search :as search]
+   [grumpy.stats :as stats]
+   [mount.core :as mount]
+   [org.httpkit.server :as http-kit]
+   [ring.middleware.content-type :as content-type]
+   [ring.middleware.head :as head]
+   [ring.middleware.params :as params]
+   [ring.util.response :as response]
+   [rum.core :as rum]))
 
 (def paginator-size
   8)
-
 
 (defn pages [db page]
   (let [db             (db/db)
@@ -42,10 +36,10 @@
         pages          (cond
                          (< (- max-page page) (+ 2 half-paginator))
                          (take (+ 2 paginator-size) (range max-page 0 -1))
-                         
+
                          (< (- page 1) half-paginator)
                          (range (min paginator-size max-page) 0 -1)
-                         
+
                          :else
                          (let [from (-> page (+ half-paginator) dec)
                                till (- from paginator-size)]
@@ -65,7 +59,6 @@
       (when (> (last pages) 1)
         [:span "..."])]]))
 
-
 (rum/defc index-page []
   (let [db          (db/db)
         total-pages (posts/total-pages db)
@@ -79,7 +72,6 @@
       (list
         (map #(fragments/post (d/entity db [:post/id %])) ids)
         (pages db -1)))))
-
 
 (rum/defc page-page [page]
   (let [db          (db/db)
@@ -98,11 +90,9 @@
       {:status 404
        :body   "Not found"})))
 
-
 (rum/defc post-page [post-id]
   (web/page {:page :post}
     (fragments/post (d/entity (db/db) [:post/id post-id]))))
-
 
 (rum/defc subscribe-page []
   (web/page {:page :subscribe}
@@ -113,7 +103,6 @@
       [:li "Via Mastodon: " [:a {:href "https://mastodon.online/@grumpy_website"} "@grumpy_website@mastodon.online"]]
       [:li "Via Telegram Channel: " [:a {:href "https://t.me/whining"} "@whining"] " (posts only)"]
       [:li "Via Telegram Group: " [:a {:href "https://t.me/grumpy_chat"} "@grumpy_chat"] " (posts + discussions, mostly in Russian)"]]]))
-
 
 (rum/defc suggest-page []
   (web/page {:page :suggest}
@@ -135,10 +124,8 @@
       [:li "We prefer to focus on bad trends/intentionally bad decisions, not just funny bugs"]]
      [:p "If that works for you, we’ll be happy to take in your suggestions!"]]))
 
-
 (def *contributors
   (atom nil))
-
 
 (defn contributors [db]
   (->> (d/datoms db :aevt :post/body)
@@ -150,7 +137,6 @@
     (vals)
     (sort-by str/lower-case)))
 
-
 (defn cached-contributors []
   (let [db (db/db)
         [cached-db cached-contrib] @*contributors]
@@ -158,12 +144,11 @@
       cached-contrib
       (second (reset! *contributors [db (contributors db)])))))
 
-
 (rum/defc about-page []
   (web/page {:page :about}
     [:.page
      [:p "Grumpy Website is a world-leading media conglomerate of renowned experts in UIs, UX and TVs."]
-     [:p "We’ve been reporting on infinite scrolls, cookie banners and unnecessary modal dialogs since 2017."]
+     [:p "We've been reporting on infinite scrolls, cookie banners and unnecessary modal dialogs since 2017."]
      [:h2 "Creators and authors:"]
      [:ul
       [:li [:a {:href "https://mastodon.online/@nikitonsky"} "Nikita Prokopov"]]
@@ -175,175 +160,123 @@
       (for [who (cached-contributors)]
         [:li [:a {:href (str "/search?q=@" who)} who]])]]))
 
-
-(def no-cache
-  (interceptor/interceptor
-    {:name  ::no-cache
-     :leave (fn [ctx]
-              (let [h (:headers (:response ctx))]
-                (if (contains? h "Cache-Control")
-                  ctx
-                  (update ctx :response assoc :headers (assoc h "Cache-Control" "no-cache", "Expires" "-1")))))}))
+(defn wrap-no-cache [handler]
+  (fn [req]
+    (let [resp (handler req)
+          h    (:headers resp)]
+      (if (contains? h "Cache-Control")
+        resp
+        (assoc resp :headers (assoc h "Cache-Control" "no-cache", "Expires" "-1"))))))
 
 (def routes
-  (routes/expand
-    [:get "/post/:post-id/:img"
-     (fn [{{:keys [post-id img]} :path-params}]
-       (let [db  (db/db)
-             url (->> (d/find-datom db :avet :media/old-url img)
-                   :e (d/entity db) :media/url)]
-         (web/moved-permanently (str "/media/" url))))]
+  (router/routes
+    "GET /post/*/*" [post-id img]
+    (let [db  (db/db)
+          url (->> (d/find-datom db :avet :media/old-url img)
+                :e (d/entity db) :media/url)]
+      (web/moved-permanently (str "/media/" url)))
 
-    [:get "/media/*path"
-     (fn [{{:keys [path]} :path-params}]
-       (response/file-response (str "grumpy_data/" path)))]
-    
-    [:get "/post/:post-id"
-     (fn [{{:keys [post-id]} :path-params}]
-       (let [post (d/entity (db/db) [:post/old-id post-id])]
-         (web/moved-permanently (str "/" (:post/id post)))))]
-    
-    [:get "/:post-id"
-     (fn [{{:keys [post-id]} :path-params}]
-       (let [post-id (parse-long post-id)
-             post    (d/entity (db/db) [:post/id post-id])]
-         (cond
-           (nil? post)
-           {:status 404
-            :body   "Not found"}
-           
-           (:post/deleted? post)
-           {:status 404
-            :body   "Deleted"}
-           
-           :else
-           (web/html-response (post-page post-id)))))]
+    "GET /media/**" [path]
+    (response/file-response (str "grumpy_data/" path))
 
-    [:get "/"
-     (when config/dev? auth/populate-session)
-     (fn [_]
-       (web/html-response (index-page)))]
-    
-    [:get "/page/:page"
-     (when config/dev? auth/populate-session)
-     (fn [req]
-       (let [page (-> req :path-params :page parse-long)]
-         (page-page page)))]
-    
-    [:get "/search"
-     (when config/dev? auth/populate-session)
-     (fn [req]
-       (web/html-response
-         (search/search-page (:query-params req))))]
-    
-    [:get "/subscribe"
-     (when config/dev? auth/populate-session)
-     (fn [req]
-       (web/html-response
-         (subscribe-page)))]
-    
-    [:get "/suggest"
-     (when config/dev? auth/populate-session)
-     (fn [req]
-       (web/html-response
-         (suggest-page)))]
-    
-    [:get "/about"
-     (when config/dev? auth/populate-session)
-     (fn [req]
-       (web/html-response
-         (about-page)))]
+    "GET /post/*" [post-id]
+    (let [post (d/entity (db/db) [:post/old-id post-id])]
+      (web/moved-permanently (str "/" (:post/id post))))
 
-    [:get "/static/*path" 
-     (when-not config/dev?
-       {:leave #(update-in % [:response :headers] assoc "Cache-Control" "max-age=315360000")})
-     (fn [{{:keys [path]} :path-params}]
-       (response/resource-response (str "static/" path)))]
+    "GET /*" [post-id]
+    (let [post-id (parse-long post-id)
+          post    (d/entity (db/db) [:post/id post-id])]
+      (cond
+        (nil? post)
+        {:status 404
+         :body   "Not found"}
 
-    [:get "/feed.xml"
-     (fn [_]
-       {:status  200
-        :headers {"Content-Type" "application/atom+xml; charset=utf-8"}
-        :body    (feed/feed (take 10 (posts/post-ids))) })]
+        (:post/deleted? post)
+        {:status 404
+         :body   "Deleted"}
 
-    [:get "/sitemap.xml"
-     (fn [_]
-       {:status 200
-        :headers {"Content-Type" "text/xml; charset=utf-8"}
-        :body (feed/sitemap (posts/post-ids))})]
+        :else
+        (web/html-response (post-page post-id))))
 
-    [:get "/robots.txt"
-     (fn [_]
-       {:status 200
-        :headers {"Content-Type" "text/plain"}
-        :body (web/resource "robots.txt")})]))
+    "GET /" _
+    (web/html-response (index-page))
 
+    "GET /page/*" [page]
+    (page-page (parse-long page))
 
-; Filtering out Broken pipe reporting
-; io.pedestal.http.impl.servlet-interceptor/error-stylobate
-(defn error-stylobate [{:keys [servlet-response] :as context} exception]
-  (let [^Throwable cause (stacktrace/root-cause exception)]
-    (cond
-      (and (instance? IOException cause) (= "Broken pipe" (.getMessage cause)))
-      :ignore ; (println "Ignoring java.io.IOException: Broken pipe")
+    "GET /search" req
+    (web/html-response
+      (search/search-page (:query-params req)))
 
-      (and (instance? IOException cause) (= "Connection reset by peer" (.getMessage cause)))
-      :ignore ; (println "Ignoring java.io.IOException: Connection reset by peer")
+    "GET /subscribe" _
+    (web/html-response
+      (subscribe-page))
 
-      :else
-      (io.pedestal.log/error
-        :msg "error-stylobate triggered"
-        :exception exception
-        :context context))
-    (@#'io.pedestal.http.impl.servlet-interceptor/leave-stylobate context)))
+    "GET /suggest" _
+    (web/html-response
+      (suggest-page))
 
-; io.pedestal.http.impl.servlet-interceptor/stylobate
-(def stylobate
-  (io.pedestal.interceptor/interceptor
-    {:name ::stylobate
-     :enter @#'io.pedestal.http.impl.servlet-interceptor/enter-stylobate
-     :leave @#'io.pedestal.http.impl.servlet-interceptor/leave-stylobate
-     :error error-stylobate}))
+    "GET /about" _
+    (web/html-response
+      (about-page))
+
+    "GET /static/**" [path]
+    (let [resp (response/resource-response (str "static/" path))]
+      (if config/dev?
+        resp
+        (assoc-in resp [:headers "Cache-Control"] "max-age=315360000")))
+
+    "GET /feed.xml" _
+    {:status  200
+     :headers {"Content-Type" "application/atom+xml; charset=utf-8"}
+     :body    (feed/feed (take 10 (posts/post-ids)))}
+
+    "GET /sitemap.xml" _
+    {:status 200
+     :headers {"Content-Type" "text/xml; charset=utf-8"}
+     :body (feed/sitemap (posts/post-ids))}
+
+    "GET /robots.txt" _
+    {:status 200
+     :headers {"Content-Type" "text/plain"}
+     :body (web/resource "robots.txt")}))
 
 (def *opts
   (atom
     {:host "localhost"
      :port 8080}))
 
+(defn wrap-headers [handler headers]
+  (fn [req]
+    (update (handler req) :headers
+      #(merge headers %))))
 
-(defn interceptors []
-  (let [routes (routes/sort (concat
-                              routes
-                              auth/routes
-                              editor/routes
-                              stats/routes))]
-    [http/not-found
-     (middleware/content-type {:mime-types {}})
-     route/query-params
-     (secure-headers/secure-headers
-       {:content-security-policy-settings "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
-     stats/interceptor
-     (middleware/head)
-     (route/router routes :linear-search)
-     route/path-params-decoder
-     no-cache]))
-
+(defn handler []
+  (-> (merge
+        routes
+        auth/routes
+        editor/routes
+        stats/routes)
+    (router/router)
+    (wrap-no-cache)
+    (head/wrap-head)
+    (stats/wrap-stats)
+    (wrap-headers {"Content-Security-Policy" "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
+    (params/wrap-params)
+    (content-type/wrap-content-type {:mime-types {}})))
 
 (mount/defstate server
   :start
-  (with-redefs [io.pedestal.http.impl.servlet-interceptor/stylobate stylobate]
-    (let [{:keys [host port]} @*opts]
-      (log/log "[server] Starting web server at" (str host ":" port))
-      (-> {::http/type         :immutant
-           ::http/host         host
-           ::http/port         port
-           ::http/interceptors (interceptors)}
-        (http/create-server)
-        (http/start))))
+  (let [{:keys [host port]} @*opts]
+    (log/log "[server] Starting web server at" (str host ":" port))
+    (http-kit/run-server (handler)
+      {:host host
+       :port port
+       :legacy-return-value? false}))
   :stop
   (do
     (log/log "[server] Stopping web server")
-    (http/stop server)))
+    (http-kit/server-stop! server)))
 
 (defn before-ns-unload []
   (mount/stop #'server))

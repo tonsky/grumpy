@@ -1,37 +1,31 @@
 (ns grumpy.stats
   (:require
-    [clojure.string :as str]
-    [clojure.java.io :as io]
-    [grumpy.auth :as auth]
-    [grumpy.core.coll :as coll]
-    [grumpy.core.log :as log]
-    [grumpy.core.routes :as routes]
-    [grumpy.core.time :as time]
-    [grumpy.core.web :as web]
-    [io.pedestal.interceptor :as interceptor]
-    [rum.core :as rum])
+   [clj-simple-router.core :as router]
+   [clojure.string :as str]
+   [clojure.java.io :as io]
+   [grumpy.auth :as auth]
+   [grumpy.core.coll :as coll]
+   [grumpy.core.log :as log]
+   [grumpy.core.time :as time]
+   [grumpy.core.web :as web]
+   [rum.core :as rum])
   (:import
-    [java.io File]
-    [java.time LocalDateTime Instant]
-    [java.time.format DateTimeFormatter]
-    [java.time.temporal TemporalQuery TemporalAccessor]))
-
+   [java.io File]
+   [java.time LocalDateTime Instant]
+   [java.time.format DateTimeFormatter]
+   [java.time.temporal TemporalQuery TemporalAccessor]))
 
 (def ^DateTimeFormatter month-formatter
   (DateTimeFormatter/ofPattern "yyyy-MM"))
 
-
 (def ^DateTimeFormatter date-formatter
   (DateTimeFormatter/ofPattern "yyyy-MM-dd"))
-
 
 (def ^DateTimeFormatter time-formatter
   (DateTimeFormatter/ofPattern "HH:mm:ss"))
 
-
 (def log-agent
   (agent nil))
-
 
 (defn log [_ req]
   (let [time       (LocalDateTime/now time/UTC)
@@ -61,15 +55,10 @@
           referrer   "\n")))
     nil))
 
-
-(def interceptor
-  (interceptor/interceptor
-    {:name ::access-log
-     :enter
-     (fn [ctx]
-       (send log-agent log (:request ctx))
-       ctx)}))
-
+(defn wrap-stats [handler]
+  (fn [req]
+    (send log-agent log req)
+    (handler req)))
 
 (defn parse-line [line]
   (let [[date time path query ip user-agent referrer] (str/split line #"\t")]
@@ -80,7 +69,6 @@
      :ip    ip
      :user-agent user-agent
      :referrer   referrer}))
-
 
 (defn group [key-fn val-fn xs]
   (->> xs
@@ -93,10 +81,8 @@
         (assoc acc k (val-fn v)))
       {})))
 
-
 (defn count-uniques [keys rs]
   (->> rs (map (apply juxt keys)) distinct count))
-
 
 (defn table [rows]
   (let [max (reduce max 1 (map second rows))]
@@ -108,7 +94,6 @@
          [:td.val count]
          (let [width (-> count (/ max) (* 100) float (str "%"))]
            [:td.bar [:div {:style {:width width}}]])])]]))
-
 
 (defn rss-user-agent [rs]
   (let [s     (or (:user-agent rs) "-")
@@ -124,7 +109,6 @@
       (str/replace #"^Mozilla$" "Unknown/Browser-based")
       (str/replace #"RSS Reader" ""))))
 
-
 (defn count-subscribers [rs]
   (or (some->> rs
         (keep #(re-find #"(\d+) subscribers" (or (:user-agent %) "-")))
@@ -133,7 +117,6 @@
         (map parse-long)
         (reduce max 0))
     (count-uniques [:ip] rs))) 
-
 
 (defn compact [limit rs]
   (let [[big small] (split-with (fn [[_ cnt]] (> cnt limit)) rs)]
@@ -199,28 +182,21 @@
         ))))
 
 (def routes
-  (routes/expand
-    [:get "/stats"
-     [auth/populate-session auth/require-user]
-     (fn [req]
-       (web/redirect
-         (time/format (time/utc-now) "'/stats/'yyyy-MM")))]
-    
-    [:get "/stats/:month"
-     [auth/populate-session auth/require-user]
-     (fn [req]
-       (web/html-response
-         (page (-> req :path-params :month))))]))
+  (router/routes
+    "GET /stats" _
+    (web/redirect
+      (time/format (time/utc-now) "'/stats/'yyyy-MM"))
 
+    "GET /stats/*" [month]
+    (web/html-response
+      (page month))))
 
 (comment
   (def ^DateTimeFormatter instant-formatter
     (DateTimeFormatter/ofPattern "dd/MMM/yyyy:HH:mm:ss X"))
 
-
   (defn parse-instant [s]
     (LocalDateTime/parse s instant-formatter))
-
 
   (defn parse-line-nginx [line]
     (let [[ip _ user time request status bytes referrer user-agent]

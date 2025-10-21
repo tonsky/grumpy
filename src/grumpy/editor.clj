@@ -12,7 +12,6 @@
    [grumpy.core.macros :refer [cond+]]
    [grumpy.core.mime :as mime]
    [grumpy.core.posts :as posts]
-   [grumpy.core.routes :as routes]
    [grumpy.core.time :as time]
    [grumpy.core.web :as web]
    [grumpy.db :as db]
@@ -231,67 +230,72 @@
       [:script {:src (str "/" (web/checksum-resource "static/editor.js"))}]
       [:script {:dangerouslySetInnerHTML {:__html "refresh();"}}])))
 
-
-(def ^:private interceptors
-  [auth/populate-session auth/require-user])
-
+(def apply-middlewares
+  (comp
+    auth/wrap-force-user
+    auth/wrap-session
+    auth/wrap-require-user))
 
 (def routes
-  (routes/expand
-    [:get "/new"
-     interceptors
+  {"GET /new"
+   (apply-middlewares
      (fn [req]
        (let [user (auth/user req)]
          (web/html-response
-           (edit-page nil user))))]
+           (edit-page nil user)))))
 
-    [:post "/new"
-     interceptors
+   "POST /new"
+   (apply-middlewares
      (fn [req]
        (let [body (-> req :body slurp (json/parse-string true))
              post (publish! nil body)]
          (log/log "Published" (:post/id post))
-         (web/json-response post)))]
+         (web/json-response post))))
 
-    [:get "/:post-id/edit"
-     interceptors
+   "GET /*/edit"
+   (apply-middlewares
      (fn [req]
-       (let [post-id (-> (:path-params req) :post-id parse-long)]
+       (let [[post-id] (:path-params req)
+             post-id   (parse-long post-id)]
          (web/html-response
-           (edit-page post-id (auth/user req)))))]
+           (edit-page post-id (auth/user req))))))
 
-    [:post "/:post-id/edit"
-     interceptors
+   "POST /*/edit"
+   (apply-middlewares
      (fn [req]
-       (let [post-id (-> (:path-params req) :post-id parse-long)
-             body    (-> req :body slurp (json/parse-string true))
-             post    (publish! post-id body)]
+       (let [[post-id] (:path-params req)
+             post-id   (parse-long post-id)
+             body      (-> req :body slurp (json/parse-string true))
+             post      (publish! post-id body)]
          (log/log "Updated" (:post/id post))
-         (web/json-response post)))]
+         (web/json-response post))))
 
-    [:get "/:post-id/delete"
-     interceptors
+   "GET /*/delete"
+   (apply-middlewares
      (fn [req]
-       (let [post-id (-> (:path-params req) :post-id parse-long)]
+       (let [[post-id] (:path-params req)
+             post-id   (parse-long post-id)]
          (posts/delete! post-id)
-         (web/redirect "/")))]
+         (web/redirect "/"))))
 
-    [:get "/media/uploads/*path"
-     (fn [{{:keys [path]} :path-params}]
-       (response/file-response (str "grumpy_data/uploads/" path)))]
+   "GET /media/uploads/**"
+   (fn [req]
+     (let [path (str/join "/" (:path-params req))]
+       (response/file-response (str "grumpy_data/uploads/" path))))
 
-    [:post "/media/uploads"
-     interceptors
-     (fn [{{:strs [content-type]} :headers
-           request-body :body}]
-       ; (when (and config/dev? (> (rand) 0.666667))
-       ;   (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))
-       (log/log (str "Uploading " content-type))
-       (let [updates (upload-media! content-type request-body)]
-         (when-some [media (:post/media-full updates)]
-           (log/log (str "Uploaded " content-type " to " (:media/url media))))
-         (when-some [media (:post/media updates)]
-           (if (:post/media-full updates)
-             (log/log (str "Converted " (-> updates :post/media-full :media/url) " to " (:media/url media)))
-             (log/log (str "Uploaded " content-type " to " (:media/url media)))))
-         (web/json-response updates)))]))
+   "POST /media/uploads"
+   (apply-middlewares
+     (fn [req]
+       (let [content-type (get-in req [:headers "content-type"])
+             request-body (:body req)]
+         ; (when (and config/dev? (> (rand) 0.666667))
+         ;   (throw (ex-info (str "/draft/" post-id "/upload-media simulated exception") {})))
+         (log/log (str "Uploading " content-type))
+         (let [updates (upload-media! content-type request-body)]
+           (when-some [media (:post/media-full updates)]
+             (log/log (str "Uploaded " content-type " to " (:media/url media))))
+           (when-some [media (:post/media updates)]
+             (if (:post/media-full updates)
+               (log/log (str "Converted " (-> updates :post/media-full :media/url) " to " (:media/url media)))
+               (log/log (str "Uploaded " content-type " to " (:media/url media)))))
+           (web/json-response updates)))))})

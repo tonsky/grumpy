@@ -214,3 +214,7 @@ button { border: none; padding: 0; }
 
 button.inline { background: none; color: #00F; border-bottom: 1px dotted #00F; cursor: pointer; }
 button.inline:active { position: relative; top: 1px; }
+
+/* AUTH */
+
+.auth, .link-sent { margin-bottom: 2em; }

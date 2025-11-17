@@ -28,11 +28,11 @@
 
 (defn redirect
   ([path]
-   { :status 302
-    :headers { "Location" path } })
+   {:status 302
+    :headers {"Location" path}})
   ([path query]
-   { :status 302
-    :headers { "Location" (url/build path query) }}))
+   {:status 302
+    :headers {"Location" (url/build path query)}}))
 
 
 (def resource
@@ -74,7 +74,7 @@
   (memoize
     (fn [name]
       (if config/dev?
-        [:link { :rel "stylesheet" :type "text/css" :href (str "/static/" name) }]
+        [:link {:rel "stylesheet" :type "text/css" :href (str "/static/" name)}]
         (inline-styles (slurp (io/resource (str "static/" name))))))))
 
 
@@ -122,9 +122,9 @@
       (style "styles.css")
       (for [css styles]
         (style css))
-      [:script {:dangerouslySetInnerHTML { :__html (resource "scripts.js") }}]
+      [:script {:dangerouslySetInnerHTML {:__html (resource "scripts.js")}}]
       (for [script scripts]
-        [:script {:dangerouslySetInnerHTML { :__html (resource script) }}])]
+        [:script {:dangerouslySetInnerHTML {:__html (resource script)}}])]
      [:body.anonymous
       [:header
        (case page
@@ -139,13 +139,13 @@
       [:footer
        (interpose ", "
          (for [author fragments/authors]
-           [:a { :href (:url author) } (:name author)]))
+           [:a {:href (:url author)} (:name author)]))
        " & contributors. 2017–2222. All fights retarded."]]]))
 
 
 (defn html-response [component]
   {:status  200
-   :headers { "Content-Type" "text/html; charset=utf-8" }
+   :headers {"Content-Type" "text/html; charset=utf-8"}
    :body    (str "<!DOCTYPE html>\n" (rum/render-static-markup component))})
 
 

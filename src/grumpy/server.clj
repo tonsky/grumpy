@@ -1,6 +1,7 @@
 (ns grumpy.server
   (:require
    [clj-simple-router.core :as router]
+   [clj-simple-stats.core :as simple-stats]
    [clojure.string :as str]
    [datascript.core :as d]
    [grumpy.auth :as auth]
@@ -260,6 +261,7 @@
     (router/router)
     (wrap-no-cache)
     (head/wrap-head)
+    (simple-stats/wrap-stats)
     (stats/wrap-stats)
     (wrap-headers {"Content-Security-Policy" "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
     (params/wrap-params)

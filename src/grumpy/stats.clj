@@ -123,7 +123,30 @@
     (concat
       big
       [["Others" (reduce + 0 (map second small))]])))
-  
+
+(comment
+  (def stats-per-day
+    (apply merge
+      (for [year  (range 2022 2026)
+            month (range 1 13)
+            :let [file (io/file (format "/Users/tonsky/Downloads/stats/%d-%02d.csv" year month))]
+            :when (File/.exists file)]
+        (let [parsed (with-open [rdr (io/reader file)]
+                       (->> (line-seq rdr)
+                         (next)
+                         (map parse-line)
+                         (doall)))]
+          (reduce
+            (fn [acc {:keys [date user-agent]}]
+              (if-some [[_ n] (re-find #"(\d+) subscribers" (or user-agent "-"))]
+                (update acc date assoc :subscribers (parse-long n))
+                (update acc date update :visitors (fnil inc 0))))
+            {} parsed)))))
+  stats-per-day
+  (with-open [wrt (io/writer (io/file "/Users/tonsky/ws/grumpy/clj_simple_stats/all.csv"))]
+    (.write wrt "day\tvisitors\tsubscribers\n")
+    (doseq [[k {:keys [visitors subscribers]}] (sort-by first stats-per-day)]
+      (.write wrt (str k "\t" visitors "\t" subscribers "\n")))))
 
 (rum/defc page [month]
   (let [lines  (with-open [rdr (io/reader (io/file "grumpy_data/stats" (str month ".csv")))]

@@ -156,6 +156,7 @@
                         [:a {:href path} path])]
            (table
              (->> lines
+               (filter :path)
                (filter #(re-matches #"^(/post/[a-zA-Z0-9_\-]+|/[0-9]+)$" (:path %)))
                (group url-fn #(count-uniques [:ip :user-agent] %))
                (sort-by second)
@@ -166,6 +167,7 @@
         [:p
          (table
            (->> lines
+             (filter :path)
              (filter #(re-matches #"^(/|/post/[a-zA-Z0-9_\-]+|/[0-9]+)$" (:path %)))
              (group :date #(count-uniques [:ip :user-agent] %))
              (sort-by first)))]
@@ -174,6 +176,7 @@
         [:p
          (table
            (->> lines
+             (filter :path)
              (filter #(= "/feed.xml" (:path %)))
              (group #(rss-user-agent %) count-subscribers)
              (sort-by second)

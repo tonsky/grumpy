@@ -2,4 +2,4 @@
 set -o errexit -o nounset -o pipefail
 cd "`dirname $0`/.."
 
-clj -M -m grumpy.migrations
+clojure $(./script/java_opts.sh) -M -m grumpy.migrations

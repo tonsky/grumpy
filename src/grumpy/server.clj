@@ -261,7 +261,7 @@
     (router/router)
     (wrap-no-cache)
     (head/wrap-head)
-    (simple-stats/wrap-stats {:uri "/simple_stats"})
+    (simple-stats/wrap-stats {:db-path "grumpy_data/stats.duckdb"})
     (stats/wrap-stats)
     (wrap-headers {"Content-Security-Policy" "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
     (params/wrap-params)

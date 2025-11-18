@@ -209,11 +209,11 @@
 
 (def routes
   (router/routes
-    "GET /stats" _
+    "GET /old_stats" _
     (web/redirect
       (time/format (time/utc-now) "'/stats/'yyyy-MM"))
 
-    "GET /stats/*" [month]
+    "GET /old_stats/*" [month]
     (web/html-response
       (page month))))
 

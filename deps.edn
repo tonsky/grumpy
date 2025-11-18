@@ -13,6 +13,7 @@
   org.apache.lucene/lucene-highlighter    {:mvn/version "9.7.0"}
   org.clojure/clojure                     {:mvn/version "1.12.3"}
   org.xerial/sqlite-jdbc                  {:mvn/version "3.50.3.0"}
+  org.duckdb/duckdb_jdbc                  {:mvn/version "1.4.2.0"}
   ring/ring-core                          {:mvn/version "1.15.3"}
   rum/rum                                 {:mvn/version "0.11.4"}}
  :paths ["src" "resources"]

@@ -60,15 +60,30 @@
     (send log-agent log req)
     (handler req)))
 
+(defn valid-line? [[date time path ip user-agent]]
+  (and
+    (not (some str/blank? [date time path ip user-agent]))
+    (re-matches #"202\d-\d\d-\d\d" date)
+    (re-matches #"\d\d:\d\d:\d\d" time)
+    (not (re-find #"(?i)/static|\.svg|\.png|\.ico|\.jpe?g|\.mp4|\.gif|\.php|\.txt" path))
+    (not (#{"/forbidden" "/robots.txt"} path))))
+
 (defn parse-line [line]
-  (let [[date time path query ip user-agent referrer] (str/split line #"\t")]
-    {:date  date
-     :time  time
-     :path  path
-     :query query
-     :ip    ip
-     :user-agent user-agent
-     :referrer   referrer}))
+  (let [segments (str/split line #"\t")]
+    (when (and
+            (<= (count segments) 7)
+            (valid-line? segments))
+      (let [[date time path query ip user-agent referrer] (->> segments
+                                                            (map #(if (str/blank? %) nil %)))]
+        {:date       date
+         :time       time
+         :path       path
+         :query      query
+         :ip         ip
+         :user-agent (str/replace user-agent #"[\t\n]" "")
+         :referrer   referrer
+         :type       (when (= "/feed.xml" path)
+                       "feed")}))))
 
 (defn group [key-fn val-fn xs]
   (->> xs
@@ -134,7 +149,7 @@
         (let [parsed (with-open [rdr (io/reader file)]
                        (->> (line-seq rdr)
                          (next)
-                         (map parse-line)
+                         (keep parse-line)
                          (doall)))]
           (reduce
             (fn [acc {:keys [date user-agent]}]
@@ -211,11 +226,61 @@
   (router/routes
     "GET /old_stats" _
     (web/redirect
-      (time/format (time/utc-now) "'/stats/'yyyy-MM"))
+      (time/format (time/utc-now) "'/old_stats/'yyyy-MM"))
 
     "GET /old_stats/*" [month]
     (web/html-response
       (page month))))
+
+(comment ;; --- re-export to csv
+  (require
+    'clj-simple-stats.analyzer
+    'clojure.data.csv)
+
+  (defn re-read-csv [from to]
+    (let [t0   (System/currentTimeMillis)
+          data (for [file  from
+                     :when (str/ends-with? (File/.getName file) ".csv")
+                     :let  [_ (println (File/.getName file) (- (System/currentTimeMillis) t0) "ms")]
+                     tuple (with-open [rdr (io/reader file)]
+                             (doall
+                               (for [line  (->> (line-seq rdr) next)
+                                     :let  [parsed (some-> line
+                                                     parse-line
+                                                     clj-simple-stats.analyzer/analyze)]
+                                     :when parsed]
+                                 ((juxt :date :time :path :query :ip :user-agent :referrer :type :agent :os :mult :uniq) parsed))))]
+                 tuple)]
+      (@(requiring-resolve 'clj-simple-stats.core/init-db!) to)
+      (with-open [conn ^org.duckdb.DuckDBConnection (java.sql.DriverManager/getConnection (str "jdbc:duckdb:" to))]
+        (with-open [app (.createAppender conn org.duckdb.DuckDBConnection/DEFAULT_SCHEMA "stats")]
+          (doseq [[date time path query ip user-agent referrer type agent os mult uniq] data]
+            (.beginRow app)
+            (.append app ^java.time.LocalDate (LocalDate/parse date))
+            (.append app ^java.time.LocalTime (LocalTime/parse time))
+            (.append app ^String path)
+            (.append app ^String query)
+            (.append app ^String ip)
+            (.append app ^String user-agent)
+            (.append app ^String referrer)
+            (.append app ^String type)
+            (.append app ^String agent)
+            (.append app ^String os)
+            (.append app (int mult))
+            (.append app ^java.util.UUID uniq)
+            (.endRow app))
+          (.flush app))))
+
+    #_(with-open [wrt (io/writer (io/file to))]
+        (.write wrt "date,time,path,query,ip,user-agent,referrer,type,agent,os,mult,uniq\n")
+        (clojure.data.csv/write-csv wrt data))))
+
+(comment
+  (re-read-csv
+    #_(sort-by File/.getName (file-seq (io/file "/Users/tonsky/Downloads/stats/")))
+    [(io/file "/Users/tonsky/Downloads/stats/2025-10.csv")]
+    (io/file "/Users/tonsky/Downloads/stats3.csv")))
+
 
 (comment
   (def ^DateTimeFormatter instant-formatter

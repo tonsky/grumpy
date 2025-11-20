@@ -274,6 +274,13 @@
     (http-kit/run-server (handler)
       {:host host
        :port port
+       :error-logger (fn [msg ex]
+                       (println
+                         (.format
+                           (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss")
+                           (java.time.ZonedDateTime/now (java.time.ZoneId/of "UTC")))
+                         msg
+                         ex))
        :legacy-return-value? false}))
   :stop
   (do

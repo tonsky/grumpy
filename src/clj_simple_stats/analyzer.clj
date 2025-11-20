@@ -120,48 +120,45 @@
 
 (defn line-type [{:keys [path agent user-agent]}]
   (cond
-    (and
-      user-agent
-      (re-find #"(?i)rss" user-agent))
+    (and user-agent (re-find #"(?i)rss" user-agent))
     "feed"
 
     (#{"Chrome" "Firefox" "Edg" "EdgA" "EdgiOS" "Safari" "OPR" "YaBrowser" "Vivaldi" "SamsungBrowser" "UCBrowser"} agent)
     "browser"
 
-    (and
-      user-agent
+    (and user-agent
       (re-find #"(?i)bot|crawl|fetch|node|ruby|.rb|python|curl|okhttp|spider|scan|nutch|mastodon|\+http" user-agent))
     "bot"
 
-    (and
-      user-agent
-      (re-find #"^Mozilla/" user-agent))
+    (and user-agent (re-find #"^Mozilla/" user-agent))
     "browser"
 
     :else
     "bot"))
 
 (defn line-os [{:keys [user-agent]}]
-  (cond
-    (re-find #"(?i)Android" user-agent)
-    "Android"
+  (when user-agent
+    (cond
+      (re-find #"(?i)Android" user-agent)
+      "Android"
 
-    (re-find #"(?i)Windows" user-agent)
-    "Windows"
+      (re-find #"(?i)Windows" user-agent)
+      "Windows"
 
-    (re-find #"(?i)iOS|iPhone|iPad|Mobile.*Safari" user-agent)
-    "iOS"
+      (re-find #"(?i)iOS|iPhone|iPad|Mobile.*Safari" user-agent)
+      "iOS"
 
-    (re-find #"(?i)macOS|Mac OS|Macintosh|Darwin" user-agent)
-    "macOS"
+      (re-find #"(?i)macOS|Mac OS|Macintosh|Darwin" user-agent)
+      "macOS"
 
-    (re-find #"(?i)Linux|X11" user-agent)
-    "Linux"))
+      (re-find #"(?i)Linux|X11" user-agent)
+      "Linux")))
 
 (defn line-multiplier [{:keys [mult user-agent]}]
   (or
-    (when-some [n (re-find #"\d+(?= subscriber)" user-agent)]
-      (parse-long n))
+    (when user-agent
+      (when-some [n (re-find #"\d+(?= subscriber)" user-agent)]
+        (parse-long n)))
     1))
 
 (defn long-hash ^UUID [^String s]
@@ -172,14 +169,13 @@
       (.getLong (ByteBuffer/wrap bs 8 16)))))
 
 (defn line-uniq ^UUID [{:keys [agent ip user-agent uniq]}]
-  (or
-    uniq
-    (long-hash
-      (if (or
+  (long-hash
+    (if (and user-agent
+          (or
             (re-find #"(?<=feed-id[=:])\w+" user-agent)
-            (re-find #"\d+(?= subscriber)" user-agent))
-        user-agent
-        (str ip user-agent)))))
+            (re-find #"\d+(?= subscriber)" user-agent)))
+      user-agent
+      (str ip user-agent))))
 
 (defn assoc-new [m k v]
   (if (some? (get m k))

@@ -93,7 +93,7 @@
       (.add queue line))))
 
 (defn- insert-lines! [db-path lines]
-  (println "Inserting" (count lines) "lines to" db-path)
+  #_(println "Inserting" (count lines) "lines to" db-path)
   (with-open [conn ^DuckDBConnection (DriverManager/getConnection (str "jdbc:duckdb:" db-path))
               app  (.createAppender conn DuckDBConnection/DEFAULT_SCHEMA "stats")]
     (doseq [line lines
@@ -134,7 +134,7 @@
                   (println e)))
               (recur)))
           (catch InterruptedException e
-            (println (.getName (Thread/currentThread)) "graceful shutdown")))))
+            #_(println (.getName (Thread/currentThread)) "graceful shutdown")))))
     (.setDaemon true)
     (.setName (str "clj-simple-stats.core/worker(path=" db-path ")"))
     (.start)))

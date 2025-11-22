@@ -2,7 +2,7 @@
   (:import
    [java.sql DriverManager]))
 
-(defn page-all [req db-path]
+(defn page-all [conn req]
   (let [sb       (StringBuilder.)
         append   #(doseq [s %&]
                     (.append sb (str s)))]
@@ -30,99 +30,98 @@
     (append "</style>")
     (append "</head><body>")
 
-    (with-open [conn (DriverManager/getConnection (str "jdbc:duckdb:" db-path))]
-      #_(let [data     (with-open [stmt     (.createStatement conn)
-                                   rs       (.executeQuery stmt
-                                              "SELECT strftime(date, '%Y-%m') as month,
+    #_(let [data     (with-open [stmt     (.createStatement conn)
+                                 rs       (.executeQuery stmt
+                                            "SELECT strftime(date, '%Y-%m') as month,
                                                     COUNT(DISTINCT ip) as visitors,
                                                     0 as subscribers
                                              FROM stats
                                              GROUP BY month
                                              ORDER BY month")]
-                         (loop [acc []]
-                           (if (.next rs)
-                             (recur (conj acc
-                                      {:month       (.getString rs "month")
-                                       :visitors    (.getLong rs "visitors")
-                                       :subscribers (.getLong rs "subscribers")}))
-                             acc)))
-              max-val  (reduce (fn [acc {:keys [visitors subscribers]}]
-                                 (max acc (+ visitors subscribers)))
-                         0
-                         data)]
-          (append "<div class=\"container\">")
-          (append "<div class=\"stats by_month\">")
-          (append "<div class=\"bars\">")
-          (doseq [{:keys [month visitors subscribers]} data]
-            (let [v-height (int (* 200 (/ visitors max-val)))
-                  s-height (int (* 2000 (/ subscribers max-val)))]
-              (append "<div class=\"month\" title=\"" month "\nvisitors: " visitors "\nsubscibers: " subscribers "\">")
-              (append "<div class=\"v\" style=\"height: " v-height "px\"></div>")
-              (append "<div class=\"s\" style=\"height: " s-height "px\"></div>")
-              (append "<div class=\"label\">" month "</div>")
-              (append "</div>")))
-          (append "</div></div></div>"))
+                       (loop [acc []]
+                         (if (.next rs)
+                           (recur (conj acc
+                                    {:month       (.getString rs "month")
+                                     :visitors    (.getLong rs "visitors")
+                                     :subscribers (.getLong rs "subscribers")}))
+                           acc)))
+            max-val  (reduce (fn [acc {:keys [visitors subscribers]}]
+                               (max acc (+ visitors subscribers)))
+                       0
+                       data)]
+        (append "<div class=\"container\">")
+        (append "<div class=\"stats by_month\">")
+        (append "<div class=\"bars\">")
+        (doseq [{:keys [month visitors subscribers]} data]
+          (let [v-height (int (* 200 (/ visitors max-val)))
+                s-height (int (* 2000 (/ subscribers max-val)))]
+            (append "<div class=\"month\" title=\"" month "\nvisitors: " visitors "\nsubscibers: " subscribers "\">")
+            (append "<div class=\"v\" style=\"height: " v-height "px\"></div>")
+            (append "<div class=\"s\" style=\"height: " s-height "px\"></div>")
+            (append "<div class=\"label\">" month "</div>")
+            (append "</div>")))
+        (append "</div></div></div>"))
 
-      (let [data     (with-open [stmt     (.createStatement conn)
-                                 rs       (.executeQuery stmt
-                                            "select date::VARCHAR as date, type, sum(mult) as cnt
+    (let [data     (with-open [stmt     (.createStatement conn)
+                               rs       (.executeQuery stmt
+                                          "select date::VARCHAR as date, type, sum(mult) as cnt
                                              from (
                                                select distinct on (date, type, uniq) date, type, uniq, mult
                                                from stats
                                              ) subq
                                              group by date, type
                                              order by date, type")]
-                       (loop [acc {}]
-                         (if (.next rs)
-                           (let [date (.getString rs "date")
-                                 type (.getString rs "type")
-                                 cnt  (.getLong rs "cnt")]
-                             (recur (update acc date assoc (keyword type) cnt)))
-                           (reduce
-                             (fn [acc [k v]]
-                               (conj acc (assoc v :date k)))
-                             []
-                             (sort-by first acc)))))
-            max-val  (reduce (fn [acc m]
-                               (max acc (reduce + 0 (vals (dissoc m :date))))) 1 data)
-            by-month (group-by #(subs (:date %) 0 7) data)
-            months   (sort (keys by-month))]
-        (append "<div class=\"container\">")
-        (append "<div class=\"stats by_day\">")
-        (doseq [month months]
-          (let [days (sort-by :date (get by-month month))]
-            (append "<div class=\"month\">")
-            (append "<div class=\"bars\">")
-            (doseq [{:keys [date feed browser bot]} days]
-              (let [f-height (int (* 200 (/ (or feed 0) max-val)))
-                    u-height (int (* 200 (/ (or browser 0) max-val)))
-                    r-height (int (* 200 (/ (or bot 0) max-val)))]
-                (append "<div class=\"day\" title=\"" date "\">")
-                (append "<div class=\"r\" style=\"height: " r-height "px\"></div>")
-                (append "<div class=\"u\" style=\"height: " u-height "px\"></div>")
-                (append "<div class=\"f\" style=\"height: " f-height "px\"></div>")
-                (append "</div>"))) ;; .day
-            (append "</div>") ;; .bars
-            (append "<div class=\"label\">" month "</div>")
-            (append "</div>")))) ;; .month
-      (append "</div></div>") ;; .stats .container
+                     (loop [acc {}]
+                       (if (.next rs)
+                         (let [date (.getString rs "date")
+                               type (.getString rs "type")
+                               cnt  (.getLong rs "cnt")]
+                           (recur (update acc date assoc (keyword type) cnt)))
+                         (reduce
+                           (fn [acc [k v]]
+                             (conj acc (assoc v :date k)))
+                           []
+                           (sort-by first acc)))))
+          max-val  (reduce (fn [acc m]
+                             (max acc (reduce + 0 (vals (dissoc m :date))))) 1 data)
+          by-month (group-by #(subs (:date %) 0 7) data)
+          months   (sort (keys by-month))]
+      (append "<div class=\"container\">")
+      (append "<div class=\"stats by_day\">")
+      (doseq [month months]
+        (let [days (sort-by :date (get by-month month))]
+          (append "<div class=\"month\">")
+          (append "<div class=\"bars\">")
+          (doseq [{:keys [date feed browser bot]} days]
+            (let [f-height (int (* 200 (/ (or feed 0) max-val)))
+                  u-height (int (* 200 (/ (or browser 0) max-val)))
+                  r-height (int (* 200 (/ (or bot 0) max-val)))]
+              (append "<div class=\"day\" title=\"" date "\">")
+              (append "<div class=\"r\" style=\"height: " r-height "px\"></div>")
+              (append "<div class=\"u\" style=\"height: " u-height "px\"></div>")
+              (append "<div class=\"f\" style=\"height: " f-height "px\"></div>")
+              (append "</div>"))) ;; .day
+          (append "</div>") ;; .bars
+          (append "<div class=\"label\">" month "</div>")
+          (append "</div>")))) ;; .month
+    (append "</div></div>") ;; .stats .container
 
-      (append "<script>
+    (append "<script>
                  document.querySelectorAll('.container').forEach((el) => {
                    el.scrollLeft = el.scrollWidth;
                  });
                </script>")
-      (append "</body></html>")
-      {:status 200
-       :headers {"Content-Type" "text/html; charset=utf-8"}
-       :body    (.toString sb)})))
+    (append "</body></html>")
+    {:status 200
+     :headers {"Content-Type" "text/html; charset=utf-8"}
+     :body    (.toString sb)}))
 
-(defn page-month [req month]
+(defn page-month [conn req month]
   {:status 200
    :headers {"Content-Type" "text/html; charset=utf-8"}
    :body    (str "page-month: " month)})
 
-(defn page-path [req path]
+(defn page-path [conn req path]
   {:status 200
    :headers {"Content-Type" "text/html; charset=utf-8"}
    :body    (str "page-path: " path)})

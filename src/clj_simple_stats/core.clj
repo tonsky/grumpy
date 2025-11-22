@@ -13,10 +13,50 @@
    [java.time.format DateTimeFormatter]
    [java.util ArrayList UUID]
    [java.util.concurrent LinkedBlockingQueue]
+   [java.util.concurrent.locks ReentrantLock]
    [org.duckdb DuckDBConnection]))
 
 (def ^LinkedBlockingQueue queue
   (LinkedBlockingQueue.))
+
+(def ^ReentrantLock db-lock
+  (ReentrantLock.))
+
+(defn- init-db! [^DuckDBConnection conn]
+  (with-open [stmt (.createStatement conn)]
+    (.execute stmt
+      "CREATE TYPE IF NOT EXISTS agent_type_t AS ENUM ('feed', 'bot', 'browser')")
+    (.execute stmt
+      "CREATE TYPE IF NOT EXISTS agent_os_t AS ENUM ('Android', 'Windows', 'iOS', 'macOS', 'Linux')")
+    (.execute stmt
+      "CREATE TABLE IF NOT EXISTS stats (
+         date       DATE,
+         time       TIME,
+         path       VARCHAR,
+         query      VARCHAR,
+         ip         VARCHAR,
+         user_agent VARCHAR,
+         referrer   VARCHAR,
+         type       agent_type_t,
+         agent      VARCHAR,
+         os         agent_os_t,
+         mult       INTEGER,
+         uniq       UUID,
+         set_cookie UUID
+       )")))
+
+(defmacro with-conn [[sym db-path] & body]
+  (let [sym (vary-meta sym assoc :tag DuckDBConnection)]
+    `(try
+       (.lock db-lock)
+       (let [db-path# ~db-path
+             exists#  (File/.exists (io/file db-path#))]
+         (with-open [~sym ^DuckDBConnection (DriverManager/getConnection (str "jdbc:duckdb:" db-path#))]
+           (when-not exists#
+             (clj-simple-stats.core/init-db! ~sym))
+           ~@body))
+       (finally
+         (.unlock db-lock)))))
 
 (def *worker
   (atom nil))
@@ -40,29 +80,6 @@
      #(get % "Content-type"))
    (:headers resp)))
 
-(defn- init-db! [db-path]
-  (with-open [conn (DriverManager/getConnection (str "jdbc:duckdb:" db-path))
-              stmt (.createStatement conn)]
-    (.execute stmt
-      "CREATE TYPE IF NOT EXISTS agent_type_t AS ENUM ('feed', 'bot', 'browser')")
-    (.execute stmt
-      "CREATE TYPE IF NOT EXISTS agent_os_t AS ENUM ('Android', 'Windows', 'iOS', 'macOS', 'Linux')")
-    (.execute stmt
-      "CREATE TABLE IF NOT EXISTS stats (
-         date       DATE,
-         time       TIME,
-         path       VARCHAR,
-         query      VARCHAR,
-         ip         VARCHAR,
-         user_agent VARCHAR,
-         referrer   VARCHAR,
-         type       agent_type_t,
-         agent      VARCHAR,
-         os         agent_os_t,
-         mult       INTEGER,
-         uniq       UUID
-       )")))
-
 (defn- loggable? [req resp]
   (let [status (:status resp 200)
         mime   (content-type resp)]
@@ -73,12 +90,12 @@
         (some-> mime (str/starts-with? "application/atom+xml"))
         (some-> mime (str/starts-with? "application/rss+xml"))))))
 
-(defn- schedule-line! [req resp user-id]
+(defn- schedule-line! [req resp opts]
   (when (loggable? req resp)
     (let [now  (LocalDateTime/now UTC)
           mime (content-type resp)
-          line (-> {:date       (.toLocalDate now)
-                    :time       (.toLocalTime now)
+          line (-> {:date       (-> now .toLocalDate)
+                    :time       (-> now .toLocalTime (.withNano 0))
                     :path       (:uri req)
                     :query      (:query-string req)
                     :ip         (or
@@ -88,32 +105,44 @@
                     :referrer   (get (:headers req) "referer")
                     :type       (cond
                                   (some-> mime (str/starts-with? "application/atom+xml")) "feed"
-                                  (some-> mime (str/starts-with? "application/rss+xml"))  "feed")
-                    :uniq       user-id})]
+                                  (some-> mime (str/starts-with? "application/rss+xml"))  "feed")}
+                 (merge opts))]
       (.add queue line))))
 
 (defn- insert-lines! [db-path lines]
-  #_(println "Inserting" (count lines) "lines to" db-path)
-  (with-open [conn ^DuckDBConnection (DriverManager/getConnection (str "jdbc:duckdb:" db-path))
-              app  (.createAppender conn DuckDBConnection/DEFAULT_SCHEMA "stats")]
-    (doseq [line lines
-            :let [line' (analyzer/analyze line)]]
-      (.beginRow app)
-      (.append app ^LocalDate (:date line'))
-      (.append app ^LocalTime (:time line'))
-      (.append app ^String    (:path line'))
-      (.append app ^String    (:query line'))
-      (.append app ^String    (:ip line'))
-      (.append app ^String    (:user-agent line'))
-      (.append app ^String    (:referrer line'))
-      (.append app ^String    (:type line'))
-      (.append app ^String    (:agent line'))
-      (.append app ^String    (:os line'))
-      (.append app            (int (:mult line')))
-      (.append app ^UUID      (:uniq line'))
-      (.endRow app))
-    (.flush app))
-  nil)
+  (with-conn [conn db-path]
+    #_(println "Inserting" (count lines) "lines to" db-path)
+    (with-open [apnd (.createAppender conn DuckDBConnection/DEFAULT_SCHEMA "stats")]
+      (doseq [line lines
+              :let [line' (analyzer/analyze line)]]
+        (.beginRow apnd)
+        (.append apnd ^LocalDate (:date line'))
+        (.append apnd ^LocalTime (:time line'))
+        (.append apnd ^String    (:path line'))
+        (.append apnd ^String    (:query line'))
+        (.append apnd ^String    (:ip line'))
+        (.append apnd ^String    (:user-agent line'))
+        (.append apnd ^String    (:referrer line'))
+        (.append apnd ^String    (:type line'))
+        (.append apnd ^String    (:agent line'))
+        (.append apnd ^String    (:os line'))
+        (.append apnd            (int (:mult line')))
+        (.append apnd ^UUID      (:uniq line'))
+        (.append apnd ^UUID      (:set-cookie line'))
+        (.endRow apnd))
+      (.flush apnd))
+
+    (when-some [to-update (->> lines
+                            (filter :second-visit?)
+                            (map :uniq)
+                            (not-empty))]
+      (with-open [stmt (.prepareStatement conn "UPDATE stats SET uniq = ? WHERE set_cookie = ?")]
+        (doseq [uniq to-update]
+          (.setObject stmt 1 uniq)
+          (.setObject stmt 2 uniq)
+          (.addBatch stmt))
+        (.executeBatch stmt)))
+    nil))
 
 (defn start-worker! [db-path]
   (doto
@@ -139,6 +168,11 @@
     (.setName (str "clj-simple-stats.core/worker(path=" db-path ")"))
     (.start)))
 
+(def ^:private default-cookie-opts
+  {:max-age   2147483647
+   :path      "/"
+   :http-only true})
+
 (defn wrap-stats
   ([handler]
    (wrap-stats handler {}))
@@ -147,34 +181,60 @@
                   uri         "/stats"
                   db-path     "clj_simple_stats.duckdb"}}]
    (some-> @*worker Thread/.interrupt)
-   (init-db! db-path)
    (reset! *worker (start-worker! db-path))
    (fn [req]
      (let [req (-> req
                  cookies/cookies-request)]
        (if (= uri (:uri req))
+         ;; internal pages
          (let [params (:query-params (params/params-request req))]
-           (cond
-             (get params "month") (pages/page-month req (get params "month"))
-             (get params "path")  (pages/page-path req (get params "path"))
-             :else                (pages/page-all req db-path)))
-         (let [old-cookie (some-> req :cookies (get cookie-name) :value parse-uuid)
-               user-id    (or old-cookie (random-uuid))
-               resp       (handler req)]
-           (when (loggable? req resp)
-             (schedule-line! req resp user-id))
-           (cond-> resp
-             (nil? old-cookie)
-             (update :cookies assoc cookie-name
-               (merge
-                 {:max-age   2147483647
-                  :path      "/"
-                  :http-only true}
-                 cookie-opts
-                 {:value (str user-id)}))
+           (with-conn [conn db-path]
+             (cond
+               (get params "month") (pages/page-month conn req (get params "month"))
+               (get params "path")  (pages/page-path conn req (get params "path"))
+               :else                (pages/page-all conn req))))
+         (let [resp (handler req)]
+           ;; pass-through response
+           (if-not (loggable? req resp)
+             resp
+             ;; wrapped response
+             (let [old-cookie    (some-> req :cookies (get cookie-name) :value)
+                   first-visit?  (nil? old-cookie)
+                   second-visit? (and old-cookie (str/starts-with? old-cookie "?"))
+                   user-id       (cond
+                                   (nil? old-cookie) (random-uuid)
+                                   second-visit?     (parse-uuid (subs old-cookie 1))
+                                   :else             (parse-uuid old-cookie))]
+               (schedule-line! req resp
+                 {:set-cookie    (when first-visit?
+                                   user-id)
+                  :second-visit? second-visit?
+                  :uniq          (when old-cookie
+                                   user-id)})
+               (cond
+                 ;; first time visit
+                 first-visit?
+                 (-> resp
+                   (update :cookies assoc cookie-name
+                     (merge
+                       default-cookie-opts
+                       cookie-opts
+                       {:value (str "?" user-id)}))
+                   (cookies/cookies-response))
 
-             (nil? old-cookie)
-             (cookies/cookies-response))))))))
+                 ;; second time visit
+                 second-visit?
+                 (-> resp
+                   (update :cookies assoc cookie-name
+                     (merge
+                       default-cookie-opts
+                       cookie-opts
+                       {:value (str user-id)}))
+                   (cookies/cookies-response))
+
+                 ;; third+ visit
+                 :else
+                 resp)))))))))
 
 (defn before-ns-unload []
   (some-> @*worker Thread/.interrupt))

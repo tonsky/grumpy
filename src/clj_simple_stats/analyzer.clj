@@ -168,7 +168,7 @@
       (.getLong (ByteBuffer/wrap bs 0 8))
       (.getLong (ByteBuffer/wrap bs 8 16)))))
 
-(defn line-uniq ^UUID [{:keys [agent ip user-agent uniq]}]
+(defn line-uniq ^UUID [{:keys [ip user-agent]}]
   (long-hash
     (if (and user-agent
           (or

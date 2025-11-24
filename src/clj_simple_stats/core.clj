@@ -22,7 +22,7 @@
 (def ^ReentrantLock db-lock
   (ReentrantLock.))
 
-(defn- init-db! [^DuckDBConnection conn]
+(defn init-db! [^DuckDBConnection conn]
   (with-open [stmt (.createStatement conn)]
     (.execute stmt
       "CREATE TYPE IF NOT EXISTS agent_type_t AS ENUM ('feed', 'bot', 'browser')")

@@ -1,117 +1,193 @@
 (ns clj-simple-stats.pages
+  (:require
+   [clojure.string :as str])
   (:import
-   [java.sql DriverManager]))
+   [java.sql DriverManager]
+   [java.time LocalDate]
+   [java.time.format DateTimeFormatter]
+   [org.duckdb DuckDBConnection]))
+
+(def ^:private ^DateTimeFormatter month-formatter
+  (DateTimeFormatter/ofPattern "yyyy-MM"))
+
+(defn data [^DuckDBConnection conn]
+  (with-open [stmt (.createStatement conn)
+              rs   (.executeQuery stmt
+                     "SELECT type, date, sum(mult) AS cnt
+                      FROM (
+                        SELECT DISTINCT ON (type, date, uniq) type, date, mult
+                        FROM stats
+                      ) subq
+                      GROUP BY type, date
+                      ORDER BY type, date")]
+    (loop [acc {}]
+      (if (.next rs)
+        (let [type (.getString rs "type")
+              date (.getObject rs "date")
+              cnt  (.getLong rs "cnt")]
+          (recur (update acc (keyword type) assoc date cnt)))
+        acc))))
+
+(comment
+  (clj-simple-stats.core/with-conn [conn "grumpy_data/stats.duckdb"]
+    (data conn)))
+
+(def styles "
+  body { margin: 0; padding: 20px; background: #EDEDF2; }
+  h1 { font-size: 16px; margin: 0 0 8px 0; }
+  .graph_outer { background: #FFF; border-radius: 6px; margin-bottom: 20px; padding: 10px 10px 0 10px; display: flex; }
+  .graph_scroll { max-width: calc(100% - 20px); overflow-x: auto; padding-bottom: 30px; margin-bottom: -20px; }
+  .graph { display: block; }
+  .graph > rect { fill: #d6f1ff; }
+  .graph > line { stroke: #0177a1; stroke-width: 2; }
+  .graph > line.hrz  { stroke: #0000000B; stroke-width: 1; }
+  .graph > line.date { stroke: #00000020; stroke-width: 1; }
+  .graph > text { font-size: 10px; fill: #00000080; }
+  .graph_legend { width: 20px; }
+  .graph_legend > text { font-size: 10px; fill: #00000070; }
+")
+
+(def script "
+  window.addEventListener('load', () => {
+    const scrollables = document.querySelectorAll('.graph_scroll');
+
+    scrollables.forEach((el) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+
+    scrollables.forEach((el) => {
+      el.addEventListener('scroll', () => {
+        const scrollLeft = el.scrollLeft;
+        scrollables.forEach((other) => {
+          if (other !== el) {
+            other.scrollLeft = scrollLeft;
+          }
+        });
+      });
+    });
+  });
+")
+
+(defn min+ [a b]
+  (let [c (compare a b)]
+    (if (pos? c)
+      b
+      a)))
+
+(defn format-num [n]
+  (->
+    (cond
+      (>= n 1000000) (format "%1.1fM" (/ n 1000000.0))
+      (>= n 1000)    (format "%1.1fK" (/ n 1000.0))
+      :else          (str n))
+    (str/replace ".0" "")))
+
+(comment
+  (format-num 1000000)
+  (format-num 1500000)
+  (format-num 22000)
+  (format-num 1500)
+  (format-num 1000)
+  (format-num 500)
+  (format-num 1))
+
+(defn round-to [n m]
+  (-> n
+    (- 1)
+    (/ m)
+    Math/floor
+    (+ 1)
+    (* m)
+    int))
+
+(comment
+  (round-to 70001 1000))
+
+(def bar-w
+  3)
+
+(def graph-h
+  100)
 
 (defn page-all [conn req]
   (let [sb       (StringBuilder.)
-        append   #(doseq [s %&]
-                    (.append sb (str s)))]
-    (append "<!DOCTYPE html><html><head><meta charset=\"utf-8\">")
-    (append "<style>")
-    (append "body { margin: 0; padding: 0; }")
-    (append ".container { max-width: 100vw; overflow-x: auto; }")
-    (append ".stats { display: flex; flex-direction: row; gap: 2px; margin: 20px 10px; width: fit-content; }")
-    (append ".by_month .bars { height: 200px; display: flex; flex-direction: row; align-items: flex-end; gap: 2px; }")
-    (append ".by_month .month { width: 12px; display: flex; flex-direction: column; }")
-    (append ".by_month .month:hover .v, .month:hover .s { opacity: 0.5; }")
-    (append ".by_month .label { font-size: 9px; white-space: nowrap; writing-mode: vertical-lr; transform: rotate(180deg); margin-top: 5px; }")
+        append   #(do
+                    (doseq [s %&]
+                      (.append sb (str s)))
+                    (.append sb "\n"))
+        data     (data conn)
+        max-val  (->> data
+                   (mapcat (fn [[_type date->cnt]] (vals date->cnt)))
+                   (reduce max 1))
+        max-val  (cond
+                   (>= max-val 200000) (round-to max-val 100000)
+                   (>= max-val  20000) (round-to max-val  10000)
+                   (>= max-val   2000) (round-to max-val   1000)
+                   (>= max-val    200) (round-to max-val    100)
+                   :else                                    100)
+        max-date (LocalDate/now)
+        min-date (->> data
+                   (mapcat (fn [[_type date->cnt]] (keys date->cnt)))
+                   (reduce min+ max-date))
+        dates    (stream-seq! (LocalDate/.datesUntil min-date (.plusDays max-date 1)))
+        graph-w  (* (count dates) bar-w)
+        bar-h    #(-> % (* graph-h) (/ max-val) int)
+        hrz-step (cond
+                   (>= max-val 200000) 100000
+                   (>= max-val 100000)  20000
+                   (>= max-val  20000)  10000
+                   (>= max-val  10000)   2000
+                   (>= max-val   2000)   1000
+                   (>= max-val   1000)    200
+                   (>= max-val    200)    100
+                   (>= max-val    100)     20
+                   :else                   10)]
+    (append "<!DOCTYPE html>")
+    (append "<html>")
+    (append "<head>")
+    (append "<meta charset=\"utf-8\">")
+    (append "<style>" styles "</style>")
+    (append "</head>")
+    (append "<body>")
+    (doseq [[type title] [[:browser "Browsers"]
+                          [:feed "RSS Readers"]
+                          [:bot "Scrapers"]]
+            :let [date->cnt (get data type)]]
+      (append "<h1>" title "</h1>")
+      (append "<div class=graph_outer>")
 
-    (append ".by_day .bars { height: 200px; display: flex; flex-direction: row; align-items: flex-end; }")
-    (append ".by_day .month { display: flex; flex-direction: column; }")
-    (append ".by_day .bars { height: 200px; display: flex; flex-direction: row; align-items: flex-end; }")
-    (append ".by_day .label { font-size: 9px; white-space: nowrap; }")
-    (append ".by_day .day { width: 2px; display: flex; flex-direction: column; }")
-    (append ".by_day .day:hover > div { opacity: 0.5; }")
+      ;; .graph
+      (append "<div class=graph_scroll>")
+      (append "<svg class=graph width=" graph-w " height=" (+ graph-h 30) ">")
+      (doseq [[idx ^LocalDate date] (map vector (range) dates)
+              :let [val (get date->cnt date)]
+              :when val
+              :let [bar-h (bar-h val)]]
+        ;; graph bar
+        (append "<rect x=" (* idx bar-w) " y=" (- graph-h bar-h -10) " width=" bar-w " height=" bar-h " />")
+        (append "<line x1=" (* idx bar-w) " y1=" (- graph-h bar-h -10) " x2=" (* (+ idx 1) bar-w) " y2=" (- graph-h bar-h -10) " />")
+        ;; month label
+        (when (= 1 (.getDayOfMonth date))
+          (append "<line class=date x1=" (* (+ idx 0.5) bar-w) " y1=" (+ 12 graph-h) " x2=" (* (+ idx 0.5) bar-w) " y2=" (+ 20 graph-h) " />")
+          (append "<text x=" (* idx bar-w) " y=" (+ 30 graph-h) ">" (.format month-formatter date) "</text>")))
+      ;; horizontal lines
+      (doseq [val (range 0 (inc max-val) hrz-step)
+              :let [bar-h (bar-h val)]]
+        (append "<line class=hrz x1=0 y1=" (- graph-h bar-h -10) " x2=" graph-w " y2=" (- graph-h bar-h -10) " />"))
+      (append "</svg>") ;; .graph
+      (append "</div>") ;; .graph_scroll
 
-    (append ".r { background-color: #C1131F40; }")
-    (append ".u { background-color: #01B5D8; }")
-    (append ".f { background-color: #0A9496; }")
+      ;;.graph_legend
+      (append "<svg class=graph_legend width=30 height=" (+ graph-h 30) ">")
+      (doseq [val (range 0 (inc max-val) hrz-step)
+              :let [bar-h (bar-h val)]]
+        (append "<text x=20 y=" (- graph-h bar-h -13) " text-anchor=end>" (format-num val) "</text>"))
+      (append "</svg>") ;; .graph_legend
 
-    (append "</style>")
-    (append "</head><body>")
-
-    #_(let [data     (with-open [stmt     (.createStatement conn)
-                                 rs       (.executeQuery stmt
-                                            "SELECT strftime(date, '%Y-%m') as month,
-                                                    COUNT(DISTINCT ip) as visitors,
-                                                    0 as subscribers
-                                             FROM stats
-                                             GROUP BY month
-                                             ORDER BY month")]
-                       (loop [acc []]
-                         (if (.next rs)
-                           (recur (conj acc
-                                    {:month       (.getString rs "month")
-                                     :visitors    (.getLong rs "visitors")
-                                     :subscribers (.getLong rs "subscribers")}))
-                           acc)))
-            max-val  (reduce (fn [acc {:keys [visitors subscribers]}]
-                               (max acc (+ visitors subscribers)))
-                       0
-                       data)]
-        (append "<div class=\"container\">")
-        (append "<div class=\"stats by_month\">")
-        (append "<div class=\"bars\">")
-        (doseq [{:keys [month visitors subscribers]} data]
-          (let [v-height (int (* 200 (/ visitors max-val)))
-                s-height (int (* 2000 (/ subscribers max-val)))]
-            (append "<div class=\"month\" title=\"" month "\nvisitors: " visitors "\nsubscibers: " subscribers "\">")
-            (append "<div class=\"v\" style=\"height: " v-height "px\"></div>")
-            (append "<div class=\"s\" style=\"height: " s-height "px\"></div>")
-            (append "<div class=\"label\">" month "</div>")
-            (append "</div>")))
-        (append "</div></div></div>"))
-
-    (let [data     (with-open [stmt     (.createStatement conn)
-                               rs       (.executeQuery stmt
-                                          "select date::VARCHAR as date, type, sum(mult) as cnt
-                                             from (
-                                               select distinct on (date, type, uniq) date, type, uniq, mult
-                                               from stats
-                                             ) subq
-                                             group by date, type
-                                             order by date, type")]
-                     (loop [acc {}]
-                       (if (.next rs)
-                         (let [date (.getString rs "date")
-                               type (.getString rs "type")
-                               cnt  (.getLong rs "cnt")]
-                           (recur (update acc date assoc (keyword type) cnt)))
-                         (reduce
-                           (fn [acc [k v]]
-                             (conj acc (assoc v :date k)))
-                           []
-                           (sort-by first acc)))))
-          max-val  (reduce (fn [acc m]
-                             (max acc (reduce + 0 (vals (dissoc m :date))))) 1 data)
-          by-month (group-by #(subs (:date %) 0 7) data)
-          months   (sort (keys by-month))]
-      (append "<div class=\"container\">")
-      (append "<div class=\"stats by_day\">")
-      (doseq [month months]
-        (let [days (sort-by :date (get by-month month))]
-          (append "<div class=\"month\">")
-          (append "<div class=\"bars\">")
-          (doseq [{:keys [date feed browser bot]} days]
-            (let [f-height (int (* 200 (/ (or feed 0) max-val)))
-                  u-height (int (* 200 (/ (or browser 0) max-val)))
-                  r-height (int (* 200 (/ (or bot 0) max-val)))]
-              (append "<div class=\"day\" title=\"" date "\">")
-              (append "<div class=\"r\" style=\"height: " r-height "px\"></div>")
-              (append "<div class=\"u\" style=\"height: " u-height "px\"></div>")
-              (append "<div class=\"f\" style=\"height: " f-height "px\"></div>")
-              (append "</div>"))) ;; .day
-          (append "</div>") ;; .bars
-          (append "<div class=\"label\">" month "</div>")
-          (append "</div>")))) ;; .month
-    (append "</div></div>") ;; .stats .container
-
-    (append "<script>
-                 document.querySelectorAll('.container').forEach((el) => {
-                   el.scrollLeft = el.scrollWidth;
-                 });
-               </script>")
-    (append "</body></html>")
+      (append "</div>")) ;; .graph_outer
+    (append "<script>" script "</script>")
+    (append "</body>")
+    (append "</html>")
     {:status 200
      :headers {"Content-Type" "text/html; charset=utf-8"}
      :body    (.toString sb)}))

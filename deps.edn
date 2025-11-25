@@ -8,9 +8,9 @@
   io.github.tonsky/clojure-plus           {:mvn/version "1.7.0"}
   io.github.tonsky/datascript-storage-sql {:mvn/version "2.1.0"}
   mount/mount                             {:mvn/version "0.1.23"}
-  org.apache.lucene/lucene-core           {:mvn/version "9.7.0"}
-  org.apache.lucene/lucene-queryparser    {:mvn/version "9.7.0"}
-  org.apache.lucene/lucene-highlighter    {:mvn/version "9.7.0"}
+  org.apache.lucene/lucene-core           {:mvn/version "10.3.2"}
+  org.apache.lucene/lucene-queryparser    {:mvn/version "10.3.2"}
+  org.apache.lucene/lucene-highlighter    {:mvn/version "10.3.2"}
   org.clojure/clojure                     {:mvn/version "1.12.3"}
   org.xerial/sqlite-jdbc                  {:mvn/version "3.50.3.0"}
   org.duckdb/duckdb_jdbc                  {:mvn/version "1.4.2.0"}
@@ -25,8 +25,7 @@
                           "-XX:+UnlockDiagnosticVMOptions"
                           "-XX:+DebugNonSafepoints"
                           "-XX:+EnableDynamicAgentLoading"]}
-  :java    {:jvm-opts    ["--add-opens" "java.base/sun.nio.ch=ALL-UNNAMED"
-                          "-Dclojure.main.report=stderr"
+  :java    {:jvm-opts    ["-Dclojure.main.report=stderr"
                           "-Duser.language=en"
                           "-Duser.country=US"
                           "-Dfile.encoding=UTF-8"]}

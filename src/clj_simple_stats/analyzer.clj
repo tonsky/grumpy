@@ -168,13 +168,16 @@
       (.getLong (ByteBuffer/wrap bs 0 8))
       (.getLong (ByteBuffer/wrap bs 8 16)))))
 
-(defn line-uniq ^UUID [{:keys [ip user-agent]}]
+(defn line-uniq ^UUID [{:keys [ip user-agent agent]}]
   (long-hash
-    (if (and user-agent
-          (or
-            (re-find #"(?<=feed-id[=:])\w+" user-agent)
-            (re-find #"\d+(?= subscriber)" user-agent)))
-      user-agent
+    (cond
+      (and user-agent agent (re-find #"feed-id[=:]" user-agent))
+      (str agent "/" (re-find #"(?<=feed-id[=:])\w+" user-agent))
+
+      (and user-agent agent (re-find #"\d+(?= subscriber)" user-agent))
+      agent
+
+      :else
       (str ip user-agent))))
 
 (defn assoc-new [m k v]

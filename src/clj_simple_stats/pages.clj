@@ -21,13 +21,14 @@
 (defn visits-by-type+date [^DuckDBConnection conn]
   (->
     (query
-      "SELECT type, date, sum(mult) AS cnt
-     FROM (
-       SELECT DISTINCT ON (type, date, uniq) type, date, mult
-       FROM stats
-     ) subq
-     GROUP BY type, date
-     ORDER BY type, date"
+      "SELECT type, date, SUM(mult) AS cnt
+       FROM (
+         SELECT type, date, MAX(mult) AS mult
+         FROM stats
+         GROUP BY type, date, uniq
+       ) subq
+       GROUP BY type, date
+       ORDER BY type, date"
       (fn [acc ^ResultSet rs]
         (let [type (.getString rs 1)
               date (.getObject rs 2)
@@ -53,24 +54,65 @@
            FROM base_query
            SELECT
              " what " AS value,
-             count(*) AS count
+             COUNT(*) AS count
            WHERE " what " IS NOT NULL
            GROUP BY value
-           ORDER BY count desc
-           ),
+           ORDER BY count DESC
+         ),
          top_n AS (
            SELECT *
            FROM top_values
-           ORDER BY count desc
+           ORDER BY count DESC
            LIMIT 10
          ),
          others AS (
            SELECT
              NULL AS value,
-             count(*) AS count
+             COUNT(*) AS count
            FROM base_query
            WHERE " what " IS NOT NULL
-           AND " what " NOT IN (SELECT VALUE FROM top_n)
+           AND " what " NOT IN (SELECT value FROM top_n)
+         )
+         FROM top_n
+         UNION ALL
+         FROM others")
+      (fn [acc ^ResultSet rs]
+        (conj! acc [(.getString rs 1) (.getLong rs 2)]))
+      (transient []) conn)
+    persistent!))
+
+(defn top-10-uniq [^DuckDBConnection conn what where]
+  (->
+    (query
+      (str
+        "WITH base_query AS (
+           SELECT ANY_VALUE(" what ") AS " what ", MAX(mult) AS mult
+           FROM stats
+           WHERE " where "
+           GROUP BY uniq
+         ),
+         top_values AS (
+           FROM base_query
+           SELECT
+             " what " AS value,
+             SUM(mult) AS count
+           WHERE " what " IS NOT NULL
+           GROUP BY value
+           ORDER BY count DESC
+         ),
+         top_n AS (
+           SELECT *
+           FROM top_values
+           ORDER BY count DESC
+           LIMIT 10
+         ),
+         others AS (
+           SELECT
+             NULL AS value,
+             SUM(mult) AS count
+           FROM base_query
+           WHERE " what " IS NOT NULL
+           AND " what " NOT IN (SELECT value FROM top_n)
          )
          FROM top_n
          UNION ALL
@@ -107,8 +149,9 @@
   th, td { padding: 0; }
   th { text-align: left; font-weight: normal; width: 250px; position: relative; }
   th > div { height: 20px; background-color: #B9E5FE; border-radius: 2px; }
-  th > div.other { background-color: #E5E5E5; }
-  th > span { height: 20px; line-height: 20px; position: absolute; top: 0; left: 4px; width: calc(250px - 4px); overflow: hidden; text-overflow: ellipsis; }
+  th > span, th > a { height: 20px; line-height: 20px; position: absolute; top: 0; left: 4px; width: calc(250px - 4px); overflow: hidden; text-overflow: ellipsis;  }
+  th > a { color: #000; text-decoration-color: #00000040; }
+  th > a:hover { text-decoration-color: #000000; }
   td { text-align: right; width: 75px; }
   .pct { color: #00000070; }
 ")
@@ -257,27 +300,38 @@
 
         (append "</div>"))) ;; .graph_outer
 
-    (let [append-table (fn [title data]
+    (let [append-table (fn [title data & [opts]]
                          (append "<div class=table_outer>")
                          (append "<h1>" title "</h1>")
                          (append "<table>")
-                         (doseq [:let [total (max 1 (transduce (map second) + 0 data))]
+                         (doseq [:let [links? (:links? opts false)
+                                       total  (max 1 (transduce (map second) + 0 data))]
                                  [value count] data
-                                 :let [percent (format "%.2f%%" (* 100.0 (/ count total)))]]
+                                 :let [percent     (* 100.0 (/ count total))
+                                       percent-str (if (< percent 2.0)
+                                                     (format "%.1f%%" percent)
+                                                     (format "%.0f%%" percent))]
+                                 :when (pos? count)]
                            (append "<tr>")
-                           (append "<th><div style='width: " percent "'" (when (nil? value) " class=other") "></div><span title='" (or value "Others") "'>" (or value "Others") "</span></th>")
+                           (append "<th>")
+                           (append "<div style='width: " percent-str "'" (when (nil? value) " class=other") "></div>")
+                           (if (and links? value)
+                             (append "<a href='" value "' title='" value "'>" value "</a>")
+                             (append "<span title='" (or value "Others") "'>" (or value "Others") "</span>"))
+                           (append "</th>")
                            (append "<td>" (format-num count) "</td>")
-                           (append "<td class='pct'>" percent "</td>")
+                           (append "<td class='pct'>" percent-str "</td>")
                            (append "</tr>"))
                          (append "</table>")
                          (append "</div>"))]
       (append "<div class=tables>")
-      (append-table "Pages"       (top-10 conn "path"     "type = 'browser'"))
-      (append-table "Queries"     (top-10 conn "query"    "type = 'browser'"))
-      (append-table "Referrers"   (top-10 conn "referrer" "type = 'browser'"))
-      (append-table "Browsers"    (top-10 conn "agent"    "type = 'browser'"))
-      (append-table "RSS Readers" (top-10 conn "agent"    "type = 'feed'"))
-      (append-table "Bots"        (top-10 conn "agent"    "type = 'bot'"))
+      (append-table "Pages"       (top-10 conn "path" "type = 'browser'") {:links? true})
+      (append-table "Queries"     (top-10 conn "query" "type = 'browser'"))
+      (append-table "Referrers"   (top-10 conn "referrer" "type = 'browser'") {:links? true})
+      (append-table "Browsers"    (top-10-uniq conn "agent"    "type = 'browser'"))
+      (append-table "OSes"        (top-10-uniq conn "os"    "type = 'browser'"))
+      (append-table "RSS Readers" (top-10-uniq conn "agent"    "type = 'feed'"))
+      (append-table "Bots"        (top-10-uniq conn "agent"    "type = 'bot'"))
       (append "</div>"))
 
     (append "</body>")

@@ -1,7 +1,7 @@
 (ns grumpy.server
   (:require
    [clj-simple-router.core :as router]
-   [clj-simple-stats.core :as simple-stats]
+   [clj-simple-stats.core :as stats]
    [clojure.string :as str]
    [datascript.core :as d]
    [grumpy.auth :as auth]
@@ -16,7 +16,6 @@
    [grumpy.feed :as feed]
    [grumpy.editor :as editor]
    [grumpy.search :as search]
-   [grumpy.stats :as stats]
    [mount.core :as mount]
    [org.httpkit.server :as http-kit]
    [ring.middleware.content-type :as content-type]
@@ -252,20 +251,22 @@
     (update (handler req) :headers
       #(merge headers %))))
 
+(def stats-db-path
+  "grumpy_data/stats.duckdb")
+
 (defn handler []
   (-> (merge
         routes
         auth/routes
         editor/routes
-        stats/routes)
+        {"GET /stats" #(stats/render-stats {:db-path stats-db-path} %)})
     (router/router)
     (wrap-no-cache)
     (head/wrap-head)
-    (simple-stats/wrap-stats {:db-path "grumpy_data/stats.duckdb"})
-    (stats/wrap-stats)
     (wrap-headers {"Content-Security-Policy" "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
     (params/wrap-params)
-    (content-type/wrap-content-type {:mime-types {}})))
+    (content-type/wrap-content-type {:mime-types {}})
+    (stats/wrap-collect-stats {:db-path stats-db-path})))
 
 (mount/defstate server
   :start

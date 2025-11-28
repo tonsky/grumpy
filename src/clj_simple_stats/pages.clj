@@ -1,6 +1,7 @@
 (ns clj-simple-stats.pages
   (:require
-   [clojure.string :as str])
+   [clojure.string :as str]
+   [ring.middleware.params :as params])
   (:import
    [java.sql DriverManager ResultSet]
    [java.time LocalDate]
@@ -220,12 +221,13 @@
 (def graph-h
   100)
 
-(defn page-all [conn req]
-  (let [sb       (StringBuilder.)
-        append   #(do
-                    (doseq [s %&]
-                      (.append sb (str s)))
-                    (.append sb "\n"))]
+(defn page [conn req]
+  (let [params (-> req params/params-request :query-params)
+        sb     (StringBuilder.)
+        append #(do
+                  (doseq [s %&]
+                    (.append sb (str s)))
+                  (.append sb "\n"))]
     (append "<!DOCTYPE html>")
     (append "<html>")
     (append "<head>")
@@ -336,16 +338,6 @@
 
     (append "</body>")
     (append "</html>")
-    {:status 200
+    {:status  200
      :headers {"Content-Type" "text/html; charset=utf-8"}
      :body    (.toString sb)}))
-
-(defn page-month [conn req month]
-  {:status 200
-   :headers {"Content-Type" "text/html; charset=utf-8"}
-   :body    (str "page-month: " month)})
-
-(defn page-path [conn req path]
-  {:status 200
-   :headers {"Content-Type" "text/html; charset=utf-8"}
-   :body    (str "page-path: " path)})

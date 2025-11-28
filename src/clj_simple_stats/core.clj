@@ -4,8 +4,7 @@
    [clj-simple-stats.pages :as pages]
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [ring.middleware.cookies :as cookies]
-   [ring.middleware.params :as params])
+   [ring.middleware.cookies :as cookies])
   (:import
    [java.io File]
    [java.sql DriverManager]
@@ -15,6 +14,20 @@
    [java.util.concurrent LinkedBlockingQueue]
    [java.util.concurrent.locks ReentrantLock]
    [org.duckdb DuckDBConnection]))
+
+(def ^:private default-db-path
+  "clj_simple_stats.duckdb")
+
+(def ^:private default-cookie-name
+  "stats_id")
+
+(def ^:private default-cookie-opts
+  {:max-age   2147483647
+   :path      "/"
+   :http-only true})
+
+(def ^:private default-uri
+  "/stats")
 
 (def ^LinkedBlockingQueue queue
   (LinkedBlockingQueue.))
@@ -168,73 +181,82 @@
     (.setName (str "clj-simple-stats.core/worker(path=" db-path ")"))
     (.start)))
 
-(def ^:private default-cookie-opts
-  {:max-age   2147483647
-   :path      "/"
-   :http-only true})
+(defn wrap-collect-stats
+  ([handler]
+   (wrap-collect-stats handler {}))
+  ([handler {:keys [cookie-name cookie-opts db-path]
+             :or {cookie-name default-cookie-name
+                  db-path     default-db-path}}]
+   (some-> @*worker Thread/.interrupt)
+   (reset! *worker (start-worker! db-path))
+   (fn [req]
+     (let [resp (handler req)]
+       (if-not (loggable? req resp)
+         ;; pass-through response
+         resp
+
+         ;; wrapped response
+         (let [old-cookie    (some-> req cookies/cookies-request :cookies (get cookie-name) :value)
+               first-visit?  (nil? old-cookie)
+               second-visit? (and old-cookie (str/starts-with? old-cookie "?"))
+               user-id       (cond
+                               (nil? old-cookie) (random-uuid)
+                               second-visit?     (parse-uuid (subs old-cookie 1))
+                               :else             (parse-uuid old-cookie))]
+           (schedule-line! req resp
+             {:set-cookie    (when first-visit?
+                               user-id)
+              :second-visit? second-visit?
+              :uniq          (when old-cookie
+                               user-id)})
+           (cond
+             ;; first time visit
+             first-visit?
+             (-> resp
+               (update :cookies assoc cookie-name
+                 (merge
+                   default-cookie-opts
+                   cookie-opts
+                   {:value (str "?" user-id)}))
+               (cookies/cookies-response))
+
+             ;; second time visit
+             second-visit?
+             (-> resp
+               (update :cookies assoc cookie-name
+                 (merge
+                   default-cookie-opts
+                   cookie-opts
+                   {:value (str user-id)}))
+               (cookies/cookies-response))
+
+             ;; third+ visit
+             :else
+             resp)))))))
+
+(defn render-stats
+  ([req]
+   (render-stats {} req))
+  ([{:keys [db-path] :or {db-path default-db-path}} req]
+   (with-conn [conn db-path]
+     (pages/page conn req))))
+
+(defn wrap-render-stats
+  ([handler]
+   (wrap-render-stats handler {}))
+  ([handler {:keys [uri] :or {uri default-uri} :as opts}]
+   (fn [req]
+     (if (= uri (:uri req))
+       (render-stats req opts)
+       (handler req)))))
 
 (defn wrap-stats
   ([handler]
    (wrap-stats handler {}))
-  ([handler {:keys [cookie-name cookie-opts uri db-path]
-             :or {cookie-name "stats_id"
-                  uri         "/stats"
-                  db-path     "clj_simple_stats.duckdb"}}]
-   (some-> @*worker Thread/.interrupt)
-   (reset! *worker (start-worker! db-path))
-   (fn [req]
-     (let [req (-> req
-                 cookies/cookies-request)]
-       (if (= uri (:uri req))
-         ;; internal pages
-         (let [params (:query-params (params/params-request req))]
-           (with-conn [conn db-path]
-             (cond
-               (get params "month") (pages/page-month conn req (get params "month"))
-               (get params "path")  (pages/page-path conn req (get params "path"))
-               :else                (pages/page-all conn req))))
-         (let [resp (handler req)]
-           ;; pass-through response
-           (if-not (loggable? req resp)
-             resp
-             ;; wrapped response
-             (let [old-cookie    (some-> req :cookies (get cookie-name) :value)
-                   first-visit?  (nil? old-cookie)
-                   second-visit? (and old-cookie (str/starts-with? old-cookie "?"))
-                   user-id       (cond
-                                   (nil? old-cookie) (random-uuid)
-                                   second-visit?     (parse-uuid (subs old-cookie 1))
-                                   :else             (parse-uuid old-cookie))]
-               (schedule-line! req resp
-                 {:set-cookie    (when first-visit?
-                                   user-id)
-                  :second-visit? second-visit?
-                  :uniq          (when old-cookie
-                                   user-id)})
-               (cond
-                 ;; first time visit
-                 first-visit?
-                 (-> resp
-                   (update :cookies assoc cookie-name
-                     (merge
-                       default-cookie-opts
-                       cookie-opts
-                       {:value (str "?" user-id)}))
-                   (cookies/cookies-response))
-
-                 ;; second time visit
-                 second-visit?
-                 (-> resp
-                   (update :cookies assoc cookie-name
-                     (merge
-                       default-cookie-opts
-                       cookie-opts
-                       {:value (str user-id)}))
-                   (cookies/cookies-response))
-
-                 ;; third+ visit
-                 :else
-                 resp)))))))))
+  ([handler opts]
+   (-> handler
+     (wrap-collect-stats opts)
+     (wrap-render-stats opts))))
 
 (defn before-ns-unload []
   (some-> @*worker Thread/.interrupt))

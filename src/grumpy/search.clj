@@ -170,4 +170,3 @@
                                post' (update post :post/body highlight q)]]
                      (fragments/post post'))]
                   (paginator "/search" {:q q} page total))))))))))
-

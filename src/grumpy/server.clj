@@ -258,15 +258,14 @@
   (-> (merge
         routes
         auth/routes
-        editor/routes
-        {"GET /stats" #(stats/render-stats {:db-path stats-db-path} %)})
+        editor/routes)
     (router/router)
     (wrap-no-cache)
     (head/wrap-head)
     (wrap-headers {"Content-Security-Policy" "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
     (params/wrap-params)
     (content-type/wrap-content-type {:mime-types {}})
-    (stats/wrap-collect-stats {:db-path stats-db-path})))
+    (stats/wrap-stats {:db-path stats-db-path})))
 
 (mount/defstate server
   :start

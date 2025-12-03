@@ -4,7 +4,8 @@
    [clj-simple-stats.pages :as pages]
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [ring.middleware.cookies :as cookies])
+   [ring.middleware.cookies :as cookies]
+   [ring.util.response :as response])
   (:import
    [java.io File]
    [java.sql DriverManager]
@@ -246,8 +247,14 @@
    (wrap-render-stats handler {}))
   ([handler {:keys [uri] :or {uri default-uri} :as opts}]
    (fn [req]
-     (if (= uri (:uri req))
-       (render-stats req opts)
+     (cond
+       (= uri (:uri req))
+       (render-stats opts req)
+
+       (= (str uri "/favicon.ico") (:uri req))
+       (response/resource-response "clj_simple_stats/favicon.ico")
+
+       :else
        (handler req)))))
 
 (defn wrap-stats

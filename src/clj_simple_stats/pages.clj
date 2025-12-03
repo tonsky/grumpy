@@ -271,6 +271,7 @@
     (append "<html>")
     (append "<head>")
     (append "<meta charset=\"utf-8\">")
+    (append "<link rel='icon' href='" (:uri req) "/favicon.ico' sizes='32x32'>")
     (append "<style>" styles "</style>")
     (append "<script>" script "</script>")
     (append "</head>")

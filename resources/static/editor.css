@@ -31,11 +31,9 @@
 
 .textarea { position: relative; }
 .textarea > .input { height: 300px; }
-.textarea > .input > textarea { resize: none; }
+.textarea > .input > textarea { resize: none; color: inherit; }
 .textarea > .input > textarea::placeholder { color: #AAA; opacity: 1; }
 .textarea > .handle { position: absolute; left: calc(50% - 5px); }
-.textarea > .handle > .rope { width: 2px; height: 35px; background: #808070; margin: 0; }
-.textarea > .handle > .ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #808070; cursor: pointer; }
 
 .post-post { padding: 0; height: 78px; font-weight: bold; background-color: #C64A42; color: white; position: relative; }
 .post-post:not([disabled]) { border-bottom: 4px solid #961A12; }

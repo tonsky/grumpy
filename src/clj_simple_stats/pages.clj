@@ -10,6 +10,9 @@
    [java.time.temporal TemporalAdjusters]
    [org.duckdb DuckDBConnection]))
 
+(def ^:private ^DateTimeFormatter date-time-formatter
+  (DateTimeFormatter/ofPattern "MMM d"))
+
 (def ^:private ^DateTimeFormatter year-month-formatter
   (DateTimeFormatter/ofPattern "yyyy-MM"))
 
@@ -159,7 +162,8 @@
    div.filter > a:hover { background: #CCCCD4; }
 
    h1 { font-size: 16px; margin: 20px 0 8px 0; }
-   .graph_outer { background: #FFF; border-radius: 6px; padding: 10px var(--padding-graph_outer) 0; display: flex; width: max-content; max-width: calc(100vw - var(--padding-body) * 2); }
+   .graph_outer { background: #FFF; border-radius: 6px; padding: 10px var(--padding-graph_outer) 0; display: flex; width: max-content; max-width: calc(100vw - var(--padding-body) * 2); position: relative; }
+   .graph_hover { font-size: 10px; font-feature-settings: 'tnum' 1; color: #0177a1; position: absolute; left: var(--padding-graph_outer); top: 10px; background: #d6f1ff; padding: 2px 6px; border-radius: 2px; }
    .graph_scroll { max-width: calc(100vw - var(--padding-body) * 2 - var(--padding-graph_outer) * 2 - var(--width-graph_legend)); overflow-x: auto; padding-bottom: 30px; margin-bottom: -20px; }
    .graph { display: block; }
    .graph > rect { fill: #d6f1ff; }
@@ -203,6 +207,30 @@
              other.scrollLeft = scrollLeft;
            }
          });
+       });
+     });
+
+     const graphs = document.querySelectorAll('.graph');
+
+     graphs.forEach((graph) => {
+       const graphOuter = graph.closest('.graph_outer');
+       const graphHover = graphOuter.querySelector('.graph_hover');
+
+       graph.addEventListener('mouseover', (e) => {
+         if (e.target.tagName === 'rect') {
+           const value = e.target.getAttribute('data-v');
+           const date = e.target.getAttribute('data-d');
+           if (value && date) {
+             graphHover.style.display = 'block';
+             graphHover.textContent = date + ': ' + value;
+           }
+         } else {
+           graphHover.style.display = 'none';
+         }
+       });
+
+       graph.addEventListener('mouseleave', () => {
+         graphHover.style.display = 'none';
        });
      });
    });")
@@ -360,15 +388,20 @@
             (append "<div class=graph_outer>")
 
             ;; .graph
+            (append "<div class=graph_hover style='display: none'></div>")
             (append "<div class=graph_scroll>")
             (append "<svg class=graph width=" graph-w " height=" (+ graph-h 30) ">")
             (doseq [[idx ^LocalDate date] (map vector (range) dates)
                     :let [val (get date->cnt date)]]
               ;; graph bar
               (when val
-                (let [bar-h (bar-h val)]
-                  (append "<rect x=" (* idx bar-w) " y=" (- graph-h bar-h -10) " width=" bar-w " height=" bar-h " />")
-                  (append "<line x1=" (* idx bar-w) " y1=" (- graph-h bar-h -10) " x2=" (* (+ idx 1) bar-w) " y2=" (- graph-h bar-h -10) " />")))
+                (let [bar-h  (bar-h val)
+                      data-v (format "%,d" val)
+                      data-d (.format date-time-formatter date)
+                      x      (* idx bar-w)
+                      y      (- graph-h bar-h -10)]
+                  (append "<rect x=" x " y=" y " width=" bar-w " height=" bar-h " data-v='" data-v "' data-d='" data-d "' />")
+                  (append "<line x1=" x " y1=" y " x2=" (+ x bar-w) " y2=" y " />")))
               ;; month label
               (when (= 1 (.getDayOfMonth date))
                 (let [month-end (.with date (TemporalAdjusters/lastDayOfMonth))

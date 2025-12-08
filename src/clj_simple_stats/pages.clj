@@ -383,7 +383,8 @@
           (doseq [[type title] [[:browser "Browsers"]
                                 [:feed "RSS Readers"]
                                 [:bot "Bots"]]
-                  :let [date->cnt (get data type)]]
+                  :let [date->cnt (get data type)]
+                  :when (not (empty? date->cnt))]
             (append "<h1>" title "</h1>")
             (append "<div class=graph_outer>")
 

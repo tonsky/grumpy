@@ -21,8 +21,9 @@
 (reload/init
   {:dirs ["src"]})
 
-(def reload
-  reload/reload)
+(defn reload []
+  (let [{:keys [loaded]} (reload/reload)]
+    (str "Reloaded " (count loaded) " namespaces")))
 
 (defn -main [& args]
   (clojure+.core.server/start-server)

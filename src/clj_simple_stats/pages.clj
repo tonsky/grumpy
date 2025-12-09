@@ -178,7 +178,7 @@
 
    h1 { font-size: 16px; margin: 20px 0 8px 0; }
    .graph_outer { background: #FFF; border-radius: 6px; padding: 10px var(--padding-graph_outer) 0; display: flex; width: max-content; max-width: calc(100vw - var(--padding-body) * 2); position: relative; }
-   .graph_hover { font-size: 10px; font-feature-settings: 'tnum' 1; color: #0177a1; position: absolute; left: var(--padding-graph_outer); top: 10px; background: #d6f1ff; padding: 2px 6px; border-radius: 2px; }
+   .graph_hover { font-size: 10px; font-feature-settings: 'tnum' 1; color: #a35249; position: absolute; left: var(--padding-graph_outer); top: 10px; background: #ffe1dc; padding: 2px 6px; border-radius: 2px; }
    .graph_scroll { max-width: calc(100vw - var(--padding-body) * 2 - var(--padding-graph_outer) * 2 - var(--width-graph_legend)); overflow-x: auto; padding-bottom: 30px; margin-bottom: -20px; }
    .graph { display: block; }
    .graph > g > rect { fill: #d6f1ff; }
@@ -426,10 +426,11 @@
               ;; month label
               (when (= 1 (.getDayOfMonth date))
                 (let [month-end (.with date (TemporalAdjusters/lastDayOfMonth))
-                      qs (querystring (assoc params "from" date "to" month-end))]
-                  (append "<line class=date x1=" (* (+ idx 0.5) bar-w) " y1=" (+ 12 graph-h) " x2=" (* (+ idx 0.5) bar-w) " y2=" (+ 20 graph-h) " />")
+                      qs        (querystring (assoc params "from" date "to" month-end))
+                      x         (* idx bar-w)]
+                  (append "<line class=date x1=" x " y1=" (+ 12 graph-h) " x2=" x " y2=" (+ 20 graph-h) " />")
                   (append "<a href='?" qs "'>")
-                  (append "<text x=" (* idx bar-w) " y=" (+ 30 graph-h) ">" (.format year-month-formatter date) "</text>")
+                  (append "<text x=" x " y=" (+ 30 graph-h) ">" (.format year-month-formatter date) "</text>")
                   (append "</a>")))
 
               ;; today
@@ -457,7 +458,7 @@
                       (append "<div class=table_outer>")
                       (append "<h1>" title "</h1>")
                       (append "<table>")
-                      (doseq [:let [{:keys [param links?]} opts
+                      (doseq [:let [{:keys [param href-fn]} opts
                                     total (max 1 (transduce (map second) + 0 data))]
                               [value count] data
                               :let [percent     (* 100.0 (/ count total))
@@ -472,8 +473,8 @@
                         (append "</td>")
                         (append "<th>")
                         (append "<div style='width: " percent-str "'" (when (nil? value) " class=other") "></div>")
-                        (if (and links? value)
-                          (append "<a href='" value "' title='" value "' target=_blank>" value "</a>")
+                        (if (and href-fn value)
+                          (append "<a href='" (href-fn value) "' title='" value "' target=_blank>" value "</a>")
                           (append "<span title='" (or value "Others") "'>" (or value "Others") "</span>"))
                         (append "</th>")
                         (append "<td>" (format-num count) "</td>")
@@ -482,9 +483,9 @@
                       (append "</table>")
                       (append "</div>")))]
           (append "<div class=tables>")
-          (tbl "Paths"       (top-10      conn "path"       (str "type = 'browser' AND " where)) {:param "path", :links? true})
+          (tbl "Paths"       (top-10      conn "path"       (str "type = 'browser' AND " where)) {:param "path", :href-fn identity})
           (tbl "Queries"     (top-10      conn "query"      (str "type = 'browser' AND " where)) {:param "query"})
-          (tbl "Referrers"   (top-10      conn "ref_domain" (str "type = 'browser' AND " where)) {:param "ref_domain", :links? true})
+          (tbl "Referrers"   (top-10      conn "ref_domain" (str "type = 'browser' AND " where)) {:param "ref_domain", :href-fn #(str "https://" %)})
           (tbl "Browsers"    (top-10-uniq conn "agent"      (str "type = 'browser' AND " where)) {:param "agent"})
           (tbl "OSes"        (top-10-uniq conn "os"         (str "type = 'browser' AND " where)) {:param "os"})
           (tbl "RSS Readers" (top-10-uniq conn "agent"      (str "type = 'feed'    AND " where)) {:param "agent"})

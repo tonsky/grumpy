@@ -16,34 +16,27 @@
 (def ^:private ^DateTimeFormatter year-month-formatter
   (DateTimeFormatter/ofPattern "yyyy-MM"))
 
-(defn query
-  ([q reduce-fn init ^DuckDBConnection conn]
-   (query q {} reduce-fn init conn))
-  ([q params reduce-fn init ^DuckDBConnection conn]
-   (let [param-names (re-seq #"(?<=\?)\w+" q)
-         q'          (str/replace q #"\?\w+" "?")]
-     (with-open [stmt (.prepareStatement conn q')]
-       (doseq [[idx param-name] (map vector (range 1 Long/MAX_VALUE) param-names)]
-         (.setObject stmt idx (params param-name)))
-       (with-open [rs (.executeQuery stmt)]
-         (loop [acc init]
-           (if (.next rs)
-             (recur (reduce-fn acc rs))
-             acc)))))))
+(defn query [q reduce-fn init ^DuckDBConnection conn]
+  (with-open [stmt (.createStatement conn)
+              rs   (.executeQuery stmt q)]
+    (loop [acc init]
+      (if (.next rs)
+        (recur (reduce-fn acc rs))
+        acc))))
 
-(defn visits-by-type+date [^DuckDBConnection conn where]
+(defn visits-by-type+date [conn where]
   (->
     (query
       (str
-        "SELECT type, date, SUM(mult) AS cnt
-         FROM (
+        "WITH subq AS (
            SELECT type, date, MAX(mult) AS mult
            FROM stats
            WHERE " where "
            GROUP BY type, date, uniq
-         ) subq
-         GROUP BY type, date
-         ORDER BY type, date")
+         )
+         FROM subq
+         SELECT type, date, SUM(mult) AS cnt
+         GROUP BY type, date")
       (fn [acc ^ResultSet rs]
         (let [type (.getString rs 1)
               date (.getObject rs 2)
@@ -56,7 +49,29 @@
   (clj-simple-stats.core/with-conn [conn "grumpy_data/stats.duckdb"]
     (visits-by-type+date conn "date <= '2025-12-31' AND date >= '2025-01-01'")))
 
-(defn top-10 [^DuckDBConnection conn what where]
+(defn total-uniq [conn where]
+  (query
+    (str
+      "WITH subq AS (
+        SELECT type, MAX(mult) AS mult
+        FROM stats
+        WHERE " where "
+        GROUP BY type, uniq
+      )
+      FROM subq
+      SELECT type, SUM(mult) AS cnt
+      GROUP BY type")
+    (fn [acc ^ResultSet rs]
+      (let [type (.getString rs 1)
+            cnt  (.getLong rs 2)]
+        (assoc acc (keyword type) cnt)))
+    {} conn))
+
+(comment
+  (clj-simple-stats.core/with-conn [conn "grumpy_data/stats.duckdb"]
+    (total-uniq conn "date <= '2025-12-31' AND date >= '2025-01-01'")))
+
+(defn top-10 [conn what where]
   (->
     (query
       (str
@@ -97,7 +112,7 @@
       (transient []) conn)
     persistent!))
 
-(defn top-10-uniq [^DuckDBConnection conn what where]
+(defn top-10-uniq [conn what where]
   (->
     (query
       (str
@@ -166,9 +181,10 @@
    .graph_hover { font-size: 10px; font-feature-settings: 'tnum' 1; color: #0177a1; position: absolute; left: var(--padding-graph_outer); top: 10px; background: #d6f1ff; padding: 2px 6px; border-radius: 2px; }
    .graph_scroll { max-width: calc(100vw - var(--padding-body) * 2 - var(--padding-graph_outer) * 2 - var(--width-graph_legend)); overflow-x: auto; padding-bottom: 30px; margin-bottom: -20px; }
    .graph { display: block; }
-   .graph > rect { fill: #d6f1ff; }
-   .graph > rect:hover { fill: #9ed6f4; }
-   .graph > line { stroke: #0177a1; stroke-width: 2; }
+   .graph > g > rect { fill: #d6f1ff; }
+   .graph > g > line { stroke: #0177a1; stroke-width: 2; }
+   .graph > g:hover > rect { fill: #ffe1dc; }
+   .graph > g:hover > line { stroke: #a35249; }
    .graph > line.hrz  { stroke: #0000000B; stroke-width: 1; }
    .graph > line.date { stroke: #00000020; stroke-width: 1; }
    .graph > line.today { stroke: #FF000030; stroke-width: 1; }
@@ -217,9 +233,10 @@
        const graphHover = graphOuter.querySelector('.graph_hover');
 
        graph.addEventListener('mouseover', (e) => {
-         if (e.target.tagName === 'rect') {
-           const value = e.target.getAttribute('data-v');
-           const date = e.target.getAttribute('data-d');
+         if (e.target.parentNode.tagName === 'g') {
+           const g = e.target.parentNode;
+           const value = g.getAttribute('data-v');
+           const date = g.getAttribute('data-d');
            if (value && date) {
              graphHover.style.display = 'block';
              graphHover.textContent = date + ': ' + value;
@@ -347,6 +364,7 @@
 
         ;; timelines
         (let [data     (visits-by-type+date conn where)
+              totals   (total-uniq conn where)
               max-val  (->> data
                          (mapcat (fn [[_type date->cnt]] (vals date->cnt)))
                          (reduce max 1))
@@ -380,12 +398,12 @@
                          (>= max-val     60)     20
                          :else                   10)]
 
-          (doseq [[type title] [[:browser "Browsers"]
+          (doseq [[type title] [[:browser "Unique visitors"]
                                 [:feed "RSS Readers"]
                                 [:bot "Bots"]]
                   :let [date->cnt (get data type)]
                   :when (not (empty? date->cnt))]
-            (append "<h1>" title "</h1>")
+            (append (format "<h1>%s: %,d</h1>" title (get totals type)))
             (append "<div class=graph_outer>")
 
             ;; .graph
@@ -401,8 +419,10 @@
                       data-d (.format date-time-formatter date)
                       x      (* idx bar-w)
                       y      (- graph-h bar-h -10)]
-                  (append "<rect x=" x " y=" y " width=" bar-w " height=" bar-h " data-v='" data-v "' data-d='" data-d "' />")
-                  (append "<line x1=" x " y1=" y " x2=" (+ x bar-w) " y2=" y " />")))
+                  (append "<g data-v='" data-v "' data-d='" data-d "'>")
+                  (append "<rect x=" x " y=" (- y 2) " width=" bar-w " height=" (+ bar-h 2) " />")
+                  (append "<line x1=" x " y1=" (- y 1) " x2=" (+ x bar-w) " y2=" (- y 1) " />")
+                  (append "</g>")))
               ;; month label
               (when (= 1 (.getDayOfMonth date))
                 (let [month-end (.with date (TemporalAdjusters/lastDayOfMonth))
@@ -453,7 +473,7 @@
                         (append "<th>")
                         (append "<div style='width: " percent-str "'" (when (nil? value) " class=other") "></div>")
                         (if (and links? value)
-                          (append "<a href='" value "' title='" value "'>" value "</a>")
+                          (append "<a href='" value "' title='" value "' target=_blank>" value "</a>")
                           (append "<span title='" (or value "Others") "'>" (or value "Others") "</span>"))
                         (append "</th>")
                         (append "<td>" (format-num count) "</td>")

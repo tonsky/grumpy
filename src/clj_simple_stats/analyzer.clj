@@ -180,6 +180,14 @@
       :else
       (str ip user-agent))))
 
+(defn line-ref-domain [{:keys [referrer]}]
+  (when referrer
+    (try
+      (-> (java.net.URI. referrer)
+        (.getHost)
+        (str/replace #"^www\." ""))
+      (catch Exception _))))
+
 (defn assoc-new [m k v]
   (if (some? (get m k))
     m
@@ -187,8 +195,9 @@
 
 (defn analyze [line]
   (as-> line %
-    (assoc-new % :agent (line-agent %))
-    (assoc-new % :type  (line-type %))
-    (assoc-new % :os    (line-os %))
-    (assoc-new % :mult  (line-multiplier %))
-    (assoc-new % :uniq  (line-uniq %))))
+    (assoc-new % :agent      (line-agent %))
+    (assoc-new % :type       (line-type %))
+    (assoc-new % :os         (line-os %))
+    (assoc-new % :mult       (line-multiplier %))
+    (assoc-new % :uniq       (line-uniq %))
+    (assoc-new % :ref-domain (line-ref-domain %))))

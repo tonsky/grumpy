@@ -54,9 +54,10 @@
          type       agent_type_t,
          agent      VARCHAR,
          os         agent_os_t,
+         ref_domain VARCHAR,
          mult       INTEGER,
-         uniq       UUID,
-         set_cookie UUID
+         set_cookie UUID,
+         uniq       UUID
        )")))
 
 (defmacro with-conn [[sym db-path] & body]
@@ -140,9 +141,10 @@
         (.append apnd ^String    (:type line'))
         (.append apnd ^String    (:agent line'))
         (.append apnd ^String    (:os line'))
+        (.append apnd ^String    (:ref-domain line'))
         (.append apnd            (int (:mult line')))
-        (.append apnd ^UUID      (:uniq line'))
         (.append apnd ^UUID      (:set-cookie line'))
+        (.append apnd ^UUID      (:uniq line'))
         (.endRow apnd))
       (.flush apnd))
 

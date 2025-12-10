@@ -8,13 +8,17 @@
    [ring.util.response :as response])
   (:import
    [java.io File]
+   [java.lang AutoCloseable]
    [java.sql DriverManager]
    [java.time LocalDate LocalTime LocalDateTime ZoneId]
    [java.time.format DateTimeFormatter]
    [java.util ArrayList UUID]
-   [java.util.concurrent LinkedBlockingQueue]
+   [java.util.concurrent LinkedBlockingQueue ScheduledFuture ScheduledThreadPoolExecutor ThreadFactory TimeUnit]
    [java.util.concurrent.locks ReentrantLock]
    [org.duckdb DuckDBConnection]))
+
+(def ^:private ^ZoneId UTC
+  (ZoneId/of "UTC"))
 
 (def ^:private default-db-path
   "clj_simple_stats.duckdb")
@@ -35,6 +39,21 @@
 
 (def ^ReentrantLock db-lock
   (ReentrantLock.))
+
+(defmacro with-lock [lock & body]
+  `(let [lock# ^ReentrantLock ~lock]
+     (.lock lock#)
+     (try
+       (do
+         ~@body)
+       (finally
+         (.unlock lock#)))))
+
+(defmacro log-verbose [& msgs]
+  #_`(println ~@msgs))
+
+(defmacro log [& msgs]
+  `(println ~@msgs))
 
 (defn init-db! [^DuckDBConnection conn]
   (with-open [stmt (.createStatement conn)]
@@ -60,33 +79,75 @@
          uniq       UUID
        )")))
 
-(defmacro with-conn [[sym db-path] & body]
-  (let [sym (vary-meta sym assoc :tag DuckDBConnection)]
-    `(try
-       (.lock db-lock)
-       (let [db-path# ~db-path
-             exists#  (File/.exists (io/file db-path#))]
-         (with-open [~sym ^DuckDBConnection (DriverManager/getConnection (str "jdbc:duckdb:" db-path#))]
-           (when-not exists#
-             (clj-simple-stats.core/init-db! ~sym))
-           ~@body))
-       (finally
-         (.unlock db-lock)))))
+(defn connect ^DuckDBConnection [db-path reason]
+  (let [exists  (File/.exists (io/file db-path))
+        _       (log-verbose "Opening" db-path reason)
+        conn    (DriverManager/getConnection (str "jdbc:duckdb:" db-path))]
+    (when-not exists
+      (log "Initializing" db-path)
+      (init-db! conn))
+    conn))
+
+;; {db-path -> {:conn ..., :future ...}}
+(def *conns
+  (atom {}))
+
+(def conn-ttl-ms
+  10000)
+
+(def worker-conn-ttl-ms
+  1000)
+
+(def ^ScheduledThreadPoolExecutor scheduler
+  (doto
+    (ScheduledThreadPoolExecutor.
+      1
+      (reify ThreadFactory
+        (newThread [_ runnable]
+          (doto
+            (Thread. ^Runnable runnable "clj-simple-stats.core/scheduler")
+            (.setDaemon true)))))
+    (.setExecuteExistingDelayedTasksAfterShutdownPolicy false)
+    (.setRemoveOnCancelPolicy true)))
 
 (def *worker
   (atom nil))
 
-(def ^:private ^DateTimeFormatter month-formatter
-  (DateTimeFormatter/ofPattern "yyyy-MM"))
+(defn close-runnable ^Runnable [db-path]
+  (fn []
+    (log-verbose "Closing" db-path "by timeout")
+    (with-lock db-lock
+      (try
+        (-> @*conns (get db-path) :conn AutoCloseable/.close)
+        (catch Exception e
+          (println e)))
+      (swap! *conns dissoc db-path))))
 
-(def ^:private ^DateTimeFormatter date-formatter
-  (DateTimeFormatter/ofPattern "yyyy-MM-dd"))
-
-(def ^:private ^DateTimeFormatter time-formatter
-  (DateTimeFormatter/ofPattern "HH:mm:ss"))
-
-(def ^:private ^ZoneId UTC
-  (ZoneId/of "UTC"))
+(defmacro with-conn [[sym db-path] & opts+body]
+  (let [sym (vary-meta sym assoc :tag 'DuckDBConnection)
+        [opts body] (if (map? (first opts+body))
+                      [(first opts+body) (next opts+body)]
+                      [{} opts+body])]
+    `(with-lock db-lock
+       (let [db-path#          ~db-path
+             new-ttl#          (or (:ttl ~opts) conn-ttl-ms)
+             {conn# :conn
+              future# :future} (or
+                                 (get @*conns db-path#)
+                                 {:conn (connect db-path# (str "for " new-ttl# " ms"))})
+             old-ttl#          (when future#
+                                 (ScheduledFuture/.getDelay future# TimeUnit/MILLISECONDS))
+             _#                (when (and future# (< old-ttl# new-ttl#))
+                                 (ScheduledFuture/.cancel future# false))
+             future#           (if (or (nil? future#) (< old-ttl# new-ttl#))
+                                 (do
+                                   (log-verbose "Extending" db-path# "to" new-ttl# "ms")
+                                   (.schedule scheduler (close-runnable db-path#) (int new-ttl#) TimeUnit/MILLISECONDS))
+                                 future#)]
+         (swap! *conns assoc db-path# {:conn   conn#
+                                       :future future#})
+         (let [~sym conn#]
+           ~@body)))))
 
 (defn- content-type [resp]
   ((some-fn
@@ -125,8 +186,8 @@
       (.add queue line))))
 
 (defn- insert-lines! [db-path lines]
-  (with-conn [conn db-path]
-    #_(println "Inserting" (count lines) "lines to" db-path)
+  (with-conn [conn db-path] {:ttl worker-conn-ttl-ms}
+    (log-verbose "Inserting" (count lines) "lines to" db-path)
     (with-open [apnd (.createAppender conn DuckDBConnection/DEFAULT_SCHEMA "stats")]
       (doseq [line lines
               :let [line' (analyzer/analyze line)]]
@@ -176,10 +237,10 @@
                 (catch InterruptedException e
                   (throw e))
                 (catch Exception e
-                  (println e)))
+                  (log e)))
               (recur)))
           (catch InterruptedException e
-            #_(println (.getName (Thread/currentThread)) "graceful shutdown")))))
+            (log-verbose (.getName (Thread/currentThread)) "graceful shutdown")))))
     (.setDaemon true)
     (.setName (str "clj-simple-stats.core/worker(path=" db-path ")"))
     (.start)))
@@ -268,4 +329,14 @@
      (wrap-render-stats opts))))
 
 (defn before-ns-unload []
-  (some-> @*worker Thread/.interrupt))
+  (some-> @*worker Thread/.interrupt)
+  (log-verbose "Shutting down pool")
+  (.shutdown scheduler)
+  (.awaitTermination scheduler 10000 TimeUnit/MILLISECONDS)
+  (with-lock db-lock
+    (doseq [[db-path {:keys [conn]}] @*conns]
+      (try
+        (log-verbose "Closing" db-path "because of shutdown")
+        (AutoCloseable/.close conn)
+        (catch Exception e
+          (log e))))))

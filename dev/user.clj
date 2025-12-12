@@ -19,7 +19,7 @@
 (test/install!)
 
 (reload/init
-  {:dirs ["src"]})
+  {:dirs ["src" "/ws/clj-simple-stats/src"]})
 
 (defn reload []
   (let [{:keys [loaded]} (reload/reload)]

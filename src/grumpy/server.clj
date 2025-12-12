@@ -251,9 +251,6 @@
     (update (handler req) :headers
       #(merge headers %))))
 
-(def stats-db-path
-  "grumpy_data/stats.duckdb")
-
 (defn handler []
   (-> (merge
         routes
@@ -265,7 +262,7 @@
     (wrap-headers {"Content-Security-Policy" "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
     (params/wrap-params)
     (content-type/wrap-content-type {:mime-types {}})
-    (stats/wrap-stats {:db-path stats-db-path})))
+    (stats/wrap-stats {:db-path "grumpy_data/stats.duckdb"})))
 
 (mount/defstate server
   :start

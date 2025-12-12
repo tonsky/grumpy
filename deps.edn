@@ -15,7 +15,7 @@
   org.xerial/sqlite-jdbc                  {:mvn/version "3.50.3.0"}
   ring/ring-core                          {:mvn/version "1.15.3"}
   rum/rum                                 {:mvn/version "0.11.4"}
-  io.github.tonsky/clj-simple-stats       {:git/sha "607f957346131edcac30cdd205c97883e80c55ec"}}
+  io.github.tonsky/clj-simple-stats       {:mvn/version "1.0.0"}}
  :paths ["src" "resources"]
  :aliases
  {:dev     {:extra-paths ["dev"]

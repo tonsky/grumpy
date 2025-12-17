@@ -46,7 +46,7 @@ function fetchRequest(method, url, opts = {}) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
-    xhr.addEventListener('load', function() {
+    xhr.addEventListener('load', function(e) {
       if (this.status !== 200) {
         console.warn('Error fetching', url, ':', this.responseText);
         reject(this.responseText);
@@ -55,7 +55,7 @@ function fetchRequest(method, url, opts = {}) {
       }
     });
 
-    xhr.addEventListener('error', () => {
+    xhr.addEventListener('error', (e) => {
       reject('Network error');
     });
 
@@ -123,7 +123,8 @@ function TextareaComponent() {
 // Media Components
 // ============================================================================
 
-function MediaElement({ src, contentType, dimensions }) {
+function MediaElement(opts) {
+  const { src, contentType, dimensions } = opts;
   if (!src) return null;
 
   let style = {};
@@ -135,6 +136,7 @@ function MediaElement({ src, contentType, dimensions }) {
 
   if (isVideo(contentType)) {
     return h('video', {
+      key: src,
       autoPlay: true,
       muted: true,
       loop: true,
@@ -143,7 +145,7 @@ function MediaElement({ src, contentType, dimensions }) {
       style: style
     }, h('source', { type: contentType, src: src }));
   } else {
-    return h('img', { src: src, style: style });
+    return h('img', { key: src, src: src, style: style });
   }
 }
 

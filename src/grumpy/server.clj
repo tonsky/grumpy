@@ -271,6 +271,7 @@
     (http-kit/run-server (handler)
       {:host host
        :port port
+       :max-body (* 100 1024 1024)
        :error-logger (fn [msg ex]
                        (println
                          (.format

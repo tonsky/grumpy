@@ -19,6 +19,7 @@
    [mount.core :as mount]
    [org.httpkit.server :as http-kit]
    [ring.middleware.content-type :as content-type]
+   [ring.middleware.cookies :as ring-cookies]
    [ring.middleware.head :as head]
    [ring.middleware.params :as params]
    [ring.util.response :as response]
@@ -262,7 +263,11 @@
     (wrap-headers {"Content-Security-Policy" "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
     (params/wrap-params)
     (content-type/wrap-content-type {:mime-types {}})
-    (stats/wrap-stats {:db-path "grumpy_data/stats.duckdb"})))
+    (stats/wrap-stats {:db-path "grumpy_data/stats.duckdb"
+                       :dash-perms-fn
+                       (fn [req]
+                         (#{"nikitonsky" "dmitriid"} (-> req :cookies (get "grumpy_user") :value)))})
+    ring-cookies/wrap-cookies))
 
 (mount/defstate server
   :start

@@ -5,7 +5,7 @@
   datascript/datascript                   {:mvn/version "1.7.8"}
   http-kit/http-kit                       {:mvn/version "2.8.0"}
   io.github.tonsky/clj-simple-router      {:mvn/version "0.1.2"}
-  io.github.tonsky/clojure-plus           {:mvn/version "1.7.0"}
+  io.github.tonsky/clojure-plus           {:mvn/version "1.7.2"}
   io.github.tonsky/datascript-storage-sql {:mvn/version "2.1.0"}
   mount/mount                             {:mvn/version "0.1.23"}
   org.apache.lucene/lucene-core           {:mvn/version "10.3.2"}
@@ -15,7 +15,7 @@
   org.xerial/sqlite-jdbc                  {:mvn/version "3.50.3.0"}
   ring/ring-core                          {:mvn/version "1.15.3"}
   rum/rum                                 {:mvn/version "0.11.4"}
-  io.github.tonsky/clj-simple-stats       {:mvn/version "1.1.0"}}
+  io.github.tonsky/clj-simple-stats       {:mvn/version "1.2.0"}}
  :paths ["src" "resources"]
  :aliases
  {:dev     {:extra-paths ["dev"]
@@ -25,10 +25,6 @@
                           "-XX:+UnlockDiagnosticVMOptions"
                           "-XX:+DebugNonSafepoints"
                           "-XX:+EnableDynamicAgentLoading"]}
-  :java    {:jvm-opts    ["-Dclojure.main.report=stderr"
-                          "-Duser.language=en"
-                          "-Duser.country=US"
-                          "-Dfile.encoding=UTF-8"]}
   :uberjar {:extra-paths ["target/uberjar"]}
   :package {:extra-paths ["package"]
             :extra-deps  {uberdeps/uberdeps {:mvn/version "1.4.0"}}}}}

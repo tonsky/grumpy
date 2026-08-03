@@ -13,11 +13,15 @@
 
 
 (defn stats [^File file]
-  (let [out (:out (jobs/sh "ffprobe" "-v" "error" "-select_streams" "v" "-show_entries" "stream=width,height,nb_frames" "-of" "csv=p=0:s=x" (.getPath file)))]
-    (if-some [[_ w h frames] (re-find #"^(\d+|N/A)x(\d+|N/A)x(\d+|N/A)" out)]
-      {:width  (parse-long w)
-       :height (parse-long h)
-       :frames (parse-long frames)}
+  (let [out (:out (jobs/sh "ffprobe" "-v" "error" "-select_streams" "v" "-show_entries" "stream=width,height,nb_frames:stream_side_data=rotation" "-of" "csv=p=0:s=x" (.getPath file)))]
+    (if-some [[_ w h frames rotation] (re-find #"^(\d+|N/A)x(\d+|N/A)x(\d+|N/A)(?:x(-?\d+))?" out)]
+      ;; rotated videos store a landscape buffer + rotation side data;
+      ;; report display dimensions
+      (let [rotation (some-> rotation Long/parseLong)
+            swap?    (and rotation (#{90 270} (mod rotation 360)))]
+        {:width  (parse-long (if swap? h w))
+         :height (parse-long (if swap? w h))
+         :frames (parse-long frames)})
       (throw (ex-info (str "Unexpected ffprobe output: " out) {:out out})))))
 
 
@@ -26,29 +30,23 @@
     [(:width stats) (:height stats)]))
 
 
-(defn local-convert!
-  ([original converted]
-   (local-convert! original converted (dimensions original)))
-  ([^File original ^File converted [w h]]
-   (let [aspect  (/ w h)
-         [w1 h1] (if (> w 1100) [1100 (/ 1100 aspect)] [w h])
-         [w2 h2] (if (> h1 1000) [(* aspect 1000) 1000] [w1 h1])
-         round   (fn [x] (-> x (/ 2) long (* 2)))
-         [w3 h3] [(round w2) (round h2)]]
-     (jobs/sh "ffmpeg"
-       "-i"           (.getPath original)
-       "-c:v"         "libx264"
-       "-crf"         "18"
-       "-movflags"    "+faststart"
-       "-vf"          (str "scale=" w3 ":" h3)
-       "-r"           "30" ; fps
-       "-profile:v"   "main"
-       "-level:v"     "3.1"
-       "-pix_fmt"     "yuv420p"
-       "-y"           ; override existing
-       "-loglevel"    "warning"
-       "-hide_banner"
-       "-map"         "0:v:0"
-       "-threads"     "3"
-       "-an"
-       (.getPath converted)))))
+(defn local-convert! [^File original ^File converted]
+  ;; iw/ih in the filter are post-autorotation dimensions, so rotated (phone)
+  ;; videos keep their display orientation. min() prevents upscaling
+  (jobs/sh "ffmpeg"
+    "-i"           (.getPath original)
+    "-c:v"         "libx264"
+    "-crf"         "18"
+    "-movflags"    "+faststart"
+    "-vf"          "scale=w='min(1100,iw)':h='min(1000,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2"
+    "-r"           "30" ; fps
+    "-profile:v"   "main"
+    "-level:v"     "3.1"
+    "-pix_fmt"     "yuv420p"
+    "-y"           ; override existing
+    "-loglevel"    "warning"
+    "-hide_banner"
+    "-map"         "0:v:0"
+    "-threads"     "3"
+    "-an"
+    (.getPath converted)))

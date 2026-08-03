@@ -51,7 +51,7 @@
     (let [[w h]          (video/dimensions full)
           converted-name (str/replace full-name #"^(.+)_full\.[a-z0-9]+$" "$1.mp4")
           converted      (io/file (.getParentFile full) converted-name)
-          _              (video/local-convert! full converted [w h])
+          _              (video/local-convert! full converted)
           [w' h']        (video/dimensions converted)]
       {:post/media
        {:media/url          (str dir converted-name)

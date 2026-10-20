@@ -3,6 +3,7 @@
     [clojure.java.io :as io]
     [datascript.core :as d]
     [grumpy.core.coll :as coll]
+    [grumpy.core.config :as config]
     [grumpy.core.files :as files]
     [grumpy.core.time :as time]
     [grumpy.db :as db]
@@ -48,7 +49,7 @@
 
 (defn posts []
   (->>
-    (for [^File file (file-seq (io/file "grumpy_data" "posts"))
+    (for [^File file (file-seq (io/file config/data-dir "posts"))
           :when (= "post.edn" (.getName file))]
       (files/read-edn-string (slurp file)))
     (sort-by :created)
@@ -72,7 +73,7 @@
         (mount/stop #'db/storage)))
     
     (doseq [year (range 2017 2024)]
-      (.mkdirs (io/file "grumpy_data" (str year))))
+      (.mkdirs (io/file config/data-dir (str year))))
   
     (doseq [d (d/datoms db :aevt :media/url)
             :let [media (d/entity db (:e d))
@@ -82,18 +83,18 @@
                   from  (str (:post/old-id post) "/" (:media/old-url media))
                   to    (:media/url media)]]
       (Files/copy
-        (Path/of "grumpy_data" (into-array String ["posts" from]))
-        (Path/of "grumpy_data" (into-array String [to]))
+        (Path/of config/data-dir (into-array String ["posts" from]))
+        (Path/of config/data-dir (into-array String [to]))
         ^{:tag "[Ljava.nio.file.CopyOption;"} (into-array CopyOption [StandardCopyOption/COPY_ATTRIBUTES StandardCopyOption/REPLACE_EXISTING])))
     
-    ; (doseq [file (reverse (file-seq (io/file "grumpy_data" "drafts")))]
+    ; (doseq [file (reverse (file-seq (io/file config/data-dir "drafts")))]
     ;   (.delete ^File file))
     
-    ; (doseq [file (reverse (file-seq (io/file "grumpy_data" "posts")))]
+    ; (doseq [file (reverse (file-seq (io/file config/data-dir "posts")))]
     ;   (.delete ^File file))
     
     ))
 
 (comment
-  (.delete (io/file "grumpy_data/db.sqlite"))
+  (.delete (io/file config/data-dir "db.sqlite"))
   (migrate!))

@@ -55,7 +55,7 @@
   (jobs/linearize post-id
     (let [post  (d/entity (db/db) [:podb/id post-id])
           post' (update-fn post)
-          file  (io/file "grumpy_data/posts" post-id "post.edn")]
+          file  (io/file config/data-dir "posts" post-id "post.edn")]
       (spit file (pr-str post'))
       post')))
 

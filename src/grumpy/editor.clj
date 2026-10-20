@@ -6,6 +6,7 @@
    [clojure.string :as str]
    [datascript.core :as d]
    [grumpy.auth :as auth]
+   [grumpy.core.config :as config]
    [grumpy.core.files :as files]
    [grumpy.core.jobs :as jobs]
    [grumpy.core.log :as log]
@@ -24,13 +25,19 @@
   (:import
    [java.io File InputStream]))
 
+;; ImageMagick 7 has `magick`, 6 only has `convert` (deprecated in 7)
+(def imagemagick
+  (if (some #(.canExecute (io/file % "magick")) (str/split (System/getenv "PATH") #":"))
+    "magick"
+    "convert"))
+
 (defn image-dimensions [^File file]
-  (let [out   (:out (jobs/sh "convert" (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
+  (let [out   (:out (jobs/sh imagemagick (.getPath file) "-ping" "-format" "[%w,%h]" "info:"))
         [w h] (edn/read-string out)]
     [w h]))
 
 (defn convert-image! [^File from ^File to opts]
-  (apply jobs/sh "convert"
+  (apply jobs/sh imagemagick
     (.getPath from)
     (concat
       (flatten
@@ -109,7 +116,7 @@
 (defn upload-media! [mime-type ^InputStream input-stream]
   (let [name    (str (posts/next-id (db/db)) "_" (time/format-timestamp-inst (time/now)))
         ext     (mime/extension mime-type)
-        dir     (io/file "grumpy_data/uploads")
+        dir     (io/file config/data-dir "uploads")
         _       (.mkdirs dir)
         full    (io/file dir (str name "_full." ext))
         _       (io/copy input-stream full)
@@ -145,8 +152,8 @@
         media-url (url-fn :post/media)
         media'    (when media-url
                     (files/move
-                      (io/file "grumpy_data" (-> body :post/media :media/url))
-                      (io/file "grumpy_data" media-url))
+                      (io/file config/data-dir (-> body :post/media :media/url))
+                      (io/file config/data-dir media-url))
                     (assoc (:post/media body)
                       :db/id         -2
                       :media/version version
@@ -154,8 +161,8 @@
         full-url  (url-fn :post/media-full)
         full'     (when full-url
                     (files/move
-                      (io/file "grumpy_data" (-> body :post/media-full :media/url))
-                      (io/file "grumpy_data" full-url))
+                      (io/file config/data-dir (-> body :post/media-full :media/url))
+                      (io/file config/data-dir full-url))
                     (assoc (:post/media-full body)
                       :db/id         -3
                       :media/version version
@@ -281,7 +288,7 @@
    "GET /media/uploads/**"
    (fn [req]
      (let [path (str/join "/" (:path-params req))]
-       (response/file-response (str "grumpy_data/uploads/" path))))
+       (response/file-response path {:root (str config/data-dir "/uploads")})))
 
    "POST /media/uploads"
    (apply-middlewares

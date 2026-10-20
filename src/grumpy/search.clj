@@ -29,7 +29,7 @@
 (declare index)
 
 (def path
-  (Path/of "grumpy_data/lucene" (into-array String [])))
+  (Path/of config/data-dir (into-array String ["lucene"])))
 
 (mount/defstate writer
   :start

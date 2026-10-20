@@ -1,5 +1,6 @@
 (ns grumpy.migrations.to-2
   (:require
+   [grumpy.core.config :as config]
    [grumpy.core.files :as files]
    [grumpy.core.log :as log]
    [grumpy.core.posts :as posts]))
@@ -14,7 +15,7 @@
 
 (defn update-every-post! [f]
   (doseq [post-id (posts/post-ids)
-          :let [file (str "grumpy_data/posts/" post-id "/post.edn")
+          :let [file (str config/data-dir "/posts/" post-id "/post.edn")
                 post (files/read-edn-string (slurp file))]]
     (try
       (spit file (pr-str (f post)))

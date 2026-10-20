@@ -19,7 +19,7 @@
 (defn feed [post-ids]
   (let [posts    (map #(d/entity (db/db) [:post/id %]) post-ids)
         updated  (or (max-date posts) (time/now))
-        hostname (config/get :grumpy.server/hostname)]
+        hostname config/site-url]
     (xml/emit
       [:feed {:xmlns    "http://www.w3.org/2005/Atom"
               :xml:lang "ru"
@@ -103,7 +103,7 @@
                (:post/body post)))]])])))
 
 (defn sitemap [post-ids]
-  (let [hostname (config/get :grumpy.server/hostname)
+  (let [hostname config/site-url
         db       (db/db)]
     (xml/emit
       [:urlset {:xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"}

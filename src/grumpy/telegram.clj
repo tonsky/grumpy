@@ -10,11 +10,11 @@
 
 
 (def token
-  (config/get-optional ::token))
+  (config/get "telegram-token"))
 
 
 (def channel
-  (config/get-optional ::channel))
+  (config/get "telegram-channel"))
 
 
 (defn post!
@@ -46,7 +46,7 @@
     (let [video? (= :mime.type/video (-> post :post/media mime/type))
           media  (posts/crosspost-media post)]
       (when media
-        (let [url    (str config/hostname "/media/" (:media/url media))
+        (let [url    (str config/site-url "/media/" (:media/url media))
               resp   (if video?
                        (post! "/sendVideo" {:video url})
                        (post! "/sendPhoto" {:photo url}))]
@@ -63,7 +63,7 @@
     (let [video? (= :mime.type/video (-> post :post/media mime/type))
           media  (posts/crosspost-media post)]
       (when media
-        (let [url (str config/hostname "/media/" (:media/url media))]
+        (let [url (str config/site-url "/media/" (:media/url media))]
           (doseq [crosspost (:post/crosspost post)
                   :when (= :tg/media (:crosspost/type crosspost))
                   :let [channel (:crosspost.tg/channel crosspost)

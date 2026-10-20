@@ -254,8 +254,8 @@
 
 (def *opts
   (atom
-    {:host "localhost"
-     :port 8080}))
+    {:host config/host
+     :port config/port}))
 
 (defn wrap-headers [handler headers]
   (fn [req]

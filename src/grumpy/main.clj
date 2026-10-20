@@ -1,7 +1,6 @@
 (ns grumpy.main
   (:require
     [grumpy.core.log :as log]
-    [grumpy.migrations :as migrations]
     [grumpy.server :as server]
     [mount.core :as mount]))
 
@@ -11,10 +10,5 @@
       (log/log "Uncaught exception on" (.getName ^Thread thread))
       (.printStackTrace ^Throwable ex))))
 
-(defn -main [& {:as args}]
-  (migrations/migrate!)
-  (when-some [host (get args "--host")]
-    (swap! server/*opts assoc :host host))
-  (when-some [port (or (get args "--port") (System/getenv "PORT"))]
-    (swap! server/*opts assoc :port (parse-long port)))
+(defn -main [& args]
   (mount/start))

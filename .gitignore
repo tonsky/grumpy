@@ -17,4 +17,4 @@ figwheel_server.log
 .DS_Store
 script/cleanup.clj
 TODO.md
-/clj_simple_stats
+/clj_simple_stats/mise.local.toml

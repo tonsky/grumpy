@@ -2,5 +2,4 @@
 set -o errexit -o nounset -o pipefail
 cd "`dirname $0`/.."
 
-# java --add-opens java.base/sun.nio.ch=ALL-UNNAMED -cp target/grumpy.jar clojure.main -m grumpy.main
-clojure $(./script/java_opts.sh) -M:java -m grumpy.main
+exec clojure $(./script/java_opts.sh) -J-Xms64m -J-Xmx1g -M -m grumpy.main "$@"

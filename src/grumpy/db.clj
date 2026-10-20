@@ -2,6 +2,7 @@
   (:require
     [datascript.core :as d]
     [datascript.storage.sql.core :as storage-sql]
+    [grumpy.core.config :as config]
     [grumpy.core.log :as log]
     [grumpy.core.transit :as transit]
     [mount.core :as mount])
@@ -43,7 +44,7 @@
 (defn make-storage [path]
   (let [datasource (storage-sql/pool 
                      (doto (SQLiteDataSource.)
-                       (.setUrl "jdbc:sqlite:grumpy_data/db.sqlite")))]
+                       (.setUrl (str "jdbc:sqlite:" path))))]
     (storage-sql/make datasource
       {:dbtype       :sqlite
        :freeze-bytes #(transit/write-bytes % :msgpack)
@@ -51,7 +52,7 @@
 
 (mount/defstate storage
   :start
-  (make-storage "grumpy_data/db.sqlite")
+  (make-storage (str config/data-dir "/db.sqlite"))
   :stop
   (storage-sql/close storage))
 

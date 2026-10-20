@@ -57,7 +57,7 @@
 (defn crosspost-media! [post]
   (when-some [media (posts/crosspost-media post)]
     (let [id (post! "/api/v2/media"
-               {:multipart [{:name "file" :content (io/file "grumpy_data" (:media/url media))}]})
+               {:multipart [{:name "file" :content (io/file config/data-dir (:media/url media))}]})
           t0 (time/now)]
       (loop []
         (let [resp (http/get (str "https://mastodon.online/api/v1/media/" id)

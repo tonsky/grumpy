@@ -178,7 +178,12 @@
       (web/moved-permanently (str "/media/" url)))
 
     "GET /media/**" [path]
-    (response/file-response (str "grumpy_data/" path))
+    ;; only post media (YYYY/<file>), not config.edn, db.sqlite etc
+    (or
+      (when (re-matches #"\d{4}/[^/.][^/]*" path)
+        (response/file-response path {:root config/data-dir}))
+      {:status 404
+       :body   "Not found"})
 
     "GET /post/*" [post-id]
     (let [post (d/entity (db/db) [:post/old-id post-id])]
@@ -237,6 +242,11 @@
      :headers {"Content-Type" "text/xml; charset=utf-8"}
      :body (feed/sitemap (posts/post-ids))}
 
+    "GET /up" _
+    {:status  200
+     :headers {"Content-Type" "text/plain"}
+     :body    "OK"}
+
     "GET /robots.txt" _
     {:status 200
      :headers {"Content-Type" "text/plain"}
@@ -263,7 +273,7 @@
     (wrap-headers {"Content-Security-Policy" "object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com"})
     (params/wrap-params)
     (content-type/wrap-content-type {:mime-types {}})
-    (stats/wrap-stats {:db-path "grumpy_data/stats.duckdb"
+    (stats/wrap-stats {:db-path (str config/data-dir "/stats.duckdb")
                        :dash-perms-fn
                        (fn [req]
                          (#{"nikitonsky" "dmitriid"} (-> req :cookies (get "grumpy_user") :value)))})

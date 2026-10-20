@@ -23,8 +23,12 @@
   (.decode (java.util.Base64/getDecoder) s))
 
 
+(def data-dir
+  (or (System/getenv "DATA_DIR") "grumpy_data"))
+
+
 (defn- load []
-  (let [file ^File (io/file "grumpy_data/config.edn")]
+  (let [file ^File (io/file data-dir "config.edn")]
     (when (.exists file)
       (edn/read-string {:readers {'bytes read-bytes}} (slurp file)))))
 
@@ -38,7 +42,7 @@
 
 
 (defn- store! [config]
-  (let [file ^File (io/file "grumpy_data/config.edn")]
+  (let [file ^File (io/file data-dir "config.edn")]
     (.mkdirs (.getParentFile file))
     (with-open [wrt (io/writer file)]
       (pprint/pprint (into (sorted-map) config) wrt)))
@@ -62,7 +66,7 @@
 
 (defn get
   ([key]
-   (get key #(throw (ex-info (str "Please specify " key " in grumpy_data/config.edn") {:key key}))))
+   (get key #(throw (ex-info (str "Please specify " key " in " data-dir "/config.edn") {:key key}))))
   ([key value-fn]
    (or (get-optional key)
      (set key (value-fn)))))

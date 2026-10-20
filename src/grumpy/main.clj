@@ -15,6 +15,6 @@
   (migrations/migrate!)
   (when-some [host (get args "--host")]
     (swap! server/*opts assoc :host host))
-  (when-some [port (get args "--port")]
+  (when-some [port (or (get args "--port") (System/getenv "PORT"))]
     (swap! server/*opts assoc :port (parse-long port)))
   (mount/start))

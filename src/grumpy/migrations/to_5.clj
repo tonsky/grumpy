@@ -2,6 +2,7 @@
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
+    [grumpy.core.config :as config]
     [datascript.core :as d]
     [grumpy.core.files :as files]
     [grumpy.db :as db]
@@ -20,7 +21,7 @@
                   (for [[eid url] media
                         :let [url' (str/replace url #"(\d+)(_1)(_full)?\.([a-z0-9]+)" "$1$3.$4")]]
                     (do
-                      (files/move (io/file "grumpy_data" url) (io/file "grumpy_data" url'))
+                      (files/move (io/file config/data-dir url) (io/file config/data-dir url'))
                       [:db/add eid :media/url url'])))]
       (db/transact! tx))
     (finally

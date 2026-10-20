@@ -16,7 +16,7 @@
 
 
 (def token
-  (config/get-optional ::token))
+  (config/get "mastodon-token"))
 
 
 (def headers

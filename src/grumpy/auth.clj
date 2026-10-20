@@ -4,6 +4,7 @@
    [grumpy.core.config :as config]
    [grumpy.core.files :as files]
    [grumpy.core.fragments :as fragments]
+   [grumpy.core.log :as log]
    [grumpy.core.posts :as posts]
    [grumpy.core.time :as time]
    [grumpy.core.url :as url]
@@ -40,10 +41,15 @@
     seed))
 
 (def cookie-secret
-  (config/get ::cookie-secret #(random-bytes 16)))
+  (if-some [s (config/get "cookie-secret")]
+    (.decode (java.util.Base64/getDecoder) ^String s)
+    (do
+      (when-not config/dev?
+        (log/log "[auth] COOKIE_SECRET not set, sessions won’t survive restart"))
+      (random-bytes 16))))
 
 (def forced-user
-  (config/get-optional ::forced-user))
+  (config/get "forced-user"))
 
 (defn gen-token []
   (str
@@ -122,7 +128,7 @@
 
       (nil? (get-token handle))
       (let [token (gen-token)
-            link  (url/build (str (config/get :grumpy.server/hostname) "/authenticate")
+            link  (url/build (str config/site-url "/authenticate")
                     {:handle       handle
                      :token        token
                      :redirect-url redirect-url})]

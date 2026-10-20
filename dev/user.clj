@@ -6,7 +6,6 @@
    [clojure+.hashp :as hashp]
    [clojure+.print :as print]
    [clojure+.test :as test]
-   [grumpy.migrations :as migrations]
    [mount.core :as mount]))
 
 (clojure+.error/install!
@@ -27,9 +26,6 @@
 
 (defn -main [& args]
   (clojure+.core.server/start-server)
-  (migrations/migrate!)
-  (when-some [*opts @(requiring-resolve 'grumpy.server/*opts)]
-    (swap! *opts assoc :host "0.0.0.0"))
   (mount/start))
 
 (defn test-all []

@@ -180,7 +180,7 @@
     "GET /media/**" [path]
     ;; only post media (YYYY/<file>), not config.edn, db.sqlite etc
     (or
-      (when (re-matches #"\d{4}/[^/.][^/]*" path)
+      (when (and path (re-matches #"\d{4}/[^/.][^/]*" path))
         (response/file-response path {:root config/data-dir}))
       {:status 404
        :body   "Not found"})
